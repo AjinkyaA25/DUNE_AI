@@ -1,0 +1,67 @@
+{
+  "_comment": "Soft opening priors for the Dune AI. Each rule: match{} gates when it applies; prefer[] lists moves to nudge toward with a weight. Nothing is forced. See config/openings.README.md. Card names are the real Uprising cards (src/data/uprising_cards.json).",
+  "rules": [
+    {
+      "name": "economy-spine-high-council",
+      "match": { "max_round": 4, "num_players": [2, 3, 4] },
+      "prefer": [
+        { "space": "High Council", "weight": 3.0 },
+        { "space": "Swordmaster", "weight": 3.5 }
+      ]
+    },
+    {
+      "name": "snowball-persuasion-turn1",
+      "match": { "max_round": 2 },
+      "prefer": [
+        { "buy_card": "Branching Path", "weight": 1.8 },
+        { "buy_card": "Prepare the Way", "weight": 1.8 },
+        { "buy_card": "Maker Keeper", "weight": 1.6 },
+        { "buy_card": "Paracompass", "weight": 1.5 },
+        { "buy_card": "Northern Watermaster", "weight": 1.3 }
+      ]
+    },
+    {
+      "name": "push-one-faction-to-friendship",
+      "match": { "max_round": 3 },
+      "prefer": [
+        { "space": "Sardaukar", "weight": 1.2 },
+        { "space": "Heighliner", "weight": 1.2 },
+        { "space": "Espionage", "weight": 1.3 },
+        { "space": "Secrets", "weight": 1.1 },
+        { "space": "Fremkit", "weight": 1.3 },
+        { "space": "Desert Tactics", "weight": 1.1 },
+        { "space": "Deliver Supplies", "weight": 1.1 },
+        { "space": "Dutiful Service", "weight": 1.1 }
+      ]
+    },
+    {
+      "name": "spice-water-economy",
+      "match": { "max_round": 3 },
+      "prefer": [
+        { "space": "Imperial Basin", "weight": 1.0 },
+        { "space": "Hagga Basin", "weight": 0.9 },
+        { "space": "Accept Contract", "weight": 1.0 }
+      ]
+    },
+    {
+      "name": "troops-before-level-2-conflicts",
+      "match": { "min_round": 2, "max_round": 4 },
+      "prefer": [
+        { "buy_card": "Arrakis Revolt", "weight": 1.4 },
+        { "buy_card": "In High Places", "weight": 1.4 },
+        { "buy_card": "Southern Elders", "weight": 1.3 },
+        { "buy_card": "Stilgar, the Devoted", "weight": 1.3 },
+        { "space": "Gather Support", "weight": 0.8 }
+      ]
+    },
+    {
+      "name": "contest-victory-conflicts",
+      "match": { "min_round": 3 },
+      "prefer": [
+        { "space": "Arrakeen", "weight": 1.2 },
+        { "space": "Imperial Basin", "weight": 1.2 },
+        { "space": "Spice Refinery", "weight": 1.0 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+.venv/
+data/selfplay/
+models/
+game_logs/
+train_run.log
+*.output
+.pytest_cache/
+
+# IDE
+.idea/
+
+# Binary reference assets — kept local, not tracked in git
+cards/
+base_cards/
+intrigue_cards/
+conflicts/
+contracts/
+*.pdf
+*.png
+*.jpg
+*.jpeg

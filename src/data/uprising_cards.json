@@ -1,0 +1,828 @@
+[
+  {
+    "name": "Convincing Argument",
+    "card_type": "starter",
+    "cost": 0,
+    "faction_tags": [],
+    "access": [],
+    "on_acquire": null,
+    "agent_box": {},
+    "reveal": { "persuasion": 2 }
+  },
+  {
+    "name": "Dagger",
+    "card_type": "starter",
+    "cost": 0,
+    "faction_tags": [],
+    "access": ["landsraad"],
+    "on_acquire": null,
+    "agent_box": {},
+    "reveal": { "swords": 1 }
+  },
+  {
+    "name": "Diplomacy",
+    "card_type": "starter",
+    "cost": 0,
+    "faction_tags": [],
+    "access": ["emperor", "spacing_guild", "bene_gesserit", "fremen"],
+    "on_acquire": null,
+    "agent_box": {},
+    "reveal": { "persuasion": 1 }
+  },
+  {
+    "name": "Dune, the Desert Planet",
+    "card_type": "starter",
+    "cost": 0,
+    "faction_tags": [],
+    "access": ["desert"],
+    "on_acquire": null,
+    "agent_box": {},
+    "reveal": { "persuasion": 1 }
+  },
+  {
+    "name": "Reconnaissance",
+    "card_type": "starter",
+    "cost": 0,
+    "faction_tags": [],
+    "access": ["city"],
+    "on_acquire": null,
+    "agent_box": {},
+    "reveal": { "persuasion": 1 }
+  },
+  {
+    "name": "Seek Allies",
+    "card_type": "starter",
+    "cost": 0,
+    "faction_tags": [],
+    "access": ["emperor", "spacing_guild", "bene_gesserit", "fremen"],
+    "on_acquire": null,
+    "agent_box": { "text": "Trash this card." },
+    "reveal": {}
+  },
+  {
+    "name": "Signet Ring",
+    "card_type": "starter",
+    "cost": 0,
+    "faction_tags": [],
+    "access": ["landsraad", "city", "desert"],
+    "on_acquire": null,
+    "agent_box": { "solari": 1 },
+    "reveal": { "persuasion": 1 }
+  },
+
+  {
+    "name": "Arrakis Revolt",
+    "card_type": "imperium",
+    "cost": 6,
+    "faction_tags": ["fremen"],
+    "access": ["city"],
+    "on_acquire": null,
+    "agent_box": { "troops": 2, "spice": 2 },
+    "reveal": { "persuasion": 1, "swords": 3 }
+  },
+  {
+    "name": "Bene Gesserit Operative",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["bene_gesserit"],
+    "access": ["bene_gesserit"],
+    "on_acquire": null,
+    "agent_box": { "troops": 1 },
+    "reveal": {
+      "persuasion": 1,
+      "text": "If you have two or more Spies on the board: gain 2 additional persuasion."
+    }
+  },
+  {
+    "name": "Branching Path",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["bene_gesserit"],
+    "access": ["bene_gesserit", "city"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Alliance: gain 2 swords."
+    },
+    "reveal": { "persuasion": 2 }
+  },
+  {
+    "name": "Calculus of Power",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["emperor"],
+    "access": ["city", "spy"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "You may trash a card from your hand."
+    },
+    "reveal": {
+      "persuasion": 2,
+      "text": "Trash another Emperor card you have in play: gain 3 swords."
+    }
+  },
+  {
+    "name": "Captured Mentat",
+    "card_type": "imperium",
+    "cost": 5,
+    "faction_tags": [],
+    "access": ["landsraad", "desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Draw a card then gain 1 sword."
+    },
+    "reveal": {
+      "persuasion": 1,
+      "text": "Gain additional rewards based on cards revealed (exact icons unclear from image)."
+    }
+  },
+  {
+    "name": "Cargo Runner",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["spacing_guild"],
+    "access": ["landsraad", "city", "desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you have completed two or more contracts: gain 1 solari. If you have completed four or more contracts: gain 1 additional solari."
+    },
+    "reveal": { "persuasion": 1 }
+  },
+  {
+    "name": "Chani, Clever Tactician",
+    "card_type": "imperium",
+    "cost": 5,
+    "faction_tags": ["fremen"],
+    "access": ["city", "desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you have three or more units in the Conflict: gain 1 sword. Retreat two of your troops: gain swords."
+    },
+    "reveal": {
+      "swords": 4,
+      "text": "Fremen Bond: gain 2 persuasion."
+    }
+  },
+  {
+    "name": "Corrinth City",
+    "card_type": "imperium",
+    "cost": 6,
+    "faction_tags": ["emperor"],
+    "access": ["emperor", "landsraad"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Spend 5 persuasion to gain a VP token OR take your seat on the High Council."
+    },
+    "reveal": {
+      "persuasion": 5,
+      "text": "-OR- Take your seat on the High Council (if you haven't already)."
+    }
+  },
+  {
+    "name": "Covert Operation",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": [],
+    "access": ["spy"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Each opponent discards a card."
+    },
+    "reveal": { "troops": 2 }
+  },
+  {
+    "name": "Dangerous Rhetoric",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": [],
+    "access": ["landsraad", "spy"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Gain a bonus (intrigue or resource), then trash this card."
+    },
+    "reveal": { "persuasion": 1, "swords": 1 }
+  },
+  {
+    "name": "Delivery Agreement",
+    "card_type": "imperium",
+    "cost": 5,
+    "faction_tags": ["spacing_guild"],
+    "access": ["city", "desert"],
+    "on_acquire": null,
+    "agent_box": { "spice": 1 },
+    "reveal": {
+      "persuasion": 1,
+      "text": "-OR- If you have completed four or more contracts: trash this card to gain 1 solari/VP."
+    }
+  },
+  {
+    "name": "Desert Power",
+    "card_type": "imperium",
+    "cost": 6,
+    "faction_tags": ["fremen"],
+    "access": ["desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you sent an Agent to a Maker board space this turn: gain 2 persuasion."
+    },
+    "reveal": {
+      "persuasion": 2,
+      "text": "-OR- Spend 1 sword + 1 water + 1 troop to gain 2 persuasion."
+    }
+  },
+  {
+    "name": "Desert Survival",
+    "card_type": "imperium",
+    "cost": 2,
+    "faction_tags": ["fremen"],
+    "access": ["desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Trash a card from your hand."
+    },
+    "reveal": { "persuasion": 1, "swords": 1 }
+  },
+  {
+    "name": "Double Agent",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["emperor", "spacing_guild"],
+    "access": ["landsraad", "city", "desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "You are spying on the board space you sent an Agent to this turn. You may place this Spy on the same observation post as another player's Spy."
+    },
+    "reveal": { "persuasion": 1, "swords": 1 }
+  },
+  {
+    "name": "Ecological Testing Station",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["fremen"],
+    "access": ["desert", "city"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Spend 2 water to gain 1 solari."
+    },
+    "reveal": {
+      "persuasion": 1,
+      "text": "Fremen Bond: gain 1 additional persuasion."
+    }
+  },
+  {
+    "name": "Fedaykin Stilltent",
+    "card_type": "imperium",
+    "cost": 2,
+    "faction_tags": ["fremen"],
+    "access": ["desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you sent an Agent to a Maker board space this turn: gain 1 troop."
+    },
+    "reveal": { "water": 1 }
+  },
+  {
+    "name": "Guild Envoy",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["spacing_guild"],
+    "access": ["emperor", "spacing_guild", "bene_gesserit", "fremen"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you discarded a Spacing Guild card this turn: gain 1 solari."
+    },
+    "reveal": { "persuasion": 1 }
+  },
+  {
+    "name": "Guild Spy",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["spacing_guild"],
+    "access": ["spy", "spacing_guild"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you discarded a Spacing Guild card this turn: gain 1 troop."
+    },
+    "reveal": {
+      "persuasion": 2,
+      "text": "If you acquire The Spice Must Flow this turn: gain 1 Influence with each Faction you are spying on."
+    }
+  },
+  {
+    "name": "Hidden Missive",
+    "card_type": "imperium",
+    "cost": 2,
+    "faction_tags": ["bene_gesserit"],
+    "access": ["landsraad"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you have 2+ Bene Gesserit Influence: gain 1 troop and 1 solari."
+    },
+    "reveal": { "persuasion": 1, "swords": 1 }
+  },
+  {
+    "name": "Imperial Spymaster",
+    "card_type": "imperium",
+    "cost": 2,
+    "faction_tags": ["emperor"],
+    "access": ["emperor", "spy"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you recalled a Spy this turn: gain 1 sword or 1 influence."
+    },
+    "reveal": { "persuasion": 1, "swords": 1 }
+  },
+  {
+    "name": "In High Places",
+    "card_type": "imperium",
+    "cost": 5,
+    "faction_tags": ["emperor", "bene_gesserit"],
+    "access": ["emperor", "bene_gesserit"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you have another Bene Gesserit card in play: gain 1 troop and 1 solari."
+    },
+    "reveal": {
+      "persuasion": 2,
+      "text": "Gain troops then gain 3 additional persuasion."
+    }
+  },
+  {
+    "name": "Interstellar Trade",
+    "card_type": "imperium",
+    "cost": 7,
+    "faction_tags": ["spacing_guild"],
+    "access": ["landsraad", "city", "desert"],
+    "on_acquire": { "solari": 1 },
+    "agent_box": {},
+    "reveal": {
+      "text": "Gain 1 persuasion for each contract you have completed."
+    }
+  },
+  {
+    "name": "Junction Headquarters",
+    "card_type": "imperium",
+    "cost": 6,
+    "faction_tags": ["spacing_guild"],
+    "access": ["landsraad", "city", "desert", "spacing_guild"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Alliance (Spacing Guild): trash a card from your hand to gain 2 persuasion, then gain 1 solari."
+    },
+    "reveal": { "persuasion": 1, "water": 1, "troops": 1 }
+  },
+  {
+    "name": "Leadership",
+    "card_type": "imperium",
+    "cost": 5,
+    "faction_tags": ["fremen"],
+    "access": ["desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "For each sandworm you have in the Conflict: gain 1 solari."
+    },
+    "reveal": {
+      "persuasion": 2,
+      "text": "Gain 1 sword for each other revealed card that provides one or more swords this turn."
+    }
+  },
+  {
+    "name": "Long Live the Fighters",
+    "card_type": "imperium",
+    "cost": 7,
+    "faction_tags": ["fremen"],
+    "access": ["city"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If your deck has three or more cards: look at the top three cards, draw one, discard one, and trash one."
+    },
+    "reveal": { "persuasion": 2, "swords": 3 }
+  },
+  {
+    "name": "Maker Keeper",
+    "card_type": "imperium",
+    "cost": 2,
+    "faction_tags": ["bene_gesserit", "fremen"],
+    "access": ["city"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you have 2+ Bene Gesserit Influence: gain 1 persuasion and 1 water. If you have 2+ Fremen Influence: gain 1 persuasion and 1 solari."
+    },
+    "reveal": { "persuasion": 2 }
+  },
+  {
+    "name": "Maula Pistol",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["fremen"],
+    "access": ["city", "desert"],
+    "on_acquire": null,
+    "agent_box": { "solari": 1 },
+    "reveal": { "persuasion": 1, "swords": 1 }
+  },
+  {
+    "name": "Northern Watermaster",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["fremen"],
+    "access": ["city"],
+    "on_acquire": null,
+    "agent_box": { "water": 1 },
+    "reveal": {
+      "persuasion": 1,
+      "text": "Fremen Bond: gain 2 additional persuasion."
+    }
+  },
+  {
+    "name": "Overthrow",
+    "card_type": "imperium",
+    "cost": 8,
+    "faction_tags": [],
+    "access": ["emperor", "spacing_guild", "bene_gesserit", "fremen"],
+    "on_acquire": {
+      "text": "Gain 1 Influence with each Faction."
+    },
+    "agent_box": {
+      "text": "Gain two Influence instead of one."
+    },
+    "reveal": { "persuasion": 2, "swords": 2, "troops": 1 }
+  },
+  {
+    "name": "Paracompass",
+    "card_type": "imperium",
+    "cost": 4,
+    "faction_tags": [],
+    "access": ["city"],
+    "on_acquire": null,
+    "agent_box": { "persuasion": 2 },
+    "reveal": {
+      "text": "If you have a seat on the High Council: gain 2 persuasion and 1 sword. If you also have a Swordmaster: gain 1 additional persuasion."
+    }
+  },
+  {
+    "name": "Prepare the Way",
+    "card_type": "imperium",
+    "cost": 2,
+    "faction_tags": ["bene_gesserit"],
+    "access": ["landsraad", "city"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you have 2+ Bene Gesserit Influence: gain 1 solari."
+    },
+    "reveal": { "persuasion": 2 }
+  },
+  {
+    "name": "Price is No Object",
+    "card_type": "imperium",
+    "cost": 6,
+    "faction_tags": ["emperor", "bene_gesserit"],
+    "access": ["emperor", "bene_gesserit"],
+    "on_acquire": null,
+    "agent_box": {
+      "solari": 2,
+      "text": "You may acquire a card to your hand using Solari instead of Persuasion."
+    },
+    "reveal": { "persuasion": 2 }
+  },
+  {
+    "name": "Priority Contracts",
+    "card_type": "imperium",
+    "cost": 6,
+    "faction_tags": ["spacing_guild"],
+    "access": ["landsraad", "desert"],
+    "on_acquire": null,
+    "agent_box": { "spice": 1 },
+    "reveal": {
+      "persuasion": 2,
+      "text": "-OR- If you have completed four or more contracts: trash this card to gain 1 VP."
+    }
+  },
+  {
+    "name": "Public Spectacle",
+    "card_type": "imperium",
+    "cost": 4,
+    "faction_tags": ["emperor"],
+    "access": ["spy"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you recalled a Spy this turn: gain 1 intrigue card or 1 influence."
+    },
+    "reveal": { "persuasion": 1, "troops": 1 }
+  },
+  {
+    "name": "Rebel Supplier",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["fremen"],
+    "access": ["city"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you recalled a Spy this turn: gain 2 troops."
+    },
+    "reveal": { "persuasion": 1, "swords": 1 }
+  },
+  {
+    "name": "Reliable Informant",
+    "card_type": "imperium",
+    "cost": 2,
+    "faction_tags": ["spacing_guild"],
+    "access": ["spacing_guild"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Place a Spy on the Spacing Guild, Bene Gesserit, and Fremen faction boards."
+    },
+    "reveal": { "persuasion": 1, "swords": 1 }
+  },
+  {
+    "name": "Sardaukar Coordination",
+    "card_type": "imperium",
+    "cost": 4,
+    "faction_tags": ["emperor"],
+    "access": ["emperor", "landsraad"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "You may deploy any troops you recruit this turn to the Conflict."
+    },
+    "reveal": {
+      "persuasion": 2,
+      "text": "Gain 1 sword for each Emperor card you revealed this turn (including this one)."
+    }
+  },
+  {
+    "name": "Sardaukar Soldier",
+    "card_type": "imperium",
+    "cost": 1,
+    "faction_tags": ["emperor"],
+    "access": ["city"],
+    "on_acquire": null,
+    "agent_box": {},
+    "reveal": { "persuasion": 1, "swords": 1 },
+    "trash_effects": [
+      { "text": "When this card is trashed: gain 1 sword or 1 influence." }
+    ]
+  },
+  {
+    "name": "Shishakli",
+    "card_type": "imperium",
+    "cost": 4,
+    "faction_tags": ["fremen"],
+    "access": ["city", "desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Trash a card from your hand: gain 1 solari."
+    },
+    "reveal": {
+      "swords": 2,
+      "text": "Fremen Bond: gain 1 Influence with a Faction."
+    }
+  },
+  {
+    "name": "The Spice Must Flow",
+    "card_type": "reserve",
+    "cost": 9,
+    "faction_tags": ["spacing_guild"],
+    "access": [],
+    "on_acquire": { "spice": 1 },
+    "agent_box": {},
+    "reveal": { "spice": 1 }
+  },
+  {
+    "name": "Smuggler's Harvester",
+    "card_type": "imperium",
+    "cost": 1,
+    "faction_tags": ["spacing_guild"],
+    "access": ["desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you sent an Agent to a Maker board space this turn: gain 1 spice."
+    },
+    "reveal": { "persuasion": 1 }
+  },
+  {
+    "name": "Smuggler's Haven",
+    "card_type": "imperium",
+    "cost": 4,
+    "faction_tags": ["spacing_guild"],
+    "access": ["spacing_guild", "desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Spend 4 persuasion to gain 1 solari."
+    },
+    "reveal": {
+      "persuasion": 1,
+      "text": "If you are spying on a Maker board space: gain 2 additional persuasion."
+    }
+  },
+  {
+    "name": "Southern Elders",
+    "card_type": "imperium",
+    "cost": 4,
+    "faction_tags": ["bene_gesserit", "fremen"],
+    "access": ["bene_gesserit", "fremen"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you have another Bene Gesserit card in play: gain 2 troops."
+    },
+    "reveal": {
+      "water": 1,
+      "text": "Fremen Bond: gain 2 persuasion."
+    }
+  },
+  {
+    "name": "Space-Time Folding",
+    "card_type": "imperium",
+    "cost": 1,
+    "faction_tags": ["spacing_guild"],
+    "access": ["spacing_guild"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you discarded a Spacing Guild card this turn: gain 1 solari."
+    },
+    "reveal": { "persuasion": 1 }
+  },
+  {
+    "name": "Spacing Guild's Favor",
+    "card_type": "imperium",
+    "cost": 5,
+    "faction_tags": ["spacing_guild"],
+    "access": ["spacing_guild", "desert"],
+    "on_acquire": null,
+    "agent_box": { "solari": 1 },
+    "reveal": {
+      "persuasion": 2,
+      "text": "Spend 3 persuasion to gain an additional reward. When this card is discarded: gain 2 persuasion."
+    }
+  },
+  {
+    "name": "Spy Network",
+    "card_type": "imperium",
+    "cost": 2,
+    "faction_tags": ["emperor", "spacing_guild"],
+    "access": ["spy"],
+    "on_acquire": null,
+    "agent_box": {
+      "persuasion": 2,
+      "swords": 1,
+      "text": "If you have two or more Spies on the board: place or move a Spy."
+    },
+    "reveal": { "persuasion": 1, "troops": 1 }
+  },
+  {
+    "name": "Steersman",
+    "card_type": "imperium",
+    "cost": 8,
+    "faction_tags": ["spacing_guild"],
+    "access": ["spacing_guild", "landsraad", "city", "desert"],
+    "on_acquire": { "spice": 1 },
+    "agent_box": {
+      "troops": 1,
+      "text": "Gain 1 troop and escalate it (place in combat)."
+    },
+    "reveal": { "persuasion": 2, "spice": 2 }
+  },
+  {
+    "name": "Stilgar, the Devoted",
+    "card_type": "imperium",
+    "cost": 6,
+    "faction_tags": ["fremen"],
+    "access": ["city", "desert"],
+    "on_acquire": null,
+    "agent_box": { "troops": 2 },
+    "reveal": {
+      "text": "Gain 2 persuasion for each Fremen card you have in play (including this one)."
+    }
+  },
+  {
+    "name": "Strike Fleet",
+    "card_type": "imperium",
+    "cost": 5,
+    "faction_tags": [],
+    "access": ["spy"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you recalled a Spy this turn: gain 3 troops."
+    },
+    "reveal": { "persuasion": 1, "swords": 3 }
+  },
+  {
+    "name": "Subversive Advisor",
+    "card_type": "imperium",
+    "cost": 5,
+    "faction_tags": [],
+    "access": ["spy"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you sent an Agent to a Faction board space this turn: gain two Influence instead of one and trash this card."
+    },
+    "reveal": { "persuasion": 1 }
+  },
+  {
+    "name": "The Beast's Spoils",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["emperor"],
+    "access": ["city"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Gain rewards for your face-up battle icons: each sword icon = 1 sword, each X = trash a card, each spice icon = 1 spice, each troop cube = 1 troop."
+    },
+    "reveal": { "swords": 3 }
+  },
+  {
+    "name": "Thumper",
+    "card_type": "imperium",
+    "cost": 3,
+    "faction_tags": ["fremen"],
+    "access": ["desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Double the bonus spice you harvest with this Agent."
+    },
+    "reveal": { "persuasion": 1, "spice": 1 }
+  },
+  {
+    "name": "Treacherous Maneuver",
+    "card_type": "imperium",
+    "cost": 5,
+    "faction_tags": ["emperor"],
+    "access": ["emperor", "spacing_guild", "bene_gesserit", "fremen"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Trash this card and an Emperor card from your hand: gain two Influence instead of one."
+    },
+    "reveal": { "persuasion": 1, "influence_emperor": 1 }
+  },
+  {
+    "name": "Tread in Darkness",
+    "card_type": "imperium",
+    "cost": 4,
+    "faction_tags": ["bene_gesserit"],
+    "access": ["landsraad", "city", "desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you have another Bene Gesserit card in play: trash a card to gain 1 solari."
+    },
+    "reveal": { "persuasion": 2, "swords": 1 }
+  },
+  {
+    "name": "Truthtrance",
+    "card_type": "imperium",
+    "cost": 4,
+    "faction_tags": ["bene_gesserit"],
+    "access": ["emperor", "spacing_guild", "bene_gesserit", "fremen"],
+    "on_acquire": null,
+    "agent_box": {},
+    "reveal": { "persuasion": 1 }
+  },
+  {
+    "name": "Undercover Asset",
+    "card_type": "imperium",
+    "cost": 2,
+    "faction_tags": ["emperor", "spacing_guild"],
+    "access": ["landsraad", "city", "desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "Ignore Influence requirements on board spaces when sending an Agent this turn."
+    },
+    "reveal": {
+      "text": "Gain 1 troop -OR- gain 1 sword."
+    }
+  },
+  {
+    "name": "Unswerving Loyalty",
+    "card_type": "imperium",
+    "cost": 1,
+    "faction_tags": ["fremen"],
+    "access": [],
+    "on_acquire": null,
+    "agent_box": {},
+    "reveal": {
+      "persuasion": 1,
+      "troops": 1,
+      "text": "Fremen Bond: you may deploy or retreat one of your troops."
+    }
+  },
+  {
+    "name": "Weirding Woman",
+    "card_type": "imperium",
+    "cost": 1,
+    "faction_tags": ["bene_gesserit"],
+    "access": ["city", "desert"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you have another Bene Gesserit card in play: return this card from play to your hand."
+    },
+    "reveal": { "persuasion": 1, "swords": 1 }
+  },
+  {
+    "name": "Wheels Within Wheels",
+    "card_type": "imperium",
+    "cost": 2,
+    "faction_tags": ["emperor", "spacing_guild"],
+    "access": ["spy"],
+    "on_acquire": null,
+    "agent_box": {
+      "text": "If you have 2+ Emperor Influence: gain 2 persuasion. If you have 2+ Spacing Guild Influence: gain 1 additional persuasion."
+    },
+    "reveal": { "persuasion": 1, "troops": 1 }
+  }
+]

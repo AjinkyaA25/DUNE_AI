@@ -1,0 +1,1224 @@
+﻿Last Updated: 6/7/26
+
+
+DUNE IMPERIUM FAQ
+Includes Rise of Ix + Immortality + Uprising + Bloodlines
+(3v3 FAQ can be found here)
+
+
+Cmd+F or Ctrl+F to search this document by keyword
+
+
+This document is unofficial and not created by Direwolf. However, it compiles official rulings from various sources in one easy to reference file. It contains every FAQ/Clarification from the official Dune FAQ and every rulebook, plus several additional questions and edge cases asked in the forums or Discord community.
+
+
+Unless labeled otherwise, each entry has been verified by an official source or ruling from the designers. For any questions, comments, or additions, please message elessar on the TTS Club discord or on BGG.
+
+
+Sources are linked below each entry:
+* Official Dune Imperium FAQ 
+* Dune Imperium Rulebook 
+* Rise of Ix Rulebook
+* Immortality Rulebook
+* Uprising Rulebook 
+* Bloodlines Rulebook
+* BoardGameGeek forum threads where the designer Paul Dennen (Merakon) has commented
+* Direwolf Discord posts where Paul has commented
+* Hidden Assets Discord posts where Paul has commented
+* On occasion, sources are direct message or in-person confirmations with the designer, in which case no source is linked
+
+
+GUIDING PRINCIPLES
+
+Order of Operations
+* On an Agent Turn, you:
+1. Play a card from your hand to send the agent
+2. Then place your agent on an eligible board location and pay the location cost (if any)
+3. Pull a spy to Gather Intelligence if desired 
+4. Then activate the effects of the board space and the agent box in any order (see below for details)
+* Once you declare a Reveal Turn, you must immediately reveal your hand, and then can activate other effects in any order.
+Source: Dune Imperium Rulebook 
+Source: BGG forum
+Source: Message from designer
+   * Exception: See Guild Spy
+        
+
+
+Timing of Effects
+   * As you take your turn, you may gain a variety of effects from board locations (including faction bumps), agent boxes, unload abilities, leader abilities, intrigue cards, tech tiles, contracts, and the research track. You may normally execute these effects in any order you choose, keeping in mind the restrictions below:
+Source: Dune Imperium Rulebook 
+      * You may not interrupt an “atomic effect” with another effect (see below)
+      * If there is a [Cost → Reward] effect indicated by an arrow, you must perform the cost on the left before you perform the reward on the right.
+Source: BGG Forum
+      * You cannot activate an effect from a card that is already trashed
+         * However, persuasion and swords go into a pool and don't go away even if the card that supplied them is trashed. This is true for your swords even if you started with no units in the combat.
+See Duncan Loyal Blade
+         * Unload effects are of course still activated as they are being trashed
+         * Some effects are considered “already installed effects” and their effect can persist even after they are trashed. Examples include Weirding Way, Chairdog, and Usurp. Essentially the effect was already triggered by the card, before the card was destroyed.
+Source: BGG Forum (Note: this ruling reverses a previous ruling) 
+            * If you choose to recall a Spy to Gather Intelligence (draw a card), you must choose whether to do this immediately after placing your Agent, before receiving any effects of the board space or card you played.
+Source: Uprising Rulebook 
+               * Plot Intrigue Cards and relevant Tech Tiles may be played at any time on your Agent or Reveal turn, provided they abide by the restrictions above.
+Source: Dune Imperium Rulebook 
+Source: Official Dune Imperium FAQ
+        
+Atomic Effects
+                  * An atomic effect is a grouping of effects considered to be one effect that cannot be interrupted. The following are atomic effects:
+                  * Any double faction influence bump (e.g. Power Play, Shifting Allegiances) may not be interrupted.
+Source: BGG Forum
+                  * A [Cost → Reward] effect may not be interrupted. You must finish executing the full Cost and Reward before moving on to other effects.
+                  * Exception: If the left side triggers any Unload effects, you MUST fully execute the Unload effects before moving on to the right side.
+This is Paul’s most recent ruling - the question was previously answered differently:
+Source: BGG Forum (2023) - You can’t interrupt it + exception with Unload
+Source: BGG Forum (2022) - You can interrupt it
+Source: BGG Forum (2021) - You can’t interrupt it
+                  * Acquire Effects must be taken immediately upon acquiring the Card or Tech.
+Source: Direwold Discord Post
+                  * The effect “Choose Two:” (e.g on Long Reach, Machinations, Propaganda, Stitched Horror) must be chosen together and fully resolved before moving on to other effects. For example with Propaganda, you should announce which two factions you are moving up on before taking the bumps (if you reach BG Level 4 Influence, you don’t get to see the Intrigue before deciding your other bump).
+Source: Message from designer
+                     * If an Intrigue card has two effects (e.g. Depart for Arrakis), you may not normally interrupt the two effects with other player-initiated actions. Resolve the Intrigue card “in one piece” before doing other actions.
+                     * Note that faction bonuses (such as drawing an Intrigue on the BG track) may interrupt this flow, since they are not considered player-initiated. See Changing Allegiances.
+Source: Message from designer.
+                     * In most cases, each sentence is considered a separate effect. 
+                     * For example, Power Play’s two sentences are separate effects:
+                     * “Trash this card.”
+                     * “Gain two influence instead of one.”
+Source: BGG Forum
+                     * Exceptions:
+                     * Imperium Ceremony’s two sentences are one effect.
+Source: BGG forum
+                     * Long Live the Fighter’s two sentences are one effect. 
+Source: Message from designer
+
+
+Mandatory vs. Optional Effects
+                        * Effects in Dune Imperium (from board locations, Agent boxes, Reveal effects, Techs) are generally mandatory, with the following exceptions:
+                        * When the word “may” is used. This includes:
+                        * Tech Negotiation
+                        * Acquire Tech
+                        * The Black X trash icon
+                        * Removing the Shield Wall token
+                        * When “may” is printed on the card
+                        * (Note that Fremen Bond and Command are mandatory, despite the word “may” mistakenly being used in the rulebook)
+                        * Any time the effect is a cost for another reward (shown with an arrow)
+Source: Official Dune Imperium FAQ
+Source: Rise of Ix Rulebook 
+Uprising Rulebook 
+                        * You cannot execute & fizzle a conditional effect while the precondition is false. In other words, you can’t announce that you’re using the ability for no effect while the condition is false, to avoid using the effect when the condition becomes true.
+                        * Example: You will be forced to draw a card from Prepare the Way if you reach (and maintain) 2 influence with the Bene Gesserit by the end of your turn. E.g. if you send Prepare the Way to High Council and fulfill the contract that gives you a Bene Gesserit influence. Unless you somehow drop back down below 2 influence by the end of your turn, you will be forced to activate the card draw from Prepare the Way.
+                        * Example: Muad'Dib will be forced to draw an intrigue card from his passive ability if he has worms in the combat by the end of his Reveal turn. He can’t say he activated his passive before he plays Unexpected Allies to put in a worm.
+Source: Hidden Assets Discord
+
+
+
+
+Acquire Effects vs. Row Replacement
+                        * Which happens “more immediately”: the row getting replaced with a new card/tech, or the Acquire effects from purchasing a card/tech?
+The row getting replaced takes precedence, and should happen before you resolve the Acquire effect of your card or tech.
+Source: Message from designer
+
+Combat Phase Timing
+                        * Is there a set order for taking combat rewards? The rules do not indicate an order for players to take their rewards, and in most cases it does not matter. If it does matter (e.g. someone has knowledge of the top Intrigue card), the designer recommends resolving in combat placement order (1st to 3rd), with the current round’s player turn order breaking ties if needed.
+Source: Message from designer
+                        * See this Quick Reference guide for a reminder on the timing within the Combat Phase, as well as tie scenarios.
+
+  
+
+
+FREQUENTLY ASKED QUESTIONS / CLARIFICATIONS
+
+
+Alliance
+                           * If you have an Alliance token and lose Influence with that Faction, you also lose the token in either of these cases:
+                           * You were previously tied for Influence with another player; the player you were tied with now takes the Alliance token. (If you were tied with more than one other player, choose one to take it.)
+                           * If you have fallen to 3 Influence or lower. (If no player has 4 Influence or higher to take the Alliance token, return it to the game board.)
+Source: Official Dune Imperium FAQ
+
+
+Appropriate
+                           * You can’t mix Solari and spice to pay the cost of a Tech tile.
+Source: Rise of Ix Rulebook  
+                           * You can return Negotiators from Ix to reduce the cost by 1 Solari each.
+Source: Rise of Ix Rulebook 
+                           * If you send an activated Appropriate to shipping and drop from the top tier, you receive two distinct Acquire Tech effects:
+                              * You may buy a tech with Spice, at a discount of 2 Spice. AND
+                              * You may buy another tech using either Solari or Spice
+You may spend Tech Negotiator cubes toward either transaction. You may NOT confuse the two transactions and receive a -2 discount on the tech you get from Appropriate.
+Source: Direwolf Discord Post
+Source: Rise of Ix Rulebook 
+
+
+Archduke Armand Ecaz
+                              * To use his “Coordination” ability, you must have at least two Agents on spaces with any of the three listed Agent icons. The Agents don’t need to be on spaces with the same icon.
+Source: Official Dune Imperium FAQ
+                              * If he controls the Mentat, it counts as one of his Agents and can help trigger the Coordination Ability.
+Source: BGG Forum
+
+
+Arrakis Revolt
+                                 * If you visit a non-combat space with Arrakis Revolt (via grafting, e.g.), you may still deploy a sandworm to the combat.
+Source: Message from designer
+
+
+Assassination Mission
+                                    * You must use some other means to trash this card for its 4 Solari; the card provides no way to trash itself.
+Source: Official Dune Imperium FAQ
+
+
+Baron Vladimir Harkonnen, Masterstroke
+                                       * To use the Masterstroke ability, choose two of the four Baron Harkonnen tokens and place them on your Leader with the Faction side face down. (Return the other two to the box without letting any opponents see them.) Later, reveal your choices as described to gain your reward. You choose the factions for the “Masterstroke” ability after completing all setup, before the first round begins. You may only reveal your choices and gain Influence one time during a game.
+Source: Dune Imperium Rulebook 
+Source: Official Dune Imperium FAQ
+
+
+Beguiling Pheromones
+                                          * When you use this to trash the other grafted card, you can’t also get an effect on that card that requires trashing it as a cost. For example: when you use Beguiling Pheromones to trash a grafted Imperial Spy, you cannot also draw an Intrigue card using Imperial Spy (as trashing the card is a required cost for that effect).
+Source: Official Dune Imperium FAQ
+Source: BGG forum
+                                          * You can use Beguiling Pheromones to trash a card that would otherwise be trashed anyway (for example: Foldspace, Seek Allies).
+Source: Official Dune Imperium FAQ
+
+
+Bindu Suspension
+                                             * You must play this Intrigue card at the start of your Agent turn, before doing anything else. When you do, draw a card, then you may choose to pass your turn or play your turn normally.
+Source: Dune Imperium Rulebook 
+Source: BGG Forum (Note Paul’s correction on the language of the link above)
+
+Bombast
+                                                * If you trash Bombast with Calculus of Power, can you still get 3 solari from Bombast’s reveal effect? No. You cannot activate effects from a card that is already trashed. Either Calculus trashes Bombast, or Bombast trashes itself. You would need to choose whether you want 3 swords or (assuming you qualify for the Command effect) 3 solari.
+See “Timing of Effects”
+Source: BGG Forum 
+
+
+Call to Arms
+                                                   * “During your Reveal turn this round, whenever you acquire a card:” - this does not include Intrigue cards.
+Source: Hidden Assets Discord post
+                                                   * This Intrigue card does not work retroactively. To get any troops from it, you must play it before you acquire card/s.
+Source: Hidden Assets Discord post
+                                                      * You may play this card during an Agent Turn. If so, simply set it aside until your Reveal Turn.
+Source: Official Dune Imperium FAQ (see Charisma)
+
+
+Calculated Hire
+                                                         * This Intrigue card can only take the Mentat from its starting position in the Landsraad.
+Source: Dune Imperium Rulebook 
+
+
+Carryall
+                                                            * The base spice you harvest is 1 from Imperial Basin, 2 from Hagga Basin, and 3 from The Great Flat. (When playing Uprising, it is 2 from Habbanya Erg and 4 from Deep Desert.)
+Source: Official Dune Imperium FAQ
+
+
+Chairdog
+                                                               * Once you return the other grafted card to your hand, you must complete your Reveal turn. You cannot change to an Agent turn and play the card you returned.
+Source: Official Dune Imperium FAQ
+                                                               * You can’t use Chairdog with Kwisatz Haderach to enable a second use of Kwisatz on the same round. Once you have started your Reveal Turn, you can’t change it to be an Agent Turn.
+Source: BGG forum
+                                                               * If you graft Chairdog to a card, but then trash Chairdog before your reveal turn, do you still return the other grafted card to your hand? Yes, the Chairdog puts an "installed effect" on the card it's grafted with, during the Agent turn when you play Chairdog. Even if you trash Chairdog before the Reveal turn, that effect remains installed on the other card.
+Source: BGG Forum
+Source: BGG Forum
+                                                                  * If you graft Chairdog with Stillsuit Manufacturer, return Stillsuit Manufacturer to your hand, lose your Fremen alliance, and play it again on a future Agent turn, does Chairdog still recognize it as “the other grafted card” when it comes time for your Reveal turn (i.e. can you still use Stillsuit Manufacturer for the Reveal effect)? Unknown
+
+
+Changing Allegiances
+                                                                  * You may play this card for just one or for both of its effects.
+Source: Message from designer.
+                                                                  * You may not interrupt the two parts of this intrigue card with other player-initiated actions. 
+Source: Message from designer.
+                                                                  * As Lady Margot playing Changing Allegiances, can you shift influence to trigger your Loyalty bonus (2 spice from reaching 2 influence with BG), then use that spice toward the other part of the intrigue (paying 3 spice for a faction bump)? Yes.
+Source: Message from designer.
+                                                                  * As Y’rkoon playing Changing Allegiances, can you shift influence to trigger a Navigation card that gives you spice, and then use that spice to pay for the second part of Changing Allegiances? Yes. Intrigues must be executed “in one piece”, meaning there can’t be a player-initiated action in the middle of processing it. But the Navigation cards are “automatically triggered” not player-initiated.
+Source: Message from designer.
+
+
+Chani (leader)
+                                                                     * During setup, place the Tactics token on the track printed on the track printed on the leader, in the space corresponding to the number of players. When the token reaches the rightmost space, reset it by returning it to the space you started on.
+Source: Bloodlines rulebook
+                                                                     * If you lose or retreat enough troops that you would pass the end of the Tactics track, you still reset at the starting space (and do not advance for those extra troops).
+Source: Bloodlines rulebook
+                                                                     * When resolving combat, troops that return to your supply are considered “lost.” Each different source of retreating or losing troops is handled separately.
+Source: Official Dune Imperium FAQ
+                                                                     * Can you push a troop in, retreat it with your Signet ring, and then immediately deploy it again the same turn? No, not unless you have a separate means of deploying it such as Detonation. “You can't deploy the same troop more than once from the same deployment source.”
+Source: Message from designer 
+                                                                     * Can you use the same physical cube twice toward fulfilling an intrigue card like Distraction or Coercive Negotiation (“when you deploy three or more units to the Conflict in a single turn”), if you deploy, retreat, and deploy that troop again (e.g. with Detonation)? 
+No. “You need to have a moment in time when there are 3 units in the conflict that were deployed to the conflict this turn, then that requirement becomes true.”
+Source: Message from designer 
+
+
+Chaumurky
+                                                                        * This Tech tile is an Endgame tiebreaker between players with the same number of Victory Points. (The amount of spice, Solari, water, and garrisoned troops those players have is irrelevant; the player with Chaumurky wins.)
+Source: Official Dune Imperium FAQ
+
+
+Choam Demands
+                                                                           * Can you send this card to Accept Contract and immediately fulfill your new contract using this card’s agent box? Yes. 
+Source: The card text itself. This card is an alternative means to complete a contract, substituting for the usual method. 
+Discussion: BGG Forum
+
+
+Choam Transports
+                                                                           * The card draw from CHOAM Transports is triggered as soon as the contract is completed and can't be deferred.
+Source: Message from designer
+                                                                           * If you have a High Council contract, then visit High Council and purchase the Choam Transports tech, can you draw a card for completing your High Council contract?
+Yes. Contract completion is just another effect that you process whenever you want before the end of the turn. If you wanted to avoid the card draw, you could choose to fulfill your contract before purchasing the tech.
+Source: Hidden Assets Discord post
+
+
+Clandestine Meeting
+                                                                              * To play this card on an Agent turn, you must add at least one Agent icon to it somehow, (For example, by grafting it.)
+Source: Immortality Rulebook
+
+
+Combat Rewards Timing
+                                                                                 * The rules do not indicate an order for players to take their combat rewards, and in most cases it does not matter. If it does matter (e.g. someone has knowledge of the top intrigue card, or multiple players have a choice or rewards), then resolve in the current round’s player turn order, starting with whoever is holding the First Player Token.
+Source: Message from designer
+See also: Combat Phase Timing sheet
+
+
+Combat Symbol
+(The crossed swords that appear on High Priority Travel and Occupation)
+                                                                                    * You cannot stack this symbol (i.e. move 2+2 units from garrison to conflict if you send this card to a Combat board space)
+Source: BGG Forum
+                                                                                    * On High Priority Travel, you may select the Combat Symbol (instead of the Card Draw) even if you sent the card to a Combat board space. The symbol fizzles and provides no added effect.
+Source: BGG Forum
+
+
+Command
+                                                                                       * Command effects (when you generate 6 or more Persuasion on Reveal) are mandatory. (The icon guide mistakenly uses the word “may”. The actual rulebook page is the correct one.)
+Source: Message from designer
+Source: BGG Forum
+
+
+Conflict
+                                                                                       * The rules for giving rewards in a Conflict are the same for one, two, or three players. They are different only for four players.
+Source: Official Dune Imperium FAQ
+                                                                                       * In a three player game, the 3rd place rewards are ignored, except in case of a tie for second.
+Source: BGG Forum - includes examples of various tie scenarios
+
+
+Contracts
+                                                                                          * It is mandatory to complete a contract when you fulfill its conditions. When you have multiple contracts for the same board space, they are all completed in one turn, by sending one Agent to that space.
+Source: Official Dune Imperium FAQ
+                                                                                          * If a contract’s condition is sending an Agent to a board space, the contract is another effect of your Agent turn. You may carry out the contract effect in any order with the effects of the board space and the Agent box of the card you played.
+Source: Official Dune Imperium FAQ
+Source: Hidden Assets Discord post
+                                                                                             * If you complete the Sardaukar contract that lets you Recall an Agent, during your first turn of the round, you are still required to complete the contract; the reward simply fizzles, since you have no other agent to recall.
+Source: BGG Forum
+                                                                                             * If you gain spice (e.g. from an Intrigue), then acquire a Harvest contract (e.g. from Leverage), then visit a Maker location, does that previous spice count toward the number needed to fulfill the Harvest contract? Yes.
+Source: Message from designer 
+                                                                                             * Does the “Earn Any Alliance” contract trigger if you already have an alliance when you get the contract? No. Whenever you take an alliance marker after taking the contract, the contract is completed.
+Source: Bloodlines Rulebook
+Source: BGG Forum
+                                                                                                * If you are at 3 influence with the Emperor, and go to Dutiful Service acquiring the “Earn Any Alliance” contract, could you immediately fulfill it that turn? Yes, you choose the order of effects, so you can acquire the contract first, then take the Emperor bump.
+Source: See “Timing of Effects”
+Discussion:  BGG Forum
+
+
+Corner the Market
+                                                                                                   * Count the total number of The Spice Must Flow cards in your deck and your discard pile. Count each opponent’s The Spice Must Flow cards separately; if any one of them has more than you (or the same number as you), you don’t meet the second requirement of the Intrigue card. 
+Source: Official Dune Imperium FAQ
+
+
+Corrinth City
+                                                                                                   * If you discard a card for Corrinth City, can you use its Unload effect to gain Solari to use toward the 5 Solari cost? (e.g. Freighter Fleet, Choam Delegate)
+No - you must be able to cover the entire cost before you start activating the effect. “You must ‘spot’ all costs before initiating the effect.”
+Source: Message from designer 
+
+
+Count Hasimir Fenring
+                                                                                                      * You do not gain Solari when trashing an Intrigue card.
+Source: Bloodlines rulebook
+
+
+Count Ilban Richese
+                                                                                                         * The “Ruthless Negotiator” ability works only when paying Solari for the printed cost of a space on the game board (not, for example, when using one of your cards with an ability that costs Solari).
+Source: Official Dune Imperium FAQ
+
+
+Countess Ariana Thorvald
+                                                                                                            * The “Spice Addict” ability is not optional. It affects only the spice you harvest when sending an Agent to a Maker (desert) board space, not spice you receive by other means.
+Source: Official Dune Imperium FAQ
+                                                                                                            * When playing Uprising, it is possible to harvest no spice from Deep Desert and Hagga Basin (if there is no bonus spice there, and you choose to summon a sandworm rather than take base spice). In such a case, you did not “harvest spice” (even if you used another card that gives you spice), so the “Spice Addict” ability does not apply.
+Source: Official Dune Imperium FAQ
+
+
+Court Intrigue / Sonic Snoopers
+                                                                                                               * When you place a card on the bottom of the Intrigue deck, do not reveal it to your opponents.
+Source: Rise of Ix Rulebook 
+
+
+Demand Respect
+                                                                                                                  * If you win a Conflict that rewards you with spice, you may take that spice first, then use it to play this Intrigue card. (You may also play “To the Victor…” to gain the spice to then play Demand Respect.)
+Source: Dune Imperium Rulebook 
+
+
+Depart for Arrakis
+                                                                                                                     * You may play this card just for the card draw and not the troops
+Source: Message from designer
+                                                                                                                     * You may play this card just for the troops and not the card draw – but you cannot decline the card draw if you meet the influence requirement. 
+Source: Message from designer
+                                                                                                                     * You may not interrupt the two parts of this intrigue card with other actions. (You cannot perform the card draw, then use that card to go to harvest spice, then use that spice to pay for the troops.)
+
+
+Desert Ambush
+                                                                                                                        * The person playing Desert Ambush decides which units are forced to retreat. 
+Source: BGG Forum
+                                                                                                                        * Desert Ambush cannot make a sandworm retreat. Sandworms can never enter a garrison, thus they can never be retreated.
+Source: BGG forum
+
+
+Discard
+                                                                                                                           * When a player is directed to discard a card (for example: Reverend Mother Mohiam, Test of Humanity), this means a card from their hand, unless otherwise specified.
+Source: Official Dune Imperium FAQ
+
+
+Discard Piles
+                                                                                                                              * Discard piles are public information. You may look through your own discard pile or an opponent’s discard pile at any time. 
+Source: BGG forum 
+
+Dispatch an Envoy
+                                                                                                                                 * This card does not remove any icons from the affected card. It also does not add a copy of an icon that a card already has. For example: you graft Slig Farmer to Spice Hunter and play Dispatch an Envoy. One of Spice Hunter’s two agent icons is Fremen, so Dispatch an Envoy adds only the other three icons. You gain 5 Solari for Slig Farmer.
+Source: Official Dune Imperium FAQ
+Source: BGG forum
+Source: BGG forum
+                                                                                                                                    * If you play two cards grafted together to send an Agent, you choose which card gains the Agent icons.
+Source: Immortality Rulebook
+                                                                                                                                       * If you use Dispatch an Envoy to add icons to a card that has an Infiltration icon, the new icons you add do not allow you to infiltrate those regions. 
+Source: Rise of Ix Rulebook 
+                                                                                                                                       * You may play Dispatch an Envoy on your reveal turn.
+Source: BGG Forum
+                                                                                                                                       * You may play Dispatch an Envoy even after sending an agent, but it won’t apply the icons.
+Source: BGG Forum
+
+
+Disruption Tactics
+                                                                                                                                          * The person playing Disruption Tactics decides which enemy troop is forced to retreat. 
+Source: See Desert Ambush
+Discussion: BGG Forum
+
+
+Double Cross
+                                                                                                                                          * At least one opponent must have a troop in the Conflict for you to play this Intrigue card. (But you do not need to have any troops in your supply.)
+Source: Official Dune Imperium FAQ
+
+
+Dreadnoughts
+                                                                                                                                             * The base game rules require you to have a “troop” in the conflict for you to have strength, count your swords, and play Combat intrigue cards. A deployed dreadnought allows the same, even if you have it in a conflict without any troops. However, a dreadnought in your garrison does none of these things, and does not add strength to the conflict.
+Source: Official Dune Imperium FAQ
+                                                                                                                                             * Can you visit the dreadnought space even if you already have two dreadnoughts? Yes. The Acquire Dreadnought effect simply “fizzles”.
+Source: BGG forum
+
+
+Duke Leto’s Prudent Diplomacy
+                                                                                                                                                * If you send Leto’s Signet Ring to a Faction Space with Dispatch an Envoy, can you choose to take the Signet bump before the regular bump from visiting the space (i.e. to steal someone’s alliance)? Yes.
+Source: Dune Imperium Rulebook (see page 9)
+
+
+Duncan Idaho (leader)
+                                                                                                                                                * If your Duncan Idaho agent is in the combat, can you recall him if you later go Imperial Privilege? Yes
+Source: Message from designer
+
+
+Duncan Loyal Blade
+                                                                                                                                                   * If you start with zero units in combat, then trash Duncan Loyal Blade to deploy all your garrisoned troops to combat, do the two swords from his reveal box still count toward your combat strength? Yes.
+Source: BGG Forum discussion
+Source: Direwolf Discord Post
+
+Endgame
+                                                                                                                                                      * In the extremely rare case that the endgame tiebreakers listed in the rulebook aren’t enough to resolve a tie, the final tiebreaker is the player who most recently took a Reveal turn.
+Source: Official Dune Imperium FAQ
+
+
+Engineered Miracle
+                                                                                                                                                         * This card cannot be used to acquire The Spice Must Flow or Prepare the Way (those piles are part of the Reserve, not the Imperium Row).
+Source: Uprising Rulebook 
+
+
+Esmar Tuek (card)
+                                                                                                                                                            * If you start with no spice, go to Carthag with Esmar Tuek, draw and play Cull to trash Esmar, can you use that spice from Esmar’s Unload ability to pay for his Agent box effect? No.
+Source: BGG Forum
+
+
+Esmar Tuek (leader)
+                                                                                                                                                               * During setup [when using this leader], place the Tuek’s Sietch board space near the game board. It is a Maker board space and accumulates spice accordingly. 
+Source: Bloodlines rulebook
+                                                                                                                                                               * Using your Signet Ring, you may place a bonus spice on Tuek’s Sietch and then gain it using the Agent you sent there (all on the same turn).
+Source: Bloodlines rulebook
+
+False Orders
+                                                                                                                                                                  * Each opponent affected by this card must move their Spy to an empty observation post that isn’t connected to the space where you sent an Agent this turn. You may play this Intrigue card even if no opponents’ Spies are on the space where you sent an Agent this turn.
+Source: Official Dune Imperium FAQ
+
+
+Feyd-Rautha Harkonnen
+                                                                                                                                                                  * During setup, place the Feyd token on the leftmost space of the Training track printed on the Leader. When the token reaches the rightmost space, it remains there for the rest of the game.
+Source: Uprising Rulebook 
+                                                                                                                                                                  * After you reach the end of Feyd’s track and activate the right-most reward, his signet ability no longer provides any rewards.
+Discussion: BGG Forum
+                                                                                                                                                                  * You may only activate “Devious Strength” once per Reveal Turn.
+See Paying a Cost
+
+
+Foldspace
+                                                                                                                                                                     * You can only acquire this card using the Foldspace icon (for example: the board space of the same name, or Ilesa Ecaz’s signet ring ability).
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                     * Foldspace’s two sentences are separate effects:
+                                                                                                                                                                        * “Trash this card.”
+                                                                                                                                                                        * Card Draw Icon
+Source: BGG Forum
+                                                                                                                                                                        * When playing this card on an Agent Turn, the card draw is effectively optional. (You can choose to trash it first before you activate the card draw, and cards in the trash can no longer be activated.)
+Source: BGG Forum (this reverses a previous ruling by Paul)
+
+
+Forbidden Weapons
+                                                                                                                                                                           * For this tech tile, if you choose the option that provides 3 strength, you must lose one influence with a Faction where you have at least one Influence (if possible).
+Source: Bloodlines rulebook
+
+
+Fremen Bond
+                                                                                                                                                                              * Effects from Fremen Bond are considered mandatory (despite the word “may” being used in the icon guide).
+Source: BGG Forum
+
+
+Friendship
+                                                                                                                                                                                 * This is an unofficial (but widely adopted) term originating from Dune Imperium players. It refers to reaching the second level of influence with a faction and earning that VP. You will often hear it in game commentary videos, etc.
+
+
+Full Scale Assault
+                                                                                                                                                                                 * If you had revealed Full Scale Assault to attain 3 extra strength, but then during combat a player uses Cannon Turrets to make you retreat a dreadnought, you do not lose the 3 swords from Full Scale Assault. They were “locked in” during your reveal turn. 
+Source: BGG Forum
+
+
+Ghola Interactions
+                                                                                                                                                                                 * When grafted to Carryall, you get four times the base spice you harvest with your Agent. 
+                                                                                                                                                                                 * When grafted to Kwisatz Haderach, you still send only one Agent on your turn (though you draw two cards).
+                                                                                                                                                                                 * When grafted to Power Play to send an Agent to a faction board space, you gain only 2 influence with that faction, the same as if you’d played Power Play alone.
+                                                                                                                                                                                 * When grafted to Guild Accord to send an agent to Heighliner, you get a 4 spice discount.
+                                                                                                                                                                                 * When grafted to Weirding Way, you may take two extra turns in a row.
+                                                                                                                                                                                 * When grafted to a Bene Gesserit card with an effect that checks “if you have a Bene Gesserit card in play” (such as Reverend Mother Mohiam), the Ghola’s version of the effect will count that Bene Gesserit card in play. However, Ghola can’t be counted by other cards looking for a Bene Gesserit card, since it is not itself a Bene Gesserit card.
+                                                                                                                                                                                 * Ghola copies the entire Agent box of the card it’s grafted to, including effects like “Trash this card.”
+Source: Official Dune Imperium FAQ
+Source: Immortality Rulebook
+Source: BGG forum
+
+
+Guild Bankers
+                                                                                                                                                                                 * The discount applies to each copy of The Spice Must Flow you acquire during your turn. 
+Source: Official Dune Imperium FAQ
+
+
+Guild Envoy
+                                                                                                                                                                                    * You must discard a card when you play this on an Agent turn.
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                    * If you send Guild Envoy to Desert Tactics, you can avoid the mandatory discard from Guild Envoy if you first trash it at Desert Tactics.
+Source: Hidden Assets Discord Post
+                                                                                                                                                                                    * If you only have Guild Envoy in hand and no other cards:
+                                                                                                                                                                                       * You can still use it to send an Agent, even though you can’t perform the discard. 
+                                                                                                                                                                                       * However, if you draw a card during that turn (e.g. Espionage, Fremkit, or pull spy), you will be forced to perform the discard. You can’t say you’re activating Guild Envoy’s discard when it’s impossible to do so. The discard requirement will only fizzle if you end your turn without any cards in hand. 
+Source: Hidden Assets Discord Post (Note: this overrules a prior ruling here)
+
+
+Guild Spy
+                                                                                                                                                                                       * If you receive a spy as a result of revealing Guild Spy (by moving up the Emperor Track), can that new spy contribute toward another bump with Guild Spy? No.
+Source: Message from designer
+        Discussion: BGG forum
+                                                                                                                                                                                          * Can you buy a Spice Must Flow, complete the SMF contract to gain 3 Solari, then use the intrigue Sleeper Unit (paying a Solari to place a Spy), and have that Spy earn you a faction bump with Guild Spy?
+No. The reveal box on Guild Spy installs a “triggered effect” and there is no time to do other actions once it is triggered. The only way you could achieve the extra bump in this scenario is if you buy a second SMF and choose to wait to activate Guild Spy until you buy the second SMF.
+Source: Message from designer
+                                                                                                                                                                                          * If you draw Guild Spy into your hand during your Reveal turn after you have bought The Spice Must Flow, can you still activate the Guild Spy bumps? (E.g. you complete SMF contract then draw a card from CHOAM Transports) Yes. 
+Source: In person from designer 
+                                                                                                                                                                                          * If you buy two The Spice Must Flow, do you get double bumps with Guild Spy? No. 
+Source: In person from designer 
+
+
+Gun Thopter
+                                                                                                                                                                                          * An opponent with no garrisoned troops is unaffected by this card’s Agent box.
+Source: Official Dune Imperium FAQ
+
+
+Harvest Cells
+                                                                                                                                                                                             * This card is played after combat resolves.
+Source: Card text
+Source: Message from Direwolf
+                                                                                                                                                                                             * Harvest Cells may not be played based off troops lost from Staged Incident
+Source: BGG Forum (non official explanation) 
+                                                                                                                                                                                                * Harvest Cells may also be used to “acquire” Reclaimed Forces (purchase a bump on the Bene Tleilaxu track or two troops to your garrison)
+Source: BGG Forum
+                                                                                                                                                                                                * If you receive Harvest Cells as a combat reward, you may play it immediately.
+Source: BGG Forum
+                                                                                                                                                                                                * If two players both play Harvest Cells for the same combat, the resolution order is the round’s current turn order.
+Source: BGG Forum
+                                                                                                                                                                                                * One player may play both Harvest Cells cards at once, even if they lost only 3 troops in the combat.
+No Source: Inferred from card text itself
+
+
+Helena Richese, Manipulate
+                                                                                                                                                                                                   * Your opponents cannot acquire the card you remove with the “Manipulate” ability. You may use other means to acquire the card (for example: Bypass Protocol, Boundless Ambition), though Helena’s discount will not apply. If you don’t acquire the card by the end of your next Reveal turn, remove it from the game.
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                   * The ability on Helena Richese and the Manipulate Intrigue card from Uprising work in the same way.
+Source: Official Dune Imperium FAQ
+
+
+Ilesa Ecaz
+                                                                                                                                                                                                      * For her “One Step Ahead” ability, the “otherwise” means you still sent an Agent using the card you set aside, but that card did not have exactly one Agent icon. If you don’t use the set aside card, you get nothing from the ability.
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                      * If you decide to take a Reveal turn on your first turn of a round, add the card you set aside to your revealed cards. Ilesa Ecaz does not give you 1 spice or 1 Solari.
+Source: Rise of Ix Rulebook 
+                                                                                                                                                                                                         * When you graft a card to the one you set aside using Ilesa Ecaz, you receive 1 spice or 1 Solari depending on the icons of the card you set aside, even if you send your Agent to a board space allowed by the other grafted card.
+Source: Immortality Rulebook
+                                                                                                                                                                                                            * You cannot use the benefit from One Step Ahead to pay for the cost of the board space that turn, but you can use it to pay toward a cost associated with your card’s Agent Box. 
+Source: BGG Forum
+                                                                                                                                                                                                            * You cannot trash the card while it is set aside for Ilesa’s ability, because it is not in your hand, discard, or play area. Similarly, you can’t discard it (e.g. from Mother Mohiam or Test of Humanity) because it’s not in your hand.
+Source: BGG Forum
+                                                                                                                                                                                                            * If you use Dispatch an Envoy for Ilesa’s second agent action, you receive one Solari even if the original card has one agent icon (Dispatch adds four additional icons to the card).
+                                                                                                                                                                                                            * The exception is if you apply Dispatch an Envoy to the card after sending your agent. E.g. you play Dagger to Assembly Hall using its Landsraad access, take your spice, and then apply Dispatch an Envoy to the card.
+Source: Message from designer
+
+
+Infiltration
+                                                                                                                                                                                                            * When using a Rise of Ix card with an infiltration icon, you may send an Agent to a board space where there is already an enemy Agent. You do not have to do this; you may use the Agent icon normally, to send an Agent to an empty board space.
+Source: Official Dune Imperium FAQ
+
+
+Imperial Bashar
+                                                                                                                                                                                                               * The Reveal box only counts other cards that actually provide swords this turn. (For example: Bene Gesserit Sister is not counted if you choose to gain 2 Persuasion instead of 2 swords.)
+Source: Rise of Ix Rulebook
+
+
+Imperium Ceremony
+                                                                                                                                                                                                                  * Imperium Ceremony's text block ("Look at the top two cards of the Intrigue deck. Keep one and put the other back on top.") is considered one effect. It must be fully executed and cannot be interrupted.
+Source: BGG forum
+
+
+Imperial Spy
+                                                                                                                                                                                                                     * You must use this card to trash itself in order to draw an Intrigue card. (You don’t draw one when it’s trashed by other means.).
+Source: Official Dune Imperium FAQ 
+                                                                                                                                                                                                                     * You are not required to activate its agent box and trash it, since it’s a Cost → Effect.
+Source: BGG forum
+
+
+In High Places
+                                                                                                                                                                                                                        * If you reveal both In High Places and Bene Gesserit Operative, you can receive the full 8 persuasion from the two cards. First count the 3 Persuasion from Bene Gesserit Operative; then remove 2 spies and count the 5 Persuasion from In High Places. 
+Source: Message from designer
+
+
+Interstellar Trade
+                                                                                                                                                                                                                           * You reveal Interstellar Trade and use it to buy The Spice Must Flow, triggering the SMF contract. Do you get one extra persuasion now from Interstellar Trade? No. You can only trigger Interstellar Trade once, and you already did. 
+Source: In-person from designer
+
+
+Intrigue cards
+                                                                                                                                                                                                                              * “To play an Intrigue card, you must meet its conditions and pay its costs.” 
+Source: Official Dune Imperium FAQ
+Also, you can’t pay the cost of an intrigue and “do nothing” on the right side of the arrow. 
+Source: Message from designer
+For example: 
+                                                                                                                                                                                                                                 * You must have a seat on the High Council to play Councilor’s Dispensation
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                 * You must pay 2 Solari to play Bribery
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                 * You must have reached at least the first genetic marker to play Disguised Bureaucrat.
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                 * At least one opponent must have a troop in the Conflict for you to play Double Cross. (But you do not need to have any troops in your supply.)
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                    * You must spend 7 Solari to play CHOAM Shares
+Source: BGG Forum
+                                                                                                                                                                                                                                    * You must have a faction alliance and spend 2 spice to play Allied Armada
+Source: BGG Forum
+                                                                                                                                                                                                                                    * The Mentat must be available in the Landsraad for you to play Calculated Hire.
+Source: BGG Forum
+                                                                                                                                                                                                                                    * You must gain spice on your turn in order to play Leverage. 
+Source: Message from designer
+                                                                                                                                                                                                                                       * You must acquire a tech when you play Machine Culture, Battlefield Research, and Rapid Engineering.
+Source: Message from designer
+                                                                                                                                                                                                                                       * You can’t play Cull and choose not to trash. 
+Source: Message from designer 
+                                                                                                                                                                                                                                       * You can’t lose one troop to Strongarm unless you sent an agent to a faction board space that turn.
+Source: Message from designer
+                                                                                                                                                                                                                                       * You can’t lose 2 spice to Quid Pro Quo if you have no agents on faction board spaces.
+Source: Message from designer  
+
+
+        However:
+                                                                                                                                                                                                                                          * You can play Charisma even if you don't use that persuasion during your Reveal turn (the persuasion just goes unspent)
+Source: BGG Forum
+                                                                                                                                                                                                                                          * You can play Know Their Ways even if your influence marker is at the top of the Fremen faction track (the effect fizzles)
+Source: BGG Forum
+                                                                                                                                                                                                                                          * You can play Rapid Mobilization and deploy zero troops to the conflict (zero is a number.)
+Source: BGG Forum
+                                                                                                                                                                                                                                          * You can play Dispatch an Envoy but choose to ignore the additional faction access when sending your agent. (It adds icons, doesn’t replace them). You can even play it after you have sent your agent, or on your Reveal Turn.
+Source: BGG Forum
+Source: BGG forum 
+                                                                                                                                                                                                                                          * You can play Intrigues that give you Card draw (e.g. Water of Life) even if you have zero cards left to draw.
+Source: BGG Forum 
+                                                                                                                                                                                                                                          * You can play Advanced Weaponry and pay 3 coins even if you already have 2 dreadnoughts in play.
+No specific source, but this would be consistent with Paul’s comments here about Dreadnoughts being a fizzable effect, and with the rule cited above on playing Double Cross. 
+                                                                                                                                                                                                                                          * You can play Counterattack even if you have no troops in your supply.
+No specific source, but this would be consistent with the rules cited above on playing Double Cross and Rapid Mobilization.
+                                                                                                                                                                                                                                          * You can play Infiltrate and choose to go to a vacant space instead. You can even play it after you have placed your agent.
+No specific source, but this would be consistent with the ruling on Dispatch an Envoy.
+                                                                                                                                                                                                                                          * You can play Detonation, Special Mission, or Unexpected Allies and choose not to remove the Shield Wall token, since the icon means you “may” remove it.
+Source: Message from designer
+                                                                                                                                                                                                                                          * You can play False Orders even if there is no enemy spy to displace. There are two separate effects on the card, and you can play it just for the gain Spy effect.
+Source: Hidden Assets Discord post
+                                                                                                                                                                                                                                          * You can play Impress even if there are no valid targets to acquire (no cards on the Imperium Row costing 3 or less, and Prepare the Ways have run out). That part of the effect fizzles. 
+Source: Message from designer
+
+
+                                                                                                                                                                                                                                             * If an intrigue card has two effects:
+                                                                                                                                                                                                                                             * You must perform at least one of the effects in order to play it.
+                                                                                                                                                                                                                                             * You may choose not to perform one of the effects if it is connected to a cost (e.g. Strategic Stockpiling)
+                                                                                                                                                                                                                                             * You cannot decline an effect if it is connected to an influence condition that you satisfy (e.g. Depart for Arrakis).
+                                                                                                                                                                                                                                             * Intrigue cards must normally be completed “in one piece” - meaning that it cannot be interrupted by “player-initiated actions.”
+Source: Message from designer
+                                                                                                                                                                                                                                             * Furthermore, if playing an Intrigue results in you getting a faction bonus (e.g. Spy from Emperor Track), that bonus also needs to be resolved before you move on to other “player initiated actions.”
+Source: Message from designer
+                                                                                                                                                                                                                                             * You may play any Plot Intrigue card during one of your Agent turns or your Reveal turn. If the card does something that won’t apply until your next Reveal turn (for example: Charisma, Recruitment Mission), keep it face up in front of you until then, then use and discard it. 
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                * In the rare case that you exhaust the Intrigue deck, shuffle the discarded Intrigue cards to form a new deck. 
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                * When you trash an Intrigue card, the card is public knowledge.
+Source: BGG Forum
+
+
+Kwisatz Haderach
+                                                                                                                                                                                                                                                   * You may play this card to take an Agent turn even if you have no Agents left in your supply, as it lets you send an Agent that is already on a board space. You may send an Agent back to the space that it was just on. 
+Source: Dune Imperium Rulebook 
+                                                                                                                                                                                                                                                   * You may send an Agent to a board space another Agent occupies (an enemy agent, or even your own Agent).
+Source: Direwolf Discord Post
+                                                                                                                                                                                                                                                      * If a board space can be used only once per game (High Council, Swordmaster), you can’t use Kwisatz Haderach to send an Agent there more than once.
+Source: Dune Imperium Rulebook 
+                                                                                                                                                                                                                                                      * You must still pay the costs of the location you choose.
+Source: BGG forum
+Source: Dune Imperium Rulebook 
+                                                                                                                                                                                                                                                      * You can’t overcome The Voice and send an Agent to a board space that has been prohibited by the Voice.
+Source: Dune Imperium Rulebook 
+                                                                                                                                                                                                                                                      * You must place your Agent before you draw the card from Kwisatz Haderach.
+Source: BGG forum
+                                                                                                                                                                                                                                                      * If you draw Kwisatz Haderach during your Reveal turn, you may not revert to an Agent Turn. You must simply Reveal the card.
+Source: Official Dune Imperium FAQ (Reveal Turn)
+                                                                                                                                                                                                                                                      * Kwisatz Haderach can’t overcome restrictions for Interstellar Shipping or Sietch Tabr if you do not have the required influence to visit the location.
+Source: Direwolf Discord Post
+                                                                                                                                                                                                                                                         * If you move an agent away from a space with a Maker icon, and that space remains empty until Phase 4, bonus spice does accumulate there.
+Source: Dune Imperium Rulebook 
+                                                                                                                                                                                                                                                         * This card’s Agent effect replaces the normal rules for sending an Agent to a board space. If you graft another card to it, you still only send one Agent that turn. Even Ghola won’t allow you to send a second Agent in a single turn.
+Source: Immortality Rulebook
+
+Lady Jessica / Reverend Mother Jessica (Uprising Leader)
+                                                                                                                                                                                                                                                            * You begin the game with the Lady Jessica side of the Leader (not Reverend Mother Jessica) face up.
+Source: Uprising Rulebook 
+                                                                                                                                                                                                                                                            * For Spice Agony, you pay 1 spice to (get an intrigue and a memory). i.e. you cannot place a memory unless you pay the spice.
+Source: Direwolf Discord Post
+                                                                                                                                                                                                                                                               * You may use her “Reverend Mother” ability on the same turn you flip to this side of the Leader card.
+Source: Official Dune Imperium FAQ 
+                                                                                                                                                                                                                                                               * When you use the “Reverend Mother” passive ability, you only pay the cost for visiting the space once. You are not visiting it a second time, just paying 1 water to repeat the printed effects of the board space.
+Source: BGG Forum (Designer liked fan response)
+                                                                                                                                                                                                                                                               * “Reverend Mother” does not grant you two Combat icons when you visit Fremen spaces. You don’t get to push 2 extra troops from garrison.
+Source: BGG Forum (Designer liked fan response)
+                                                                                                                                                                                                                                                               * When you use the “Reverend Mother” passive ability to double the board space effects of Espionage, you may choose to resolve both card draws before placing the two spies.
+Source: Message from Designer
+
+
+
+
+Lady Margot Fenring / Princess Irulan
+                                                                                                                                                                                                                                                                  * You “reach” 2 Influence even when you move past 2 while gaining multiple Influence at the same time. You can reach 2 Influence with the same Faction more than once per game by losing Influence and later regaining it— though you only reach 2 Influence when moving up the Influence track, not down.
+Source: Uprising Rulebook 
+
+
+Leadership
+                                                                                                                                                                                                                                                                     * Scenario: You reveal Leadership, Calculus of Power, and Sardaukar Soldier. You trash Sardaukar Soldier with Calculus of Power. Can Leadership get extra swords from both Calculus of Power and Sardaukar Soldier? 
+No. You pick one moment at which you want to activate Leadership, so it will only get a bonus sword from Calculus or Soldier, but not both. Leadership can’t get a bonus sword from a card that’s in the trash. In the example above, you would get 5 swords (3 from Calculus, 2 from Leadership).
+Source: In person from designer
+
+
+Liet Kynes
+                                                                                                                                                                                                                                                                        * Cards from your Agent turns this round and your current Reveal turn count; Liet Kynes provides 2 persuasion for each.
+Source: Official Dune Imperium FAQ
+
+
+Litany Against Fear
+                                                                                                                                                                                                                                                                           * Ignore the “red box” on this card if you play it during a Reveal turn, or if you somehow give it an Agent icon (for example, with Urgent Shigawire) and play it normally in an Agent turn.
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                           * If you play Urgent Shigawire, then use Litany Against Fear for its red box (pass turn), then play a third Bene Gesserit card, does that third card get the benefits of Shigawire? Yes. 
+Source: BGG Forum
+
+
+Long Live the Fighters
+                                                                                                                                                                                                                                                                              * Long Live the Fighter’s text block ("If your deck has three or more cards, look at the top three cards. Draw one, discard one, and trash one.") is considered one effect. It must be fully executed and cannot be interrupted.
+Source: Message from designer
+
+
+Long Reach
+                                                                                                                                                                                                                                                                                 * The access icons are a different effect from the two faction bumps. They are two separate sentences. You can still receive the two faction bumps by grafting another card with Long Reach (does not need to be Bene Gesserit)
+Source: Immortality Designer Diary
+Related: BGG forum
+                                                                                                                                                                                                                                                                                    * Ghola with Long Reach: Does Ghola gain the green and yellow access from Long Reach, or would you need to send them to blue? It does gain access to all three icons. 
+“The moment you play the Ghola, it copies the Agent box of the card it’s grafted to. Ghola would ‘see’ another Bene Gesserit card – Long Reach – and thus get the 3 icons.”
+BGG Forum Discussion
+Source: Email screenshots in TTS Discord 
+                                                                                                                                                                                                                                                                                       * Planned Coupling with Long Reach: If you play these cards together as your first action, can you send it to yellow/green/blue? Yes.
+No source. Inferred from ruling for Ghola and Long Reach.
+
+
+Maker board spaces
+                                                                                                                                                                                                                                                                                       * These are any of the board spaces where spice may be harvested: Hagga Basin and Imperial Basin, The Great Flat (in the original Dune: Imperium), and Deep Desert and Habbanya Erg (in Uprising). 
+Source: Official Dune Imperium FAQ
+
+
+Maker Hooks
+                                                                                                                                                                                                                                                                                          * You do not “spend” your Maker hooks to summon a sandworm.
+Source: Uprising Rulebook 
+Source: Official Dune Imperium FAQ
+
+Mentat
+                                                                                                                                                                                                                                                                                             * If a player acquires the Mentat, it is considered to be their Agent (their color) for all purposes for the remainder of the round (e.g. Armand Ecaz’s Coordination ability)
+Source: BGG forum
+                                                                                                                                                                                                                                                                                             * You are still allowed to go to the Mentat space even if the Mentat has been taken (e.g. if you are able to infiltrate, or if someone else has already played Calculated Hire). You might wish to do this simply for the card draw.
+Discussion: BGG forum
+
+
+Optional effects
+                                                                                                                                                                                                                                                                                                * Most effects from a board space or card you play are mandatory, unless: 
+                                                                                                                                                                                                                                                                                                * a card says “you may” do something;
+                                                                                                                                                                                                                                                                                                * there’s an arrow in the effect (if you don’t want the effect, you may choose not to pay the cost—except when playing an Intrigue card, where paying a cost is required);
+                                                                                                                                                                                                                                                                                                * you’re trashing a card using the “black X” card icon (but note that it is not optional when a card tells you—without using an arrow—to trash itself).
+        Source: Official Dune Imperium FAQ
+
+
+Ornithopter Fleet
+                                                                                                                                                                                                                                                                                                * Each battle icon you have, including wild battle icons, must be treated as an Ornithopter instead. This can cause you to immediately match battle icons when you acquire it. The Crysknife and Desert Mouse Intrigues cards can’t be used to gain a Victory Point while you have this Tech tile.
+Source: Bloodlines rulebook
+                                                                                                                                                                                                                                                                                                * What happens if Kota trashes this tech? Flipped Combat cards are already converted into a VP and can't be unflipped. But if Kota trashes Ornithopter Fleet and still has face up combat icons, then they revert back to whatever is printed on the card.
+Source: Message from designer
+
+
+Panopticon
+                                                                                                                                                                                                                                                                                                   * Can you double up this tech with Spy Satellites to get extra endgame points? 
+No, once Panopticon gives you VPs, the VPs that Spy Satellites would have given you won’t be valid anymore. (unofficial answer)
+Discussion: BGG Forum
+
+
+Paying a cost
+                                                                                                                                                                                                                                                                                                      * When an arrow indicates a cost you may pay to receive an effect, you may only choose to do this once. For example: when you play Duncan Idaho, you may pay 1 water to recruit a troop and draw a card; you can’t pay 2 water to recruit two troops and draw two cards.
+Source: Official Dune Imperium FAQ
+
+
+Plans Within Plans
+                                                                                                                                                                                                                                                                                                         * There are six spaces on each Influence track; you have 3 Influence on a track if you reach the space one above where you score a Victory Point.
+Source: Official Dune Imperium FAQ
+
+
+Poison Snooper / Paul Atreides Prescience
+                                                                                                                                                                                                                                                                                                            * You can’t look at the top card of your deck if it is empty. (You can’t reshuffle your discard pile and form a new deck until you need to draw a card.)
+Source: Dune Imperium Rulebook 
+
+
+Power Play
+                                                                                                                                                                                                                                                                                                               * Power Play’s Agent Box only works if you send an agent to a faction space. If you graft Powerplay to send an Agent to Shipping and take an influence bump there, you do not receive an extra influence bump.
+Source: BGG Forum
+
+
+Price Is No Object
+                                                                                                                                                                                                                                                                                                               * Acquiring The Spice Must Flow with this card completes the Acquire The Spice Must Flow contract. “The Acquire The Spice Must Flow contract is completed when you next acquire that card.”
+Source: Uprising Rulebook 
+                                                                                                                                                                                                                                                                                                               * You can even acquire that contract and TSMF card in the same turn, and the contract still gets completed. This sentence on timing does not apply: “If you take a contract involving the board space where you’ve already sent your Agent this turn, you must wait until a future turn to complete the contract. (That is, you must have had the contract at the time you sent your Agent.)”
+Source: Uprising Rulebook 
+Source: Message from designer?
+
+Princess Yuna Moritani
+                                                                                                                                                                                                                                                                                                                  * If you gain Solari more than once during your turn, her “Smuggling Operation” ability applies each time (for example: you recall your Freighter and take 5 Solari, and also play the Windfall Intrigue card; you would take 2 additional Solari). When you gain Solari from Slig Farmer, you gain only 1 additional Solari from Yuna’s “Smuggling Operation” Ability.
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                  * When playing Uprising, if Yuna has a flag on Spice Refinery and visits the space, she earns two bonus solari: one for the space and one for her flag. 
+Source: Message with designer
+                                                                                                                                                                                                                                                                                                                     * When playing 3v3, if Yuna receives Solari on her turn from trading with an Ally, does she get an extra Solari from the bank? Yes.
+Source: Message from designer
+
+
+Propaganda
+                                                                                                                                                                                                                                                                                                                     * The “Choose Two: [faction bumps]” must be chosen together and fully resolved before moving on to other effects. You should announce which two factions you are moving up on before taking the bumps (if you reach BG Level 4 Influence, you don’t get to see the Intrigue before deciding your other bump). 
+                                                                                                                                                                                                                                                                                                                     * However, note that if you win Propaganda with worms, you receive two “Choose Two” benefits, and may process other benefits between the two sets (BG Intrigue draw, Y’rkoon Navigation cards, e.g.)
+Source: Message from designer
+
+
+Rapid Dropships
+                                                                                                                                                                                                                                                                                                                     * Can you activate this tech before you place your Agent? Can you declare it an Agent turn before actually sending an Agent? (e.g. you want to deploy 3 units, place a spy with Distraction, then place Agent). No, you need to play the card and send an agent before activating Rapid Dropships. 
+Source: Message from designer
+
+
+Recruitment Mission
+                                                                                                                                                                                                                                                                                                                     * This entire card applies only to your Reveal turn this round. (It does not let you put cards you acquire during an Agent turn on top of your deck.) If you acquire more than one card during your Reveal turn, you may choose differently for each one whether to put it on top of your deck or in your discard pile as usual.
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                     * You may not retroactively apply the effect of Recruitment Mission, even during the same Reveal Turn. (You can’t buy a card, then play Recruitment Mission, then move that first card from your discard to the top of your deck.)
+Source: BGG Forum
+
+
+Refocus
+                                                                                                                                                                                                                                                                                                                        * If your discard pile is empty when you play this card, reshuffle your deck.
+Source: Official Dune Imperium FAQ
+
+
+Retreat
+                                                                                                                                                                                                                                                                                                                           * When a card (e.g. Chani) allows you to retreat “any number” of troops, you may choose zero.
+Source: Official Dune Imperium FAQ
+
+
+Reveal turn
+                                                                                                                                                                                                                                                                                                                              * If you draw a card during your Reveal turn (for example, using: Poison Snooper, Refocus), you must immediately reveal that card and use it this turn. If you draw a card after your Reveal turn, you keep it until the next round, where you will draw five additional cards and thus have more cards than usual for the round. For example: you win the Trade Monopoly conflict, recall your Freighter from the top of the Shipping Track, and acquire the Spaceport Tech tile, drawing two cards. It’s after your Reveal turn, so you keep those two cards. Next round, you draw five more and have seven cards for the round.
+Source: Official Dune Imperium FAQ
+
+
+Reverend Mother Mohiam
+                                                                                                                                                                                                                                                                                                                                 * Your opponents choose the cards they discard, beginning with the player to your left and proceeding clockwise.
+Source: Official Dune Imperium FAQ
+
+
+Rivals
+                                                                                                                                                                                                                                                                                                                                    * When a House Hagal card shows two different spaces to play an Agent, only look at the one that matches the current game conditions (for example: the Rival’s Influence, or the Conflict card number). If that space is occupied, do not use the other option on that card. Instead, reveal a new card. 
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                                    * When playing Rise of Ix, if a Rival takes its influence for the second space of the Shipping Track, and there is a tie for the Faction in which it has the least Influence, the player with the First Player marker (or acting next after a Rival who has it) chooses between them. 
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                                    * When playing Uprising, if a Rival is first to gain a Swordmaster, the cost for other (human) players is reduced to 6 Solari.
+Source: Official Dune Imperium FAQ
+
+Sandworms
+                                                                                                                                                                                                                                                                                                                                       * When you visit Hagga Basin or Deep Desert, you choose to either gather the base spice printed on the board space OR (if you have Maker Hooks) summon a sandworm to the conflict. You gain the bonus spice on the space regardless of your choice.
+Source: Uprising Rulebook 
+Discussion: BGG Forum
+                                                                                                                                                                                                                                                                                                                                       * Sandworms are not a limited resource. (If more than 8 are ever needed, use any suitable replacement.)
+Source: Uprising Rulebook 
+                                                                                                                                                                                                                                                                                                                                       * You do not need to visit a combat space to deploy a sandworm to the combat. e.g. you can graft Arrakis Revolt with Planned Coupling, visit a Bene Gesserit space, and still deploy the worm. The sandworm icon states “Does nothing if the current Conflict is protected by the Shield Wall. Otherwise, summon and deploy one sandworm; take it from the bank and put it in your quadrant of the Conflict.”
+Source: Uprising Rulebook 
+Source: Message with designer
+
+Second Wave
+                                                                                                                                                                                                                                                                                                                                       * As with all Combat Intrigue cards, you must already have a unit in the Conflict before you can play the card.
+Source: Rise of Ix Rulebook
+                                                                                                                                                                                                                                                                                                                                       * If your Dreadnought has been pushed out of combat by Cannon Turrets, leaving you with no units left in the combat, you may no longer play any intrigue cards during that combat phase (even Second Wave).
+Source: BGG Forum
+Source: BGG Forum (fan explanation) 
+
+Selective Breeding
+                                                                                                                                                                                                                                                                                                                                          * If you send Seek Allies, Foldspace, Power Play, or Treachery to Selective Breeding, you may trash that card as the requirement for the Selective Breeding action. You may still get the card draw from Foldspace, the double bump from Power Play, and the double bump and troops from Treachery.
+Source: BGG Forum
+Source: BGG Forum
+Source: BGG Forum
+
+Shaddam Corrino IV
+                                                                                                                                                                                                                                                                                                                                             * The “Sardaukar Commander” gives you the option to acquire a set-aside Sardaukar contract in place of one of the generally available contracts. You do not begin the game with the Sardaukar contracts in your possession.
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                                             * When you play your Signet Ring to send an Agent to a board space, the “Emperor of the Known Universe” restriction on deploying units to the Conflict takes effect immediately.
+Source: Uprising Rulebook 
+                                                                                                                                                                                                                                                                                                                                             * The “Emperor of the Known Universe” ability affects only the turn in which it is triggered, not the remainder of the round. In a six-player game, it will affect your activated Ally.
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                                             * If you are Shaddam Corrino, can you play Unexpected Allies at the start of your turn (deploying the worm), and then play your Signet Ring? Yes. The restriction of deploying units from Shaddam’s ring (Emperor of the Known Universe) doesn’t apply until you play the ring.
+Source: Message from designer
+Discussion: BGG Forum
+                                                                                                                                                                                                                                                                                                                                             * If you are Shaddam Corrino with the tech Suspensor Suits, what happens if you gain an Intrigue on a turn where you played your Signet Ring? 
+You still gain the troop, but it just goes to your Garrison instead of deploying.
+Source: Message from designer
+                                                                                                                                                                                                                                                                                                                                             * If you play Boundless Ambition as Shaddam, does the drawback of the Signet Ring still apply that turn? Yes, you may not deploy units. 
+Source: Message from designer
+
+Shield Wall
+                                                                                                                                                                                                                                                                                                                                                * Destroying the Shield Wall with the Shield Wall icon is optional. (Thus, you can play Intrigue cards like Unexpected Allies, Special Mission, and Detonation, and choose not to remove the Shield Wall.)
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                                                * Once removed, the Shield Wall is gone for the remainder of the game. 
+Source: Official Dune Imperium FAQ
+
+Shifting Allegiances
+                                                                                                                                                                                                                                                                                                                                                   * If you choose, you may lose and gain Influence with the same Faction (ultimately gaining one Influence with that Faction). As with any cost, you must actually pay the cost (losing one Influence) in order to gain two Influence. You can’t “lose” Influence with a Faction where you have none.
+Source: Official Dune Imperium FAQ
+
+
+Sietch Ritual
+                                                                                                                                                                                                                                                                                                                                                      * If you draw this intrigue as Muad’Dib, can you immediately use it (discard a card for an influence bump)? No - when you declare a Reveal Turn, your hand immediately goes to the table, so you would no longer have a card to discard.
+Message from designer
+
+Solo Play
+                                                                                                                                                                                                                                                                                                                                                         * Rivals in Solo Play do earn Victory Points from a Faction’s Influence track (both for reaching 2 Influence and for having an Alliance token). They do not receive the bonus for reaching 4 Influence. 
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                                                         * When using Expert Troop Deployment, a Rival fighting for a Conflict I or II card won’t deploy troops if it is already leading by 4 strength or more. (In the Rise of Ix expansion, dreadnoughts mean that you should count a Rival’s strength to determine deployment, not just its troops.)
+Source: Official Dune Imperium FAQ
+
+
+Sort Through the Chaos
+                                                                                                                                                                                                                                                                                                                                                            * When you win this Conflict, you take the Mentat at the start of the next round.
+Source: Official Dune Imperium FAQ
+ 
+Spaceport
+                                                                                                                                                                                                                                                                                                                                                               * This Tech tile also allows you to put Tleilaxu cards you acquire on top of your deck, even if your research token hasn’t reached the first genetic marker.
+Source: Immortality Rulebook
+                                                                                                                                                                                                                                                                                                                                                               * Can you purchase Spaceport, use Armand’s signet ring to put a card on top of your deck, and then Draw the 2 cards from Spaceport? No – Acquire effects must be taken immediately.
+Source: Direwold Discord Post
+
+
+Spacing Guild’s Favor
+                                                                                                                                                                                                                                                                                                                                                                  * Moving this card from in play to your discard pile during Clean Up does not trigger the discard ability. Only discarding it from your hand triggers the ability.
+Source: Uprising Rulebook 
+
+
+The Spice Must Flow
+                                                                                                                                                                                                                                                                                                                                                                     * You keep the Victory Point for acquiring this card even if you later trash it. Also remember that Reserve cards (Foldspace, Arrakis Liaison, The Spice Must Flow) return to the Reserve when you trash them.
+Source: Official Dune Imperium FAQ
+Source: Dune Imperium Rulebook
+
+
+Spice Refinery / Gather Support
+                                                                                                                                                                                                                                                                                                                                                                        * If you start the turn with 0 spice, and send an agent to Spice Refinery with a card that gives you spice, you cannot use that spice to do the 4 solari transaction. The cost of the board space is either 0 spice (to receive 2 solari) or 1 spice (to receive 4 solari). The cost of the board space must always be paid prior to activating your agent effect.
+The same principle applies to the board space Gather Support and Sell Melange (base game).
+Source: Uprising Rulebook 
+Discussion: BGG Forum
+
+Spies
+                                                                                                                                                                                                                                                                                                                                                                           * To recall a Spy to Infiltrate or Gather Intelligence, you must still play a card on your Agent turn.
+Source: Official Dune Imperium FAQ 
+                                                                                                                                                                                                                                                                                                                                                                           * You may recall two Spies in one turn if each is used for a different effect. For example: with Spies on Research Station’s two observation posts, you can recall one to Infiltrate and one to Gather Intelligence, but not both to Gather Intelligence
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                                                                           * You may never place two of your own spies on the same observation post (i.e. if you play Distraction or Double Agent, and someone is already sharing one of your observation posts, you still may not put a second one of your spies at that observation post)
+Source: Message from designer
+                                                                                                                                                                                                                                                                                                                                                                           * However, it is possible for all four players to share the same observation post (via playing cards like Distraction or Double Agent).
+Source: Message from designer
+                                                                                                                                                                                                                                                                                                                                                                           * If you have no spies in your supply and you gain the effect to place a spy, you may choose to relocate one (i.e. recall the spy and place it elsewhere); you may even choose to recall it and put it back down on the same spot (e.g. if you want to trigger Staban’s signet ring abilities). 
+Source: Uprising Rulebook 
+Source: BGG forum
+                                                                                                                                                                                                                                                                                                                                                                              * If a card grants you a benefit “if you recall a spy this turn” (e.g. Strike Fleet, Public Spectacle, Rebel Supplier, Imperial Spymaster), it does not care which spy or how the spy was recalled. E.g. If you recall a spy that turn using Special Mission, that counts to activate the agent box.
+Source: Hidden Assets Discord
+                                                                                                                                                                                                                                                                                                                                                                              * Placing a spy is a mandatory effect, not an optional one.
+Source: Hidden Assets discord post
+See Errata section
+                                                                                                                                                                                                                                                                                                                                                                              * Very niche case: 
+                                                                                                                                                                                                                                                                                                                                                                                 * You start the turn with 2 influence on Emperor
+                                                                                                                                                                                                                                                                                                                                                                                 * You play Change Allegiances to reach 4 influence (earning a Spy bonus)
+                                                                                                                                                                                                                                                                                                                                                                                 * You play Shaddam’s Favor to earn 3 solari
+                                                                                                                                                                                                                                                                                                                                                                                 * You go to Imperial Privilege using that solari, recalling a Spy there
+                                                                                                                                                                                                                                                                                                                                                                                 * Can you delay the Spy bonus from the Emperor track earlier, to put it back down on the Imperial Privilege observation post?
+                                                                                                                                                                                                                                                                                                                                                                                 * No. You need to finish resolving that Spy placement before you move on to other “player initiated actions.”
+Source: Message from designer
+See “Intrigue Cards”
+
+
+Staged Incident
+                                                                                                                                                                                                                                                                                                                                                                                 * When using this Intrigue card, move your Combat marker to lower your strength as you would with any other adjustment caused by a Combat intrigue card.
+Source: Official Dune Imperium FAQ
+
+
+Steersman Y’rkoon
+                                                                                                                                                                                                                                                                                                                                                                                    * You may look at your face-down Navigation cards at any time.
+Source: Bloodlines rulebook
+                                                                                                                                                                                                                                                                                                                                                                                    * By losing and regaining influence, it may be possible to reach 2 influence with the same Faction more than once, playing a Navigation card each time.
+Source: Bloodlines rulebook
+                                                                                                                                                                                                                                                                                                                                                                                    * If you activate a Navigation card during Endgame scoring using Panopticon tech, do you still get to do the Navigation Card (e.g. pay 5 spice for a VP)? 
+Yes.
+Source: Message from designer
+Discussion: BGG Forum
+                                                                                                                                                                                                                                                                                                                                                                                       * In 3v3, if your Ally trades 3 spice to you, does that count as “gaining 3 spice or more in a single turn” and trigger your card draw? Yes.
+Source: Message from designer
+                                                                                                                                                                                                                                                                                                                                                                                       * If you win Propaganda as Y’rkoon, and your first bump triggers a Navigation card, do you execute the Navigation card before deciding the other bump? No. Propaganda uses a “Choose Two” template, which means you must announce your two choices at the same time; there isn’t time to process other benefits in between. (However, note that if you win Propaganda with worms, you receive two “Choose Two” benefits, and may process other benefits between the two sets.)
+Source: Message from designer
+                                                                                                                                                                                                                                                                                                                                                                                          * As Y’rkoon playing Changing Allegiances, can you shift influence to trigger a Navigation card that gives you spice, and then use that spice to pay for the second part of Changing Allegiances? Yes. Intrigues must be executed “in one piece”, meaning there can’t be a “player-initiated” action in the middle of processing it. But the Navigation cards are “automatically triggered” not player-initiated.
+Source: Message from designer.
+                                                                                                                                                                                                                                                                                                                                                                                          * Let’s say you reveal CHOAM Demands for all four faction bumps, triggering 3 solari from SG along with a Navigation card. Can you play an Intrigue card (e.g. Market Opportunity to convert that solari into spice) before you execute the Navigation card (e.g. to convert spice into a VP)? No, the Navigation cards are automatically triggered, so there is no time to interrupt it with a player-initiated action such as playing an Intrigue card.
+Source: Message from designer.
+
+
+Stitched Horror
+                                                                                                                                                                                                                                                                                                                                                                                             * Stitched Horror uses a “Choose Two:” template. This means the two options must be chosen together and fully resolved before moving on to other effects. For example, you shouldn’t draw an Intrigue from the Tleilaxu bump before deciding your second option from Stitched Horror.
+Source: Inferred from designer ruling.
+
+
+Strategic Stockpiling
+                                                                                                                                                                                                                                                                                                                                                                                                * You may play this card for just one or for both of its effects.
+Source: Message from designer.
+
+
+Strong Arm
+                                                                                                                                                                                                                                                                                                                                                                                                * This card must be played the same “turn” that you sent the agent to a Faction space (not “round”)
+Source: Please read the card
+                                                                                                                                                                                                                                                                                                                                                                                                * The troop lost may be either from your Garrison or the Conflict
+Source: BGG forum
+
+
+Suspensor Suits
+                                                                                                                                                                                                                                                                                                                                                                                                   * If you purchase this tech on your turn after acquiring an Intrigue Card, do you still get the troop? No. If you go to Assembly Hall and purchase Suspensor Suits, you should declare that you’re buying the tech first before you draw your Intrigue Card.
+No source, but would be consistent with Call to Arms ruling.
+                                                                                                                                                                                                                                                                                                                                                                                                   * In 3v3, can you trigger this tech if you receive Intrigues during your turn via trade from an ally? No. Receiving Intrigues via trade is not “drawing” or “stealing” them.
+Source: Message from designer.
+                                                                                                                                                                                                                                                                                                                                                                                                      * If you are Shaddam Corrino with the tech Suspensor Suits, what happens if you gain an Intrigue on a turn where you played your Signet Ring? 
+You still gain the troop, but it just goes to your Garrison instead of deploying.
+Source: Message from designer
+                                                                                                                                                                                                                                                                                                                                                                                                      * How does Imperium Ceremony interact with Suspensor Suits? 
+“Keep one” in this context is equivalent to “Draw one.” The other one was looked at but not drawn, so it only triggers one troop for Suspensor Suits.
+Source: Message from designer
+
+Tech tiles
+                                                                                                                                                                                                                                                                                                                                                                                                         * If a Tech tile does not specify a time when you use it, then it must be used during one of your turns. For example: Spy Satellites has two different effects. The second specifies it is used at Endgame, The first (pay 3 spice and trash the Tech tile to score a Victory Point) does not specify a time to use it, so it must be used during one of your turns.
+Source: Official Dune Imperium FAQ
+
+
+Tessia Vernius, Careful Observation
+                                                                                                                                                                                                                                                                                                                                                                                                         * If you gain your first snooper token when you have no cards to discard (during the Conflict Resolution phase, or during your Reveal Turn), you still take the snooper token and cover the top space on your leader mat; you simply don’t get the opportunity to pay a card for a spice. Any time there is a “Cost → Effect”, the Cost is optional.
+Source: BGG Forum
+Source: Official Dune Imperium FAQ
+
+
+Tessia Vernius, Duplicity
+                                                                                                                                                                                                                                                                                                                                                                                                         * Can you still activate Tessia’s signet ring ability if you have no more snooper tokens left to retrieve? i.e. You want to pay the cost of doing down on a faction track, but forsake the reward of going up. Unknown
+BGG Forum Discussion 
+
+
+Test of Humanity
+                                                                                                                                                                                                                                                                                                                                                                                                            * Opponents make their choices starting from your left and proceeding clockwise. Each opponent must choose something they can do; they can’t discard if their hand is empty, or lose a deployed troop if they have none. An opponent who decides to discard chooses which card; it is not random.
+Source: Dune Imperium Rulebook  
+
+
+Tleilaxu Master
+                                                                                                                                                                                                                                                                                                                                                                                                               * The two research icons on the reveal may be executed separately (they can be interrupted by other effects).
+Source: BGG forum
+
+
+Tleilaxu track
+                                                                                                                                                                                                                                                                                                                                                                                                                  * The Bene Tleilax are not a faction. Effects that let you gain Influence with any faction can’t be used to advance on the Tleilaxu track.
+Source: Official Dune Imperium FAQ
+
+
+Trade Monopoly Conflict
+                                                                                                                                                                                                                                                                                                                                                                                                                     * If you win Trade Monopoly you might acquire a Tech Tile during the Conflict Resolution phase. This can provide some unique scenarios:
+                                                                                                                                                                                                                                                                                                                                                                                                                     * Spaceport: Draw 2 cards + 5 cards, and start the next round with 7 cards
+                                                                                                                                                                                                                                                                                                                                                                                                                     * Troop Transports: Gain 3 troops, but just put them in your garrison. If you deployed them to conflict they would immediately die, not stay for the next round.
+                                                                                                                                                                                                                                                                                                                                                                                                                     * Windtraps: You would immediately earn 2 Water, one from the Acquire effect and one for winning the combat
+Source: BGG forum
+
+
+Trashing
+                                                                                                                                                                                                                                                                                                                                                                                                                     * Trashing is optional unless the card text instructs you to do so (e.g. Power Play, Foldspace, Seek Allies, Treachery)
+                                                                                                                                                                                                                                                                                                                                                                                                                     * Exception: If the instruction is part of a “Cost → Effect”, such as Imperial Spy, you are not required to trash it.
+Source: Official Dune Imperium FAQ
+Source: BGG forum
+
+
+Treachery
+                                                                                                                                                                                                                                                                                                                                                                                                                     * Unlike most cards with an Unload icon, this card’s Agent box does specify that it trashes itself. This triggers the Unload Reveal box.
+Source: Rise of Ix Rulebook
+
+
+Troops
+                                                                                                                                                                                                                                                                                                                                                                                                                        * When you recruit a troop, it must come from your supply. You can’t recruit a Negotiator from the Ix board.
+Source: Official Dune Imperium FAQ 
+                                                                                                                                                                                                                                                                                                                                                                                                                        * On the other hand, you may return any of your Specimens to your supply at any time. (This could be useful if you need to recruit troops but have no more in your supply.)
+Source: Immortality Rulebook   
+                                                                                                                                                                                                                                                                                                                                                                                                                        * When you send an Agent to a Combat space (e.g. Heighliner), you can’t “re-recruit” troops in your garrison to get around the limit of deploying up to two troops from your garrison to the Conflict area.
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                                                                                                                           * When you send an Agent to a Combat space, any unit you recruit that turn, from any source, can be deployed to the Conflict area. (This includes, but is not limited to, units from an Intrigue card, Tech tile, or the Shipping track.). You may also push in two additional units from your garrison. 
+Source: Official Dune Imperium FAQ
+Source: Rise of Ix Rulebook 
+Source: BGG Forum
+                                                                                                                                                                                                                                                                                                                                                                                                                           * Is deploying units a “one-time” opportunity during your turn, where you need to decide all in one clump how many units go in? 
+No. On a turn when you visit a combat board space, you can deploy any units you recruit that turn, plus up to two more from garrison. You don’t need to decide on the amount all at once, and could add more later in your turn after you reveal new info (e.g. you could deploy some troops with Chani Clever Tactician, draw an intrigue card, then decide to push more troops in).
+Source: Hidden Assets Discord post
+                                                                                                                                                                                                                                                                                                                                                                                                                           * From one deployment source, you can deploy any troops you generated that turn, plus up to two more. But you can't deploy the same troop more than once from the same deployment source.
+Source: Message from designer
+
+Unexpected Allies
+                                                                                                                                                                                                                                                                                                                                                                                                                              * Yes, this card lets you deploy a sandworm to combat even if you don’t have Maker Hooks. You may even do this during your Reveal Turn.
+Source: In-person with designer
+Discussion: BGG Forum
+
+
+Urgent Mission
+                                                                                                                                                                                                                                                                                                                                                                                                                                 * You may play this intrigue card even if you currently have no Agents left. You are not in a Reveal Turn until you declare it so.
+Source: BGG forum
+Source: BGG forum
+
+
+Urgent Shigawire
+                                                                                                                                                                                                                                                                                                                                                                                                                                    * Does Weirding Woman keep the added agent icons and card draw from Urgent Shigawire if you return her to hand for use a second time?
+No. “When a card changes zones (in play to hand, or to discard, etc.) any card modifications on it are removed. So the Urgent Shigawire effect on Weirding Woman would be removed when Weirding Woman moves to hand.”
+Source: BGG Forum
+
+
+Usurp
+                                                                                                                                                                                                                                                                                                                                                                                                                                       * You may graft this to another card in your hand instead of grafting it to a card in the Imperium Row.
+Source: Immortality Rulebook   
+                                                                                                                                                                                                                                                                                                                                                                                                                                       * A grafted card in the Imperium Row isn’t considered to be “in play.”
+Source: Immortality Rulebook  
+                                                                                                                                                                                                                                                                                                                                                                                                                                       * Trashing a card with Usurp does trigger effects like Replacement Eyes and cards with Unload effects.
+Source: Immortality Rulebook
+                                                                                                                                                                                                                                                                                                                                                                                                                                       * If you use Usurp to graft Boundless Ambition, Boundless gets trashed at the end of the turn, triggering the Unload effect to acquire a card. Do you acquire a card before or after the Imperium row gets filled back to 5 cards?
+After. You immediately refill to 5 and can acquire that new card with Boundless Ambitions Unload effect (if it costs 5 or less).
+Source: Direwolf Discord
+                                                                                                                                                                                                                                                                                                                                                                                                                                          * You are always required to trash the target of Usurp, even if through a variety of moves you are able to get that card into your deck before your turn ends. You still need to go find it and trash it.
+Source: BGG Forum
+                                                                                                                                                                                                                                                                                                                                                                                                                                          * Can you use Usurp to put Stillsuit Manufacturer in your hand? You can target Stillsuit Manufacturer and use it to send an agent, but you won’t be able to put it into your hand even if you have the Fremen alliance. The card says “Return this card from play to your hand” but cards targeted by Usurp are never “in play” (they technically remain on the Imperium row).
+Source: BGG Forum
+                                                                                                                                                                                                                                                                                                                                                                                                                                          * Can you graft Usurp to Kwisatz Haderach, even if you are out of Agents? Presumably yes.
+No citation, but it’s consistent with the rulebook.
+
+
+Victory Points
+                                                                                                                                                                                                                                                                                                                                                                                                                                             * You can score more than 12 Victory Points, even though the Score track only goes to 12.
+Source: Official Dune Imperium FAQ
+
+
+The Voice
+                                                                                                                                                                                                                                                                                                                                                                                                                                                * Use one of your available Control markers to mark the board space you choose, then remove it on your next turn. (The Voice only stops opponents from sending Agents to that board space for one turn.) This does prevent Kwisatz Haderach from sending an Agent to the board space you chose.
+Source: Dune Imperium Rulebook  
+                                                                                                                                                                                                                                                                                                                                                                                                                                                * If you play Bindu Suspension and pass during the sequence of turns following your opponent playing the Voice, your following turn will still be bound to the restrictions of the Voice (since it’s your “next agent this round”)
+Source: BGG forum
+                                                                                                                                                                                                                                                                                                                                                                                                                                                   * If you play Weirding Way during the sequence of turns following your opponent playing the Voice, your immediate second turn is free of the restrictions of the Voice.
+Source: BGG forum
+
+
+“When you win a Conflict”
+                                                                                                                                                                                                                                                                                                                                                                                                                                                   * Combat Intrigue cards that do something “when you win a conflict” can’t be played when you tie for victory with another player. 
+Source: Official Dune Imperium FAQ
+                                                                                                                                                                                                                                                                                                                                                                                                                                                   * If you receive an Intrigue card as a reward for winning a Conflict, and that card can be played “When you win a Conflict” (Demand Respect, To the Victor, e.g.) you may choose to play it immediately.
+Source: Official Dune Imperium FAQ
+
+
+Wild Battle Icon
+                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Can two Wild battle icons match with each other during Endgame? 
+Yes, the Bloodlines rulebook updates this rule since now multiple Wild battle icons are possible.
+Source: Bloodlines Rulebook
+
+
+ERRATA
+
+
+Missionaria Protectiva — This card is part of the Bene Gesserit faction. Cards from the first English printing are missing this underneath its title. (If you have replaced the misprints, note that there should be only two copies of Missionaria Protectiva in your Imperium deck.)
+Source: Official Dune Imperium FAQ
+
+
+Rise of Ix Rulebook, page 4 — A tech tile with a “once per round” ability (indicated by the flip icon) can be used during one of your Agent or Reveal turns. The first English printing mistakenly said this could be done only during an Agent turn.
+Source: Official Dune Imperium FAQ
+
+
+Rise of Ix Rulebook, page 8 — This instruction for Setup of Solo & Two-Player Games is missing from the first English printing: Remove four of the original cards from the House Hagal deck: the two Hall of Oratory cards and the two Rally Troops cards.
+Source: Official Dune Imperium FAQ
+
+
+Uprising Rulebook, page 11 — The rulebook says "Whenever the Spy icon appears on a card or board space, you may place a Spy from your supply on an unoccupied observation post on the board." The word “may” is incorrectly used here. It is mandatory to place a Spy if you have at least one Spy in your supply.  
+Source: Hidden Assets discord post
+
+
+
+
+—————————————————————————————
+
+
+DUNE UPRISING 3v3 RULES FAQ
+As a related resource, see the 3v3 FAQ here.
+
+
+COMMONLY OVERLOOKED RULES
+As a related resource, see BGG thread here.
+
+
+FULL CARD LISTS
+                                                                                                                                                                                                                                                                                                                                                                                                                                                         * Spreadsheet from Rowie
+                                                                                                                                                                                                                                                                                                                                                                                                                                                         * https://dune-imperium-db-1.glitch.me by _royce / meep
+                                                                                                                                                                                                                                                                                                                                                                                                                                                         * https://www.duneimperiumassets.com
+
+
+AUCTION VARIANT
+See the rules for an unofficial variant by Lannister here

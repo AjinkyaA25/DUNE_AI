@@ -1,0 +1,16 @@
+# Core — the engine + self-play AI need only NumPy.
+numpy>=1.24
+typing-extensions>=4.5.0
+
+# Tests
+pytest>=7.3.0
+
+# Optional: reading the rulebook PDF (leader/space verification only)
+# pypdf>=4.0.0
+
+# Optional: heavier RL stack (NOT required — the value net is pure NumPy).
+#   torch>=2.0.0
+#   stable-baselines3>=2.0.0
+#   gymnasium>=0.28.0
+#   pandas>=2.0.0
+#   matplotlib>=3.7.0
