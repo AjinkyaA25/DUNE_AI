@@ -392,6 +392,52 @@ class EffectResolver:
             if spec.get(key):
                 EffectResolver.resolve_single_effect(spec[key], player, gs)
 
+        # -- pick a sub-effect based on completed-contract count -----
+        # (Delivery Agreement reveal: 1 VP at 4+ contracts, else 1 spice.)
+        if "choose_by_contracts" in effect:
+            spec = effect["choose_by_contracts"]
+            n = int(spec.get("n", 4))
+            branch = "yes" if len(player.contracts_completed) >= n else "no"
+            if spec.get(branch):
+                EffectResolver.resolve_single_effect(spec[branch], player, gs)
+
+        # -- Interstellar Trade reveal: 1 persuasion per completed contract --
+        if "persuasion_per_contract" in effect:
+            k = len(player.contracts_completed)
+            if k:
+                gs.gain_persuasion(player.id, k * int(effect["persuasion_per_contract"]))
+
+        # -- Desert Power reveal: 2 persuasion, OR (with Maker Hooks) pay 1
+        #    water to summon a sandworm into the current Conflict.  The worm
+        #    needs the Shield Wall down (or a Conflict not behind it); the
+        #    worm is auto-taken only when already committed to that Conflict.
+        if "worm_or_persuasion" in effect:
+            spec = effect["worm_or_persuasion"]
+            took_worm = False
+            if (cc is not None and player.has_maker_hooks
+                    and player.water >= spec.get("water", 1)):
+                from src.game.board.board import SHIELD_WALL_PROTECTED as _SWP
+                deployable = not (gs.shield_wall_intact and cc.location in _SWP)
+                committed = (gs.troops_in_conflict.get(player.id, 0) > 0
+                             or gs.sandworms_in_conflict.get(player.id, 0) > 0)
+                if deployable and committed:
+                    player.water -= spec.get("water", 1)
+                    gs.spawn_sandworms(spec.get("sandworm", 1), source="card_effect")
+                    took_worm = True
+            if not took_worm:
+                gs.gain_persuasion(player.id, spec.get("persuasion", 2))
+
+        # -- In High Places reveal: MAY recall N Spies for +M persuasion ----
+        if "recall_spies_persuasion" in effect:
+            spec = effect["recall_spies_persuasion"]
+            posts = list(player.spies_on_board)
+            need = int(spec.get("count", 2))
+            if len(posts) >= need:
+                for post in posts[:need]:
+                    player.recall_spy(post)
+                player.recalled_spy_this_turn = True
+                gs.gain_persuasion(player.id, int(spec.get("persuasion", 0)))
+
         if "if_opp_combat_intrigue" in effect:
             if any(q != player.id for q in getattr(gs, "_combat_intrigue_players", set())):
                 EffectResolver.resolve_single_effect(
@@ -477,6 +523,21 @@ class EffectResolver:
         if "discard_then" in effect and player.hand:
             EffectResolver._discard_worst(player)
             EffectResolver.resolve_single_effect(effect["discard_then"], player, game_state)
+
+        # ===== GUILD ENVOY: mandatory discard 1; bonus if it was a Spacing =====
+        # Guild card.  Auto-discards a spare Spacing Guild card to earn the
+        # bonus when one is in hand, otherwise the least useful card.
+        if "discard_then_if_sg" in effect and player.hand:
+            sg = [c for c in player.hand if c.has_tag(CardTag.SPACING_GUILD)]
+            if sg and len(player.hand) > 1:
+                tgt = min(sg, key=lambda c: c.persuasion + c.swords
+                          + len(getattr(c, "agent_effects", [])))
+                player.hand.remove(tgt)
+                player.discard.append(tgt)
+                EffectResolver.resolve_single_effect(
+                    effect["discard_then_if_sg"], player, game_state)
+            else:
+                EffectResolver._discard_worst(player)
 
         # ===== DISCARD N + PAY SOLARI -> GAIN VP (Corrinth City agent) =====
         if "discard_pay_vp" in effect:

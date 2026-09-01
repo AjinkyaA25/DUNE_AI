@@ -122,6 +122,56 @@ def test_spy_topology_verified_posts():
     assert S["Deep Desert"] == {"Deep Desert Post"}
 
 
+def test_card_corrections_2026_09_01():
+    """Spot-check the user-verified Imperium card fixes."""
+    from src.game.effects import EffectResolver
+    from src.data.card_definitions import create_imperium_cards
+    from src.game.cards.card import AccessSymbol, CardTag
+
+    cs = {c.name: c for c in create_imperium_cards()}
+
+    # Ecological Testing Station: Fremen+City access, Fremen-bond -> water.
+    e = cs["Ecological Testing Station"]
+    assert e.access_symbols == {AccessSymbol.FREMEN, AccessSymbol.CITY}
+    assert e.reveal_effects == [{"if_fremen_bond": {"water": 1}}]
+
+    # Interstellar Trade: acquire a contract; reveal = 1 persuasion / contract.
+    it = cs["Interstellar Trade"]
+    assert it.acquire_effects == [{"contract": 1}]
+    assert AccessSymbol.SPACING not in it.access_symbols
+
+    # Junction HQ: no Spacing Guild access.
+    assert AccessSymbol.SPACING not in cs["Junction Headquarters"].access_symbols
+
+    gs = setup_game(2, seed=3)
+    p = gs.players[0]
+
+    # persuasion_per_contract scales with completed contracts.
+    p.contracts_completed = [object(), object(), object()]
+    gs.persuasion_pool[0] = 0
+    EffectResolver.resolve_single_effect({"persuasion_per_contract": 1}, p, gs)
+    assert gs.get_persuasion(0) == 3
+
+    # choose_by_contracts: VP at 4+, else spice.
+    vp0, sp0 = p.victory_points, p.spice
+    EffectResolver.resolve_single_effect(
+        {"choose_by_contracts": {"n": 4, "yes": {"vp": 1}, "no": {"spice": 1}}}, p, gs)
+    assert p.spice == sp0 + 1 and p.victory_points == vp0
+    p.contracts_completed = [object()] * 4
+    EffectResolver.resolve_single_effect(
+        {"choose_by_contracts": {"n": 4, "yes": {"vp": 1}, "no": {"spice": 1}}}, p, gs)
+    assert p.victory_points == vp0 + 1
+
+    # In High Places reveal: recall 2 spies -> +3 persuasion.
+    p.place_spy("Emperor Post")
+    p.place_spy("Fremen Post")
+    gs.persuasion_pool[0] = 0
+    EffectResolver.resolve_single_effect(
+        {"recall_spies_persuasion": {"count": 2, "persuasion": 3}}, p, gs)
+    assert gs.get_persuasion(0) == 3
+    assert sum(p.spies_on_board.values()) == 0
+
+
 def _city_card():
     from src.game.cards.card import Card, CardType, AccessSymbol
     c = Card("CityTest", CardType.STARTER)

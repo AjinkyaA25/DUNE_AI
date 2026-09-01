@@ -147,47 +147,71 @@ def create_imperium_cards() -> List[Card]:
           agent={"influence_any": 1, "trash_self": 1}, persuasion=1, swords=1,
           notes="Agent: gain 1 Influence with a Faction of your choice, then trash this card."),
         m("Delivery Agreement", 5, I, access=["city"], tags=["spacing_guild"],
-          agent={"discard_then": {"contract": 1}}, persuasion=1,
-          reveal={"if_contracts_4": {"vp": 1}},
-          notes="Agent: MAY discard a card to take a contract (auto when you have a "
-                "spare card). Reveal conditional still unverified."),
+          agent={"discard_then": {"contract": 1}}, persuasion=0,
+          reveal={"choose_by_contracts": {"n": 4, "yes": {"vp": 1}, "no": {"spice": 1}}},
+          notes="No reveal persuasion. Reveal: gain 1 spice, OR — if you have "
+                "completed 4+ contracts — 1 VP instead (auto-takes the VP). "
+                "Agent: MAY discard a card to take a contract."),
         m("Desert Power", 6, I, access=["desert"], tags=["fremen"],
-          agent={"if_agent_to_maker": {"spice": 2}}, persuasion=2),
+          agent={"if_agent_to_maker": {"spice": 2}}, persuasion=0,
+          reveal={"worm_or_persuasion": {"persuasion": 2, "water": 1, "sandworm": 1}},
+          notes="Reveal: gain 2 persuasion, OR — with Maker Hooks — spend 1 water "
+                "to summon a sandworm into the Conflict (needs the Shield Wall down "
+                "/ Conflict not behind it). Worm auto-taken only when already "
+                "committed to that Conflict, else the 2 persuasion."),
         m("Desert Survival", 2, I, access=["desert"], tags=["fremen"],
           agent={"trash": 1}, persuasion=1, swords=1),
         m("Double Agent", 3, I, access=["landsraad", "city", "desert"],
           tags=["emperor", "spacing_guild"],
           agent={"spy_special": 1}, persuasion=1, swords=1,
           notes="'Spy on the space you visited' approximated as a free special Spy placement."),
-        m("Ecological Testing Station", 3, I, access=["desert", "city"], tags=["fremen"],
-          agent={"may_convert": {"cost": {"water": 2}, "gain": {"solari": 1}}},
-          persuasion=1, reveal={"if_fremen_bond": {"persuasion": 1}}),
+        m("Ecological Testing Station", 3, I, access=["fremen", "city"], tags=["fremen"],
+          agent={"pay_then": {"cost": {"water": 2}, "draw": 2}},
+          persuasion=1, reveal={"if_fremen_bond": {"water": 1}},
+          notes="Agent: MAY spend 2 water to draw 2 cards (auto-taken when you "
+                "have 2+ water). Reveal: 1 persuasion, +1 water if Fremen bond."),
         m("Fedaykin Stilltent", 2, I, access=["desert"], tags=["fremen"],
           agent={"if_agent_to_maker": {"troops": 1}}, reveal={"water": 1}),
         m("Guild Envoy", 3, I,
           access=["emperor", "spacing_guild", "bene_gesserit", "fremen"], tags=["spacing_guild"],
-          persuasion=1, notes="'If you discarded a Spacing Guild card this turn: +1 solari' "
-                              "not modelled."),
+          agent={"discard_then_if_sg": {"draw": 2}}, persuasion=1,
+          notes="Agent: mandatory — discard a card; if it was a Spacing Guild "
+                "card, draw 2 cards (auto-discards a spare SG card to earn this)."),
         m("Guild Spy", 3, I, access=["spy", "spacing_guild"], tags=["spacing_guild"],
-          persuasion=2, notes="Agent/acquire conditionals (discarded SG card, acquire TSMF) "
-                              "not modelled."),
+          agent={"discard_then": {"draw": 1}}, persuasion=2, acquire={"spy": 1},
+          notes="Acquire: place a Spy. Agent modelled as 'MAY discard a card to "
+                "draw a card'; the printed upgrade — if you discarded a Spacing "
+                "Guild card this turn, draw a card + gain an Intrigue instead — "
+                "needs discard-tracking, not modelled. Reveal: 2 persuasion; the "
+                "printed bonus (if you acquired The Spice Must Flow this Reveal "
+                "turn, +1 influence with each Faction whose post holds your Spy) "
+                "is not modelled."),
         m("Hidden Missive", 2, I, access=["landsraad"], tags=["bene_gesserit"],
-          agent={"if_influence_bene_gesserit_2": {"troops": 1, "solari": 1}},
+          agent={"if_influence_bene_gesserit_2": {"troops": 1, "draw": 1}},
           persuasion=1, swords=1),
         m("Imperial Spymaster", 2, I, access=["emperor", "spy"], tags=["emperor"],
-          agent={"if_spy_recalled": {"swords": 1}}, persuasion=1, swords=1),
+          agent={"if_spy_recalled": {"intrigue": 1}}, persuasion=1, swords=1),
         m("In High Places", 5, I, access=["emperor", "bene_gesserit"],
-          tags=["emperor", "bene_gesserit"],
-          agent={"if_tag_other_bene": {"troops": 1, "solari": 1}},
-          persuasion=2, reveal={"troops": 1, "persuasion": 3}),
+          tags=["emperor", "bene_gesserit"], acquire={"spy": 1},
+          agent={"if_tag_other_bene": {"spy": 1, "draw": 1}},
+          persuasion=2,
+          reveal={"recall_spies_persuasion": {"count": 2, "persuasion": 3}},
+          notes="Acquire: place a Spy. Agent: with another Bene Gesserit card in "
+                "play, gain a Spy + draw a card. Reveal: 2 persuasion, plus MAY "
+                "recall 2 Spies this turn for +3 persuasion (5 total); auto-taken "
+                "when 2+ Spies are on the board."),
         m("Interstellar Trade", 7, I, access=["landsraad", "city", "desert"],
-          tags=["spacing_guild"], acquire={"solari": 1},
-          reveal={"if_contracts_2": {"persuasion": 2}, "if_contracts_4": {"persuasion": 2}},
-          notes="Reveal: +1 persuasion per completed contract — approximated as tiers."),
+          tags=["spacing_guild"], acquire={"contract": 1},
+          reveal={"persuasion_per_contract": 1},
+          notes="Acquire: take a contract. Reveal: 1 persuasion per completed "
+                "contract (no other reveal effect)."),
         m("Junction Headquarters", 6, I,
-          access=["landsraad", "city", "desert", "spacing_guild"], tags=["spacing_guild"],
-          agent={"if_alliance_spacing_guild": {"trash": 1, "persuasion": 2, "solari": 1}},
-          reveal={"persuasion": 1, "water": 1, "troops": 1}),
+          access=["landsraad", "city", "desert"], tags=["spacing_guild"],
+          agent={"if_alliance_spacing_guild":
+                 {"trash_intrigue_for": {"pay_then": {"cost": {"spice": 2}, "vp": 1}}}},
+          reveal={"persuasion": 1, "water": 1, "troops": 1},
+          notes="Agent: with the Spacing Guild Alliance, MAY trash an Intrigue "
+                "card and spend 2 spice to gain 1 VP."),
         m("Leadership", 5, I, access=["desert"], tags=["fremen"],
           agent={"solari": 1}, persuasion=2, swords=1,
           notes="Agent: 1 solari per sandworm in Conflict — approximated as flat 1 solari; "
