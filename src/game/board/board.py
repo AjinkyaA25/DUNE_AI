@@ -51,7 +51,6 @@ class BoardSpace:
         mandatory_cost: Optional[Dict] = None,
         influence_gate: Optional[Tuple[str, int]] = None,
         shield_wall_protected: bool   = False,
-        observation_posts: Optional[List[str]] = None,
         one_time_use: bool            = False,
         special: bool                 = False,
         grants_faction_influence: Optional[str] = None,
@@ -66,7 +65,6 @@ class BoardSpace:
         self.mandatory_cost         = mandatory_cost or {}
         self.influence_gate         = influence_gate
         self.shield_wall_protected  = shield_wall_protected
-        self.observation_posts      = observation_posts or []
         self.one_time_use           = one_time_use
         self.special                = special
         # Faction whose influence track advances +1 when an Agent is placed here.
@@ -147,90 +145,76 @@ def build_uprising_board() -> Dict[str, BoardSpace]:
     add(BoardSpace("Arrakeen", C, "city",
                    [{"troops": 1, "draw": 1}],
                    is_combat_space=True, is_controlled_location=True,
-                   shield_wall_protected=True, observation_posts=["Arrakeen Post"]))
+                   shield_wall_protected=True))
     add(BoardSpace("Spice Refinery", C, "city",
                    [], special=True,          # 0 or 1 spice → 2 or 4 solari
                    is_combat_space=True, is_controlled_location=True,
-                   shield_wall_protected=True,
-                   observation_posts=["Research Post", "Carthag Post"]))
+                   shield_wall_protected=True))
     add(BoardSpace("Research Station", C, "city",
                    [{"troops": 2, "draw": 2}],
-                   is_combat_space=True, mandatory_cost={"water": 2},
-                   observation_posts=["Arrakeen Post", "Research Post"]))
+                   is_combat_space=True, mandatory_cost={"water": 2}))
     add(BoardSpace("Sietch Tabr", C, "city",
                    [], special=True,          # hooks+troop+water  OR  water+destroy shield wall
-                   is_combat_space=True, influence_gate=("fremen", 2),
-                   observation_posts=["Fremen Post"]))
+                   is_combat_space=True, influence_gate=("fremen", 2)))
 
     # ── Emperor ─────────────────────────────────────────────────────────────
     add(BoardSpace("Sardaukar", E, "emperor",
                    [{"intrigue": 1, "troops": 4}],
-                   mandatory_cost={"spice": 4},          # NOT a Combat space
-                   observation_posts=["Emperor Post"]))
+                   mandatory_cost={"spice": 4}))         # NOT a Combat space
     add(BoardSpace("Dutiful Service", E, "emperor",
-                   [{"contract": 1}], observation_posts=["Emperor Post"]))
+                   [{"contract": 1}]))
 
     # ── Spacing Guild ───────────────────────────────────────────────────────
     add(BoardSpace("Heighliner", S, "spacing_guild",
                    [{"troops": 5}],
-                   is_combat_space=True, mandatory_cost={"spice": 5},
-                   observation_posts=["Spacing Guild Post"]))
+                   is_combat_space=True, mandatory_cost={"spice": 5}))
     add(BoardSpace("Deliver Supplies", S, "spacing_guild",
-                   [{"water": 1}], observation_posts=["Spacing Guild Post"]))
+                   [{"water": 1}]))
 
     # ── Bene Gesserit ───────────────────────────────────────────────────────
     add(BoardSpace("Espionage", B, "bene_gesserit",
-                   [{"draw": 1, "spy": 1}], mandatory_cost={"spice": 1},
-                   observation_posts=["Carthag Post"]))
+                   [{"draw": 1, "spy": 1}], mandatory_cost={"spice": 1}))
     add(BoardSpace("Secrets", B, "bene_gesserit",
-                   [{"intrigue": 1, "secrets_steal": 1}],
-                   observation_posts=["Carthag Post"]))
+                   [{"intrigue": 1, "secrets_steal": 1}]))
 
     # ── Fremen ──────────────────────────────────────────────────────────────
     add(BoardSpace("Desert Tactics", F, "fremen",
                    [{"troops": 1, "trash": 1}],
-                   is_combat_space=True, mandatory_cost={"water": 1},
-                   observation_posts=["Fremen Post"]))
+                   is_combat_space=True, mandatory_cost={"water": 1}))
     add(BoardSpace("Fremkit", F, "fremen",
-                   [{"draw": 1}], is_combat_space=True,
-                   observation_posts=["Fremen Post"]))
+                   [{"draw": 1}], is_combat_space=True))
 
     # ── Landsraad ───────────────────────────────────────────────────────────
     add(BoardSpace("High Council", L, "landsraad",
-                   [], special=True, mandatory_cost={"solari": 5},
-                   observation_posts=["Landsraad Post"]))
+                   [], special=True, mandatory_cost={"solari": 5}))
     add(BoardSpace("Swordmaster", L, "landsraad",
-                   [], special=True, one_time_use=True,
-                   observation_posts=["Landsraad Post"]))
+                   [], special=True, one_time_use=True))
     add(BoardSpace("Imperial Privilege", L, "landsraad",
                    [{"uplift": 1, "draw": 1}],
-                   influence_gate=("emperor", 2), mandatory_cost={"solari": 3},
-                   observation_posts=["Landsraad Post"]))
+                   influence_gate=("emperor", 2), mandatory_cost={"solari": 3}))
     add(BoardSpace("Assembly Hall", L, "landsraad",
-                   [{"intrigue": 1}], observation_posts=["Landsraad Post"]))
+                   [{"intrigue": 1}]))
     add(BoardSpace("Gather Support", L, "landsraad",
-                   [], special=True, observation_posts=["Landsraad Post"]))
+                   [], special=True))
 
     # ── Spice Trade / Desert ────────────────────────────────────────────────
     add(BoardSpace("Accept Contract", D, "desert",
-                   [{"draw": 1, "contract": 1}], observation_posts=["Imperial Basin Post"]))
+                   [{"draw": 1, "contract": 1}]))
     add(BoardSpace("Shipping", D, "desert",
                    [{"solari": 5, "influence_any": 1}],
-                   influence_gate=("spacing_guild", 2), mandatory_cost={"spice": 3},
-                   observation_posts=["Imperial Basin Post"]))
+                   influence_gate=("spacing_guild", 2), mandatory_cost={"spice": 3}))
     add(BoardSpace("Imperial Basin", D, "desert",
                    [{"spice": 1}],
                    is_combat_space=True, is_maker_space=True,
-                   is_controlled_location=True, shield_wall_protected=True,
-                   observation_posts=["Imperial Basin Post"]))
+                   is_controlled_location=True, shield_wall_protected=True))
     add(BoardSpace("Hagga Basin", D, "desert",
                    [], special=True,          # bonus spice + (2 spice OR 1 sandworm)
                    is_combat_space=True, is_maker_space=True,
-                   mandatory_cost={"water": 1}, observation_posts=["Hagga Basin Post"]))
+                   mandatory_cost={"water": 1}))
     add(BoardSpace("Deep Desert", D, "desert",
                    [], special=True,          # bonus spice + (4 spice OR 2 sandworms)
                    is_combat_space=True, is_maker_space=True,
-                   mandatory_cost={"water": 3}, observation_posts=["Hagga Basin Post"]))
+                   mandatory_cost={"water": 3}))
 
     return spaces
 
@@ -240,6 +224,16 @@ UPRISING_BOARD: Dict[str, BoardSpace] = build_uprising_board()
 
 # ---------------------------------------------------------------------------
 # Observation posts (spy placement locations)
+#
+# THE single source of truth for spy topology: each post -> the set of board
+# spaces a Spy there can Infiltrate / Gather Intelligence on.  `GameState`
+# derives everything (`ALL_OBSERVATION_POSTS`, `SPACE_TO_OBSERVATION_POSTS`)
+# from this dict.
+#
+# Verified against the physical board (user, 2026-09-01):
+#   - Landsraad Post  -> High Council, Swordmaster, Imperial Privilege
+#   - Green Post      -> Assembly Hall, Gather Support
+# The remaining posts are still approximate pending board review.
 # ---------------------------------------------------------------------------
 
 OBSERVATION_POST_CONNECTIONS: Dict[str, set] = {
@@ -248,8 +242,8 @@ OBSERVATION_POST_CONNECTIONS: Dict[str, set] = {
     "Carthag Post":        {"Spice Refinery", "Espionage", "Secrets"},
     "Imperial Basin Post": {"Imperial Basin", "Accept Contract", "Shipping"},
     "Hagga Basin Post":    {"Hagga Basin", "Deep Desert"},
-    "Landsraad Post":      {"Swordmaster", "High Council", "Assembly Hall",
-                            "Gather Support", "Imperial Privilege"},
+    "Landsraad Post":      {"High Council", "Swordmaster", "Imperial Privilege"},
+    "Green Post":          {"Assembly Hall", "Gather Support"},
     "Emperor Post":        {"Sardaukar", "Dutiful Service"},
     "Spacing Guild Post":  {"Heighliner", "Deliver Supplies"},
     "Fremen Post":         {"Desert Tactics", "Fremkit", "Sietch Tabr"},
