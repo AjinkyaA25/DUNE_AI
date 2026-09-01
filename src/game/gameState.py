@@ -180,10 +180,13 @@ FACTIONS    = ("emperor", "spacing_guild", "bene_gesserit", "fremen")
 # ---------------------------------------------------------------------------
 
 class PendingSpyPlacement:
-    def __init__(self, player_id: int, count: int, allow_occupied: bool):
+    def __init__(self, player_id: int, count: int, allow_occupied: bool,
+                 allowed_posts=None):
         self.player_id     = player_id
         self.count         = count
         self.allow_occupied = allow_occupied
+        # Optional restriction (e.g. Reliable Informant: faction posts only).
+        self.allowed_posts = set(allowed_posts) if allowed_posts else None
 
 
 class PendingUplift:
@@ -771,11 +774,20 @@ class GameState:
 
     def _step_resolve_spy(self, action: GameAction) -> None:
         pid = action.player_id
-        pending = next((p for p in self.pending_spy_placements if p.player_id == pid), None)
-        if pending is None:
-            raise ValueError("No pending spy placement for player")
         post = action.spy_post_name
-        if not self.can_place_spy(pid, post, pending.allow_occupied):
+        candidates = [p for p in self.pending_spy_placements if p.player_id == pid]
+        if not candidates:
+            raise ValueError("No pending spy placement for player")
+        # Resolve against a queued placement that permits this post — restricted
+        # placements (allowed_posts set) are matched first so they don't get
+        # starved by a co-pending unrestricted one.
+        candidates.sort(key=lambda p: p.allowed_posts is None)
+        pending = next(
+            (p for p in candidates
+             if (p.allowed_posts is None or post in p.allowed_posts)
+             and self.can_place_spy(pid, post, p.allow_occupied)),
+            None)
+        if pending is None:
             raise ValueError(f"Cannot place spy at '{post}'")
         self.place_spy(pid, post, pending.allow_occupied)
         pending.count -= 1
@@ -827,6 +839,9 @@ class GameState:
                 raise ValueError(f"Card '{name}' not in hand or discard")
             (p.hand if card in p.hand else p.discard).remove(card)
             p.trash.append(card)
+            # "When this card is trashed" effects (e.g. Sardaukar Soldier).
+            for eff in getattr(card, "trash_effects", []):
+                EffectResolver.resolve_single_effect(eff, p, self)
         pending.count -= 1
         if pending.count <= 0 or not name:
             self.pending_trashes.remove(pending)
@@ -943,7 +958,7 @@ class GameState:
             psp for psp in self.pending_spy_placements
             if psp.player_id != player_id
             or any(self.can_place_spy(player_id, post, psp.allow_occupied)
-                   for post in ALL_OBSERVATION_POSTS)
+                   for post in (psp.allowed_posts or ALL_OBSERVATION_POSTS))
         ]
         self.pending_uplifts = [
             pu for pu in self.pending_uplifts
@@ -976,7 +991,7 @@ class GameState:
         for psp in self.pending_spy_placements:
             if psp.player_id != player_id:
                 continue
-            for post in ALL_OBSERVATION_POSTS:
+            for post in (psp.allowed_posts or ALL_OBSERVATION_POSTS):
                 if self.can_place_spy(player_id, post, psp.allow_occupied):
                     actions.append(GameAction(ActionType.RESOLVE_SPY,
                                               player_id, spy_post_name=post))
@@ -1551,6 +1566,7 @@ class GameState:
             player.leader.trigger("on_reveal", player, self)   # sees pre-reveal hand
         cards_to_reveal = list(player.hand)
         player.reveal_cards(cards_to_reveal)
+        player._revealed_this_turn = len(cards_to_reveal)
 
         swords = sum(c.swords for c in cards_to_reveal)
         self.swords_this_reveal[player_id] = (
@@ -1988,15 +2004,17 @@ class GameState:
         return True
 
     def add_pending_spy_placement(
-        self, player_id: int, count: int, allow_occupied: bool
+        self, player_id: int, count: int, allow_occupied: bool,
+        allowed_posts=None,
     ) -> None:
         """
         Queue a mandatory spy placement.
         Per Uprising errata, spy placement is NOT optional.
         The RL env must resolve this before other actions.
+        `allowed_posts` optionally restricts which observation posts are legal.
         """
         self.pending_spy_placements.append(
-            PendingSpyPlacement(player_id, count, allow_occupied)
+            PendingSpyPlacement(player_id, count, allow_occupied, allowed_posts)
         )
 
     def can_infiltrate(self, player_id: int, space_name: str) -> bool:

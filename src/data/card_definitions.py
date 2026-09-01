@@ -39,7 +39,7 @@ _TAG = {
 
 
 def _make(name, cost, ctype, access=(), tags=(), agent=None, reveal=None,
-          persuasion=0, swords=0, acquire=None, notes="") -> Card:
+          persuasion=0, swords=0, acquire=None, trash=None, notes="") -> Card:
     c = _c(name, ctype, cost)
     for a in access:
         c.add_access_symbol(_ACCESS[a])
@@ -57,6 +57,8 @@ def _make(name, cost, ctype, access=(), tags=(), agent=None, reveal=None,
     c.swords = swords
     if acquire:
         c.acquire_effects = [dict(acquire)]
+    if trash:
+        c.trash_effects = [dict(trash)]
     if notes:
         c.notes = notes
     return c
@@ -212,53 +214,72 @@ def create_imperium_cards() -> List[Card]:
           reveal={"persuasion": 1, "water": 1, "troops": 1},
           notes="Agent: with the Spacing Guild Alliance, MAY trash an Intrigue "
                 "card and spend 2 spice to gain 1 VP."),
-        m("Leadership", 5, I, access=["desert"], tags=["fremen"],
-          agent={"solari": 1}, persuasion=2, swords=1,
-          notes="Agent: 1 solari per sandworm in Conflict — approximated as flat 1 solari; "
-                "reveal sword-doubling not modelled."),
-        m("Long Live the Fighters", 7, I, access=["city"], tags=["fremen"],
-          agent={"draw": 1, "trash": 1}, persuasion=2, swords=3,
-          notes="'Look at top 3, draw 1, discard 1, trash 1' approximated as draw 1 + trash 1."),
+        m("Leadership", 5, I, access=["desert", "fremen"], tags=["fremen"],
+          agent={"draw_per_sandworm_in_conflict": 1}, persuasion=2, swords=1,
+          reveal={"swords_per_other_revealed_card": 1},
+          notes="Agent: draw 1 per sandworm you have in the Conflict. Reveal: "
+                "2 persuasion + 1 sword, +1 more sword per other card revealed."),
+        m("Long Live the Fighters", 7, I, access=["fremen", "city"], tags=["fremen"],
+          agent={"look_top3_draw_discard_trash": 1}, persuasion=2, swords=3,
+          notes="Agent: look at top 3 of your deck — draw 1, discard 1, trash 1 "
+                "(all mandatory; auto keeps the strongest / trashes the weakest)."),
         m("Maker Keeper", 2, I, access=["city"], tags=["bene_gesserit", "fremen"],
-          agent={"if_influence_bene_gesserit_2": {"persuasion": 1, "water": 1},
-                 "if_influence_fremen_2": {"persuasion": 1, "solari": 1}},
+          agent={"if_influence_bene_gesserit_2": {"water": 1},
+                 "if_influence_fremen_2": {"spice": 1}},
           persuasion=2),
         m("Maula Pistol", 3, I, access=["city", "desert"], tags=["fremen"],
-          agent={"solari": 1}, persuasion=1, swords=1),
+          agent={"draw": 1}, persuasion=1, swords=1),
         m("Northern Watermaster", 3, I, access=["city"], tags=["fremen"],
-          agent={"water": 1}, persuasion=1, reveal={"if_fremen_bond": {"persuasion": 2}}),
+          agent={"water": 1}, persuasion=1, reveal={"if_fremen_bond": {"spice": 2}}),
         m("Overthrow", 8, I,
           access=["emperor", "spacing_guild", "bene_gesserit", "fremen"],
-          agent={"if_faction_agent": {"influence_any": 1}}, persuasion=2, swords=2,
-          reveal={"troops": 1},
-          acquire={"influence_emperor": 1, "influence_spacing_guild": 1,
-                   "influence_bene_gesserit": 1, "influence_fremen": 1}),
+          agent={"if_faction_agent": {"influence_faction_visited": 2}},
+          persuasion=2, swords=2, reveal={"troops": 1}, acquire={"intrigue": 1},
+          notes="Agent: gain 2 influence with the Faction whose space you visited "
+                "(the space's normal +1 still applies). Acquire: gain an Intrigue."),
         m("Paracompass", 4, I, access=["city"],
-          agent={"persuasion": 2},
-          reveal={"if_councilor": {"persuasion": 2, "swords": 1},
-                  "if_swordmaster": {"persuasion": 1}}),
+          agent={"solari": 2, "if_influence_bene_gesserit_2": {"draw": 1}},
+          reveal={"if_councilor": {"persuasion": 2,
+                                   "if_swordmaster": {"persuasion": 1}}},
+          notes="Agent: 2 solari, +1 draw if 2+ Bene Gesserit influence. Reveal: "
+                "with a High Council seat, 2 persuasion (+1 more if you also have "
+                "your Swordmaster)."),
         m("Prepare the Way", 2, I, access=["landsraad", "city"], tags=["bene_gesserit"],
           agent={"if_influence_bene_gesserit_2": {"solari": 1}}, persuasion=2),
         m("Price is No Object", 6, I, access=["emperor", "bene_gesserit"],
-          tags=["emperor", "bene_gesserit"], agent={"solari": 2}, persuasion=2,
-          notes="'Acquire a card with Solari' option not modelled."),
+          tags=["emperor", "bene_gesserit"],
+          agent={"acquire_with_solari": {"max_cost": 6}},
+          persuasion=2, reveal={"solari": 2}, acquire={"solari": 2},
+          notes="Agent: MAY acquire an Imperium Row card by paying Solari equal "
+                "to its cost instead of Persuasion (auto-buys the best affordable; "
+                "max_cost 6 unverified). Reveal: 2 persuasion + 2 solari. "
+                "Acquire: gain 2 solari."),
         m("Priority Contracts", 6, I, access=["landsraad", "desert"], tags=["spacing_guild"],
-          agent={"spice": 1}, persuasion=2,
-          reveal={"if_contracts_4": {"vp": 1}},
-          notes="Trash-for-VP option approximated as auto when 4+ contracts done."),
+          agent={"contract": 1}, persuasion=0,
+          reveal={"choose_by_contracts": {"n": 4, "yes": {"vp": 1}, "no": {"spice": 2}}},
+          notes="No reveal persuasion. Reveal: gain 2 spice, OR — with 4+ "
+                "contracts completed — 1 VP instead (auto-takes the VP)."),
         m("Public Spectacle", 4, I, access=["spy"], tags=["emperor"],
-          agent={"if_spy_recalled": {"intrigue": 1}}, persuasion=1, reveal={"troops": 1}),
+          agent={"if_spy_recalled": {"influence_any": 1}}, persuasion=1,
+          reveal={"spy": 1}),
         m("Rebel Supplier", 3, I, access=["city"], tags=["fremen"],
-          agent={"if_spy_recalled": {"troops": 2}}, persuasion=1, swords=1),
+          agent={"if_spy_recalled": {"troops": 2}}, persuasion=0, swords=1,
+          reveal={"spice": 1}),
         m("Reliable Informant", 2, I, access=["spacing_guild"], tags=["spacing_guild"],
-          agent={"spy": 1}, persuasion=1, swords=1,
-          notes="'Place a Spy on SG/BG/Fremen faction boards' approximated as one Spy."),
+          agent={"spy_posts": {"count": 1, "posts": ["Emperor Post",
+                 "Bene Gesserit Post", "Fremen Post"]}},
+          persuasion=1, reveal={"solari": 1},
+          notes="Agent: place a Spy on the Emperor, Bene Gesserit, or Fremen "
+                "observation post only. Reveal: 1 persuasion + 1 solari."),
         m("Sardaukar Coordination", 4, I, access=["emperor", "landsraad"], tags=["emperor"],
-          persuasion=2, reveal={"if_tag_other_emperor": {"swords": 2}},
-          notes="'Deploy troops recruited this turn' is already allowed at Combat spaces; "
-                "reveal swords per Emperor card approximated as: another Emperor card -> 2."),
+          agent={"deploy_recruited": 9}, persuasion=2,
+          reveal={"swords_per_emperor_card": 1},
+          notes="Agent: MAY deploy troops you recruited this turn to the Conflict. "
+                "Reveal: 2 persuasion, +1 sword per Emperor card in play if you "
+                "have another Emperor card besides this one."),
         m("Sardaukar Soldier", 1, I, access=["city"], tags=["emperor"],
-          persuasion=1, swords=1, notes="'When trashed: Signet' not modelled."),
+          persuasion=1, swords=1, trash={"intrigue": 1},
+          notes="When trashed: gain 1 Intrigue card."),
         m("Shishakli", 4, I, access=["city", "desert"], tags=["fremen"],
           agent={"trash": 1, "solari": 1}, swords=2,
           reveal={"if_fremen_bond": {"influence_fremen": 1}}),

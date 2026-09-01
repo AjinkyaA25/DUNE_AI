@@ -172,6 +172,58 @@ def test_card_corrections_2026_09_01():
     assert sum(p.spies_on_board.values()) == 0
 
 
+def test_card_corrections_batch3():
+    from src.game.effects import EffectResolver
+    from src.data.card_definitions import create_imperium_cards
+    from src.game.cards.card import AccessSymbol, CardTag
+
+    cs = {c.name: c for c in create_imperium_cards()}
+    assert cs["Leadership"].access_symbols == {AccessSymbol.DESERT, AccessSymbol.FREMEN}
+    assert cs["Long Live the Fighters"].access_symbols == {AccessSymbol.FREMEN,
+                                                           AccessSymbol.CITY}
+    assert cs["Sardaukar Soldier"].trash_effects == [{"intrigue": 1}]
+    assert cs["Maula Pistol"].agent_effects == [{"draw": 1}]
+
+    gs = setup_game(2, seed=11)
+    p = gs.players[0]
+
+    # Sardaukar Soldier: trashing it grants an Intrigue.
+    from src.game.cards.card import Card, CardType
+    ss = next(c for c in create_imperium_cards() if c.name == "Sardaukar Soldier")
+    p.hand.append(ss)
+    gs.add_pending_trash(0, 1)
+    n_intrigue = len(p.intrigue_cards)
+    from src.game.gameState import GameAction, ActionType
+    gs.step(GameAction(ActionType.RESOLVE_TRASH, 0, trash_card_name="Sardaukar Soldier"))
+    assert len(p.intrigue_cards) == n_intrigue + 1
+    assert ss in p.trash
+
+    # Reliable Informant: spy restricted to the 3 faction posts.
+    gs.add_pending_spy_placement(0, 1, allow_occupied=False,
+                                 allowed_posts=["Emperor Post", "Bene Gesserit Post",
+                                                "Fremen Post"])
+    spy_actions = [a for a in gs.get_valid_actions(0)
+                   if a.action_type == ActionType.RESOLVE_SPY]
+    assert spy_actions and all(
+        a.spy_post_name in {"Emperor Post", "Bene Gesserit Post", "Fremen Post"}
+        for a in spy_actions)
+
+    # Leadership reveal: +1 sword per OTHER card revealed this turn.
+    p._revealed_this_turn = 4
+    gs.swords_this_reveal[0] = 0
+    EffectResolver.resolve_single_effect({"swords_per_other_revealed_card": 1}, p, gs)
+    assert gs.swords_this_reveal[0] == 3
+
+    # Maker Keeper agent: BG2 -> water, Fremen2 -> spice (no persuasion).
+    p.influence["bene_gesserit"] = 2
+    p.influence["fremen"] = 2
+    w0, sp0 = p.water, p.spice
+    EffectResolver.resolve_single_effect(
+        {"if_influence_bene_gesserit_2": {"water": 1},
+         "if_influence_fremen_2": {"spice": 1}}, p, gs)
+    assert p.water == w0 + 1 and p.spice == sp0 + 1
+
+
 def _city_card():
     from src.game.cards.card import Card, CardType, AccessSymbol
     c = Card("CityTest", CardType.STARTER)

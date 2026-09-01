@@ -195,6 +195,13 @@ class EffectResolver:
         if "spy_special" in effect:
             game_state.add_pending_spy_placement(player.id, effect["spy_special"], allow_occupied=True)
 
+        # Restricted spy placement (Reliable Informant: faction posts only).
+        if "spy_posts" in effect:
+            spec = effect["spy_posts"]
+            game_state.add_pending_spy_placement(
+                player.id, int(spec.get("count", 1)), allow_occupied=False,
+                allowed_posts=spec.get("posts"))
+
         # ===== UPLIFT =====
         if "uplift" in effect:
             game_state.add_pending_uplift(player.id, effect["uplift"])
@@ -437,6 +444,74 @@ class EffectResolver:
                     player.recall_spy(post)
                 player.recalled_spy_this_turn = True
                 gs.gain_persuasion(player.id, int(spec.get("persuasion", 0)))
+
+        # -- Leadership agent: draw 1 per sandworm you have in the Conflict --
+        if "draw_per_sandworm_in_conflict" in effect:
+            k = gs.sandworms_in_conflict.get(player.id, 0)
+            if k:
+                gs.draw_cards_for_player(player.id, k * int(effect["draw_per_sandworm_in_conflict"]))
+
+        # -- Leadership reveal: +1 sword per OTHER card revealed this turn --
+        if "swords_per_other_revealed_card" in effect:
+            k = max(0, getattr(player, "_revealed_this_turn", 0) - 1)
+            if k:
+                gs.swords_this_reveal[player.id] = gs.swords_this_reveal.get(player.id, 0) \
+                    + k * int(effect["swords_per_other_revealed_card"])
+
+        # -- Sardaukar Coordination reveal: +1 sword per Emperor card in play
+        #    (only if you have another Emperor card besides this one) ---------
+        if "swords_per_emperor_card" in effect:
+            k = player.count_cards_with_tag_in_play(CardTag.EMPEROR)
+            if k >= 2:
+                gs.swords_this_reveal[player.id] = gs.swords_this_reveal.get(player.id, 0) \
+                    + k * int(effect["swords_per_emperor_card"])
+
+        # -- Overthrow agent: gain N influence with the Faction you visited --
+        if "influence_faction_visited" in effect:
+            fac = gs._faction_for_space(getattr(gs, "_current_agent_space", None))
+            if fac:
+                gs.gain_influence_with_check(player.id, fac, int(effect["influence_faction_visited"]))
+
+        # -- Long Live the Fighters agent: look at top 3, draw 1 / discard 1
+        #    / trash 1 (all mandatory).  Auto: keep the strongest, trash the
+        #    weakest starter-ish card, discard the middle. ------------------
+        if "look_top3_draw_discard_trash" in effect:
+            if len(player.deck) < 3 and player.discard:
+                nd = list(player.discard); gs.rng.shuffle(nd)
+                player.deck = nd + player.deck
+                player.discard = []
+            top = [player.deck.pop() for _ in range(min(3, len(player.deck)))]
+            if top:
+                def _val(c):
+                    return c.persuasion + c.swords + len(getattr(c, "agent_effects", [])) \
+                        + len(getattr(c, "access_symbols", []))
+                top.sort(key=_val, reverse=True)
+                player.hand.append(top[0])                       # draw the best
+                if len(top) >= 3:
+                    player.discard.append(top[1])                # discard the middle
+                    player.trash.append(top[2])                  # trash the worst
+                elif len(top) == 2:
+                    player.trash.append(top[1])
+
+        # -- Sardaukar Coordination agent: deploy troops recruited this turn -
+        if "deploy_recruited" in effect and gs.current_conflict is not None:
+            n = min(int(effect["deploy_recruited"]),
+                    getattr(player, "troops_recruited_this_turn", 0),
+                    player.troops_garrison)
+            if n > 0:
+                player.troops_garrison -= n
+                gs.troops_in_conflict[player.id] = gs.troops_in_conflict.get(player.id, 0) + n
+
+        # -- Price is No Object agent: acquire a Row card by paying Solari ---
+        if "acquire_with_solari" in effect:
+            mx = int(effect["acquire_with_solari"].get("max_cost", 99))
+            opts = [c for c in gs.imperium_row if c.cost <= mx and c.cost <= player.solari]
+            if opts:
+                best = max(opts, key=lambda c: c.persuasion + c.swords + c.cost * 0.3)
+                player.solari -= best.cost
+                gs.imperium_row.remove(best)
+                player.discard.append(best)
+                gs.refill_imperium_row()
 
         if "if_opp_combat_intrigue" in effect:
             if any(q != player.id for q in getattr(gs, "_combat_intrigue_players", set())):
