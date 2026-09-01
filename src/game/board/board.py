@@ -238,6 +238,12 @@ UPRISING_BOARD: Dict[str, BoardSpace] = build_uprising_board()
 #   Landsraad area — 2 posts:
 #     - Landsraad Post             -> High Council, Swordmaster, Imperial Privilege
 #     - Green Post                 -> Assembly Hall, Gather Support
+#   Bene Gesserit — 1 post:
+#     - Bene Gesserit Post         -> Espionage, Secrets
+#   Spice Trade / Maker — 3 posts (each Maker basin is its own post):
+#     - Shipping Post              -> Accept Contract, Shipping   (NOT Imperial Basin)
+#     - Hagga Basin Post           -> Hagga Basin
+#     - Deep Desert Post           -> Deep Desert
 #
 # Spice Refinery and Research Station each border 2 posts.  A player with a Spy
 # on BOTH posts bordering a space may, on the same Agent turn, spend one Spy to
@@ -245,7 +251,8 @@ UPRISING_BOARD: Dict[str, BoardSpace] = build_uprising_board()
 # spend both Spies to draw two cards.  (GameState offers the combined
 # (gather+infiltrate) spy-mod only when the space is occupied and 2 Spies border it.)
 #
-# The remaining posts below are still approximate, pending board review.
+# Still approximate, pending board review: Imperial Basin Post (does it border
+# anything besides Imperial Basin?), Emperor Post, Spacing Guild Post, Fremen Post.
 # ---------------------------------------------------------------------------
 
 OBSERVATION_POST_CONNECTIONS: Dict[str, set] = {
@@ -256,10 +263,14 @@ OBSERVATION_POST_CONNECTIONS: Dict[str, set] = {
     # ── Landsraad (verified 2026-09-01) ────────────────────────────────────
     "Landsraad Post":      {"High Council", "Swordmaster", "Imperial Privilege"},
     "Green Post":          {"Assembly Hall", "Gather Support"},
+    # ── Bene Gesserit (verified 2026-09-01) ───────────────────────────────
+    "Bene Gesserit Post": {"Espionage", "Secrets"},
+    # ── Spice Trade / Maker (verified 2026-09-01) ─────────────────────────
+    "Shipping Post":       {"Accept Contract", "Shipping"},
+    "Hagga Basin Post":    {"Hagga Basin"},
+    "Deep Desert Post":    {"Deep Desert"},
     # ── Still approximate, pending board review ────────────────────────────
-    "Carthag Post":        {"Espionage", "Secrets"},
-    "Imperial Basin Post": {"Imperial Basin", "Accept Contract", "Shipping"},
-    "Hagga Basin Post":    {"Hagga Basin", "Deep Desert"},
+    "Imperial Basin Post": {"Imperial Basin"},
     "Emperor Post":        {"Sardaukar", "Dutiful Service"},
     "Spacing Guild Post":  {"Heighliner", "Deliver Supplies"},
     "Fremen Post":         {"Desert Tactics", "Fremkit"},

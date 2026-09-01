@@ -109,11 +109,17 @@ def test_spy_topology_verified_posts():
     )
     assert O["Landsraad Post"] == {"High Council", "Swordmaster", "Imperial Privilege"}
     assert O["Green Post"] == {"Assembly Hall", "Gather Support"}
+    assert O["Bene Gesserit Post"] == {"Espionage", "Secrets"}
+    assert O["Shipping Post"] == {"Accept Contract", "Shipping"}
+    assert O["Hagga Basin Post"] == {"Hagga Basin"}
+    assert O["Deep Desert Post"] == {"Deep Desert"}
     assert S["Research Station"] == {"Research Station Left Post",
                                      "Research Station Right Post"}
     assert S["Spice Refinery"] == {"Arrakeen Post", "Research Station Right Post"}
     assert S["Sietch Tabr"] == {"Research Station Left Post"}
     assert S["Arrakeen"] == {"Arrakeen Post"}
+    assert "Imperial Basin Post" not in S["Accept Contract"]
+    assert S["Deep Desert"] == {"Deep Desert Post"}
 
 
 def _city_card():
