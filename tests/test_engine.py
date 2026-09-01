@@ -100,3 +100,64 @@ def test_victory_checked_after_combat():
     gs.phase = Phase.MAKERS
     gs._auto_advance()
     assert gs.game_over and gs.winner == 2
+
+
+def test_spy_topology_verified_posts():
+    from src.game.board.board import (
+        OBSERVATION_POST_CONNECTIONS as O,
+        SPACE_TO_OBSERVATION_POSTS as S,
+    )
+    assert O["Landsraad Post"] == {"High Council", "Swordmaster", "Imperial Privilege"}
+    assert O["Green Post"] == {"Assembly Hall", "Gather Support"}
+    assert S["Research Station"] == {"Research Station Left Post",
+                                     "Research Station Right Post"}
+    assert S["Spice Refinery"] == {"Arrakeen Post", "Research Station Right Post"}
+    assert S["Sietch Tabr"] == {"Research Station Left Post"}
+    assert S["Arrakeen"] == {"Arrakeen Post"}
+
+
+def _city_card():
+    from src.game.cards.card import Card, CardType, AccessSymbol
+    c = Card("CityTest", CardType.STARTER)
+    c.add_access_symbol(AccessSymbol.CITY)
+    return c
+
+
+def test_two_spies_allow_infiltrate_plus_gather_not_double_draw():
+    gs = setup_game(4, seed=7)
+    p = gs.players[0]
+    p.water = 6
+    p.hand.append(_city_card())
+    p.place_spy("Research Station Left Post")
+    p.place_spy("Research Station Right Post")
+
+    # Unoccupied: only single spy-mods, never (gather + gather) double-draw.
+    combos = {
+        (a.use_gather_intelligence, a.use_infiltrate)
+        for a in gs.get_valid_actions(0)
+        if a.action_type == ActionType.AGENT_TURN and a.space_name == "Research Station"
+    }
+    assert (True, False) in combos      # gather intelligence alone
+    assert (True, True) not in combos   # no infiltrate target yet
+
+    # Opponent occupies Research Station -> combined Infiltrate + Gather allowed.
+    gs.agent_on_space["Research Station"] = 1
+    combos = {
+        (a.use_gather_intelligence, a.use_infiltrate)
+        for a in gs.get_valid_actions(0)
+        if a.action_type == ActionType.AGENT_TURN and a.space_name == "Research Station"
+    }
+    assert (True, True) in combos
+    assert (False, True) in combos
+
+    # Execute the combined action: both spies recalled, exactly one card drawn.
+    act = next(
+        a for a in gs.get_valid_actions(0)
+        if a.action_type == ActionType.AGENT_TURN
+        and a.space_name == "Research Station"
+        and a.use_gather_intelligence and a.use_infiltrate
+    )
+    spies_before = p.spies_available
+    gs.step(act)
+    assert p.spies_available == spies_before + 2   # both spies recalled
+    assert p.spies_on_board == {}

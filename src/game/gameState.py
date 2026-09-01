@@ -533,10 +533,17 @@ class GameState:
                     for space in self.get_legal_agent_spaces(player_id, card):
                         options = self.get_space_options(player_id, space)
                         spy_mods = [(False, False)]
-                        if self.can_gather_intelligence(player_id, space):
+                        can_gi  = self.can_gather_intelligence(player_id, space)
+                        can_inf = self.can_infiltrate(player_id, space)
+                        if can_gi:
                             spy_mods.append((True, False))
-                        if self.can_infiltrate(player_id, space):
+                        if can_inf:
                             spy_mods.append((False, True))
+                        # A Spy on BOTH posts bordering the space: one may
+                        # Infiltrate while the other Gathers Intelligence.
+                        # (Never two Gather Intelligence — no double card draw.)
+                        if can_inf and self._connected_spy_count(player_id, space) >= 2:
+                            spy_mods.append((True, True))
                         for opt in options:
                             for gi, inf in spy_mods:
                                 actions.append(GameAction(
@@ -2010,6 +2017,14 @@ class GameState:
 
     def _player_has_spy_connected_to(self, player_id: int, space_name: str) -> bool:
         return self.can_gather_intelligence(player_id, space_name)
+
+    def _connected_spy_count(self, player_id: int, space_name: str) -> int:
+        """How many distinct posts bordering `space_name` hold this player's Spy."""
+        player = self.players[player_id]
+        return sum(
+            1 for post in SPACE_TO_OBSERVATION_POSTS.get(space_name, set())
+            if player.has_spy_at(post)
+        )
 
     def _execute_infiltrate(self, player_id: int, space_name: str) -> None:
         player = self.players[player_id]
