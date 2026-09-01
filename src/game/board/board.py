@@ -230,47 +230,48 @@ UPRISING_BOARD: Dict[str, BoardSpace] = build_uprising_board()
 # derives everything (`ALL_OBSERVATION_POSTS`, `SPACE_TO_OBSERVATION_POSTS`)
 # from this dict.
 #
-# Verified against the physical board (user, 2026-09-01):
-#   City area — 3 posts:
+# Fully verified against the physical board (user, 2026-09-01) — 13 posts:
+#   City area (3):
 #     - Arrakeen Post              -> Arrakeen, Spice Refinery
 #     - Research Station Right Post -> Spice Refinery, Research Station
 #     - Research Station Left Post  -> Research Station, Sietch Tabr
-#   Landsraad area — 2 posts:
+#   Landsraad area (2):
 #     - Landsraad Post             -> High Council, Swordmaster, Imperial Privilege
 #     - Green Post                 -> Assembly Hall, Gather Support
-#   Bene Gesserit — 1 post:
+#   Bene Gesserit (1):
 #     - Bene Gesserit Post         -> Espionage, Secrets
-#   Spice Trade / Maker — 3 posts (each Maker basin is its own post):
+#   Spice Trade / Maker (4) — each Maker basin is its own post:
 #     - Shipping Post              -> Accept Contract, Shipping   (NOT Imperial Basin)
+#     - Imperial Basin Post        -> Imperial Basin
 #     - Hagga Basin Post           -> Hagga Basin
 #     - Deep Desert Post           -> Deep Desert
+#   Emperor (1):  Emperor Post     -> Sardaukar, Dutiful Service
+#   Spacing Guild (1): Spacing Guild Post -> Heighliner, Deliver Supplies
+#   Fremen (1):  Fremen Post       -> Desert Tactics, Fremkit
 #
 # Spice Refinery and Research Station each border 2 posts.  A player with a Spy
 # on BOTH posts bordering a space may, on the same Agent turn, spend one Spy to
 # Infiltrate AND one Spy to Gather Intelligence (draw a card) — but may NOT
 # spend both Spies to draw two cards.  (GameState offers the combined
 # (gather+infiltrate) spy-mod only when the space is occupied and 2 Spies border it.)
-#
-# Still approximate, pending board review: Imperial Basin Post (does it border
-# anything besides Imperial Basin?), Emperor Post, Spacing Guild Post, Fremen Post.
 # ---------------------------------------------------------------------------
 
 OBSERVATION_POST_CONNECTIONS: Dict[str, set] = {
-    # ── City (verified 2026-09-01) ──────────────────────────────────────────
+    # ── City ───────────────────────────────────────────────────────────────
     "Arrakeen Post":               {"Arrakeen", "Spice Refinery"},
     "Research Station Right Post":  {"Spice Refinery", "Research Station"},
     "Research Station Left Post":   {"Research Station", "Sietch Tabr"},
-    # ── Landsraad (verified 2026-09-01) ────────────────────────────────────
+    # ── Landsraad ─────────────────────────────────────────────────────────
     "Landsraad Post":      {"High Council", "Swordmaster", "Imperial Privilege"},
     "Green Post":          {"Assembly Hall", "Gather Support"},
-    # ── Bene Gesserit (verified 2026-09-01) ───────────────────────────────
+    # ── Bene Gesserit ────────────────────────────────────────────────────
     "Bene Gesserit Post": {"Espionage", "Secrets"},
-    # ── Spice Trade / Maker (verified 2026-09-01) ─────────────────────────
+    # ── Spice Trade / Maker ──────────────────────────────────────────────
     "Shipping Post":       {"Accept Contract", "Shipping"},
+    "Imperial Basin Post": {"Imperial Basin"},
     "Hagga Basin Post":    {"Hagga Basin"},
     "Deep Desert Post":    {"Deep Desert"},
-    # ── Still approximate, pending board review ────────────────────────────
-    "Imperial Basin Post": {"Imperial Basin"},
+    # ── Emperor / Spacing Guild / Fremen ─────────────────────────────────
     "Emperor Post":        {"Sardaukar", "Dutiful Service"},
     "Spacing Guild Post":  {"Heighliner", "Deliver Supplies"},
     "Fremen Post":         {"Desert Tactics", "Fremkit"},
