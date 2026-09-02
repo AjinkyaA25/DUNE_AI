@@ -260,12 +260,53 @@ def test_card_corrections_batch4():
     EffectResolver.resolve_single_effect({"if_spy_at_maker_post": {"spice": 2}}, p, gs)
     assert p.spice == sp0 + 2
 
-    # Smuggler's Haven agent: 4 spice -> 1 VP.
+    # Smuggler's Haven agent: 4 spice -> 1 VP is an ARROW = optional accept/decline.
     p.spice = 4
     vp0 = p.victory_points
     EffectResolver.resolve_single_effect(
         {"pay_then": {"cost": {"spice": 4}, "vp": 1}}, p, gs)
-    assert p.victory_points == vp0 + 1 and p.spice == 0
+    assert len(gs.pending_optional_payments) == 1          # not auto-paid
+    opts = {a.accept_optional for a in gs.get_valid_actions(0)
+            if a.action_type == ActionType.RESOLVE_OPTIONAL}
+    assert opts == {True, False}
+    gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=False))  # decline
+    assert p.spice == 4 and p.victory_points == vp0
+    EffectResolver.resolve_single_effect(
+        {"pay_then": {"cost": {"spice": 4}, "vp": 1}}, p, gs)
+    gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))   # accept
+    assert p.spice == 0 and p.victory_points == vp0 + 1
+
+
+def test_arrow_effects_are_optional():
+    """Every cost->reward arrow surfaces as an accept/decline choice."""
+    from src.game.effects import EffectResolver
+    from src.game.gameState import GameAction, ActionType
+    from src.game.cards.card import Card, CardType
+
+    gs = setup_game(2, seed=4)
+    p = gs.players[0]
+    p.hand = [Card(f"H{i}", CardType.STARTER) for i in range(4)]
+    p.deck = [Card(f"D{i}", CardType.STARTER) for i in range(6)]
+
+    # Captured Mentat agent: discard_then -> optional, decline = no discard.
+    EffectResolver.resolve_single_effect({"discard_then": {"draw": 1, "intrigue": 1}}, p, gs)
+    assert len(gs.pending_optional_payments) == 1
+    hand0, disc0 = len(p.hand), len(p.discard)
+    gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=False))
+    assert len(p.hand) == hand0 and len(p.discard) == disc0
+    assert not gs.pending_optional_payments
+
+    # Accepting: discards 1, draws 1, gains an intrigue.
+    ig0 = len(p.intrigue_cards)
+    EffectResolver.resolve_single_effect({"discard_then": {"draw": 1, "intrigue": 1}}, p, gs)
+    gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
+    assert len(p.intrigue_cards) == ig0 + 1
+
+    # pay_then with an unaffordable cost is never queued.
+    p.spice = 1
+    EffectResolver.resolve_single_effect(
+        {"pay_then": {"cost": {"spice": 3}, "trash": 1, "draw": 1}}, p, gs)
+    assert not gs.pending_optional_payments
 
 
 def _city_card():

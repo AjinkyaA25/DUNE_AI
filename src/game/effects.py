@@ -254,15 +254,13 @@ class EffectResolver:
                 if f:
                     gs.lose_influence_with_check(player.id, f, 1)
 
-        # -- pay a cost, then gain rewards (auto if affordable) --------
+        # -- pay a cost, then gain rewards.  Every cost->reward arrow is a MAY:
+        #    it is surfaced as an accept/decline choice, never auto-paid. -----
         if "pay_then" in effect:
             spec = effect["pay_then"]
-            cost = spec.get("cost", {})
-            if all(getattr(player, k, 0) >= v for k, v in cost.items()):
-                for k, v in cost.items():
-                    setattr(player, k, getattr(player, k) - v)
-                rew = {k: v for k, v in spec.items() if k != "cost"}
-                EffectResolver.resolve_single_effect(rew, player, gs)
+            rew = {k: v for k, v in spec.items() if k != "cost"}
+            gs.add_pending_optional_payment(player.id, spec.get("cost", {}), rew,
+                                            label="pay_then")
 
         # -- recall a placed Spy, then gain rewards -------------------
         if "recall_spy_then" in effect:
@@ -609,11 +607,11 @@ class EffectResolver:
                 game_state.spawn_sandworms(1, source="card_effect")
 
         # ===== DISCARD A CARD -> RESOLVE A SUB-EFFECT (cost -> reward) =====
-        # Approximated: pay the cost (discard the least useful hand card) when
-        # the player has one to spare.
-        if "discard_then" in effect and player.hand:
-            EffectResolver._discard_worst(player)
-            EffectResolver.resolve_single_effect(effect["discard_then"], player, game_state)
+        # An arrow effect: the player MAY discard a card for the reward, or
+        # decline.  Surfaced as an accept/decline choice.
+        if "discard_then" in effect:
+            game_state.add_pending_optional_payment(
+                player.id, {}, effect["discard_then"], discard=1, label="discard_then")
 
         # ===== GUILD ENVOY: mandatory discard 1; bonus if it was a Spacing =====
         # Guild card.  Auto-discards a spare Spacing Guild card to earn the
@@ -631,13 +629,12 @@ class EffectResolver:
                 EffectResolver._discard_worst(player)
 
         # ===== DISCARD N + PAY SOLARI -> GAIN VP (Corrinth City agent) =====
+        # Arrow effect -> optional accept/decline.
         if "discard_pay_vp" in effect:
             d = effect["discard_pay_vp"]
-            if len(player.hand) >= d.get("discard", 0) and player.solari >= d.get("solari", 0):
-                for _ in range(d.get("discard", 0)):
-                    EffectResolver._discard_worst(player)
-                player.solari -= d.get("solari", 0)
-                player.gain_vp(d.get("vp", 1))
+            game_state.add_pending_optional_payment(
+                player.id, {"solari": d.get("solari", 0)}, {"vp": d.get("vp", 1)},
+                discard=d.get("discard", 0), label="discard_pay_vp")
 
         # ===== SWAP INFLUENCE: -1 on one Faction, +1 on another =====
         # (Captured Mentat) The player MAY do this, and the two Factions may be

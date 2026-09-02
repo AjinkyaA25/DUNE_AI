@@ -125,10 +125,10 @@ def create_imperium_cards() -> List[Card]:
         m("Captured Mentat", 5, I, access=["landsraad", "desert"],
           agent={"discard_then": {"draw": 1, "intrigue": 1}}, persuasion=1,
           reveal={"influence_swap": 1},
-          notes="Agent: if you discard a card, draw a card + gain an Intrigue "
-                "(auto-taken when you have a spare card). Reveal: lose 1 Influence "
-                "on any Faction, gain 1 on any Faction (same Faction allowed); "
-                "auto-chosen to reallocate a wasted cube, else no-op."),
+          notes="Agent: MAY discard a card to draw a card + gain an Intrigue "
+                "(accept/decline choice). Reveal: lose 1 Influence on any Faction, "
+                "gain 1 on any Faction (same Faction allowed); auto-chosen to "
+                "reallocate a wasted cube, else no-op."),
         m("Cargo Runner", 3, I, access=["landsraad", "city", "desert"], tags=["spacing_guild"],
           agent={"if_contracts_2": {"draw": 1}, "if_contracts_4": {"draw": 1}},
           persuasion=1),
@@ -140,7 +140,7 @@ def create_imperium_cards() -> List[Card]:
         m("Corrinth City", 6, I, access=["emperor", "landsraad"], tags=["emperor"],
           agent={"discard_pay_vp": {"discard": 2, "solari": 5, "vp": 1}}, persuasion=0,
           reveal={"hc_seat_or_solari": 5},
-          notes="Agent: discard 2 cards + spend 5 solari -> 1 VP (auto when affordable). "
+          notes="Agent: MAY discard 2 cards + spend 5 solari -> 1 VP (accept/decline). "
                 "Reveal: gain 5 solari, OR spend 5 solari to take a High Council seat "
                 "(auto: takes the seat if you have none and can pay)."),
         m("Covert Operation", 3, I, access=["spy"],
@@ -289,7 +289,7 @@ def create_imperium_cards() -> List[Card]:
         m("Smuggler's Haven", 4, I, access=["spacing_guild", "desert"], tags=["spacing_guild"],
           agent={"pay_then": {"cost": {"spice": 4}, "vp": 1}},
           persuasion=1, reveal={"if_spy_at_maker_post": {"spice": 2}},
-          notes="Agent: MAY convert 4 spice into 1 VP (auto when affordable). "
+          notes="Agent: MAY convert 4 spice into 1 VP (accept/decline choice). "
                 "Reveal: 1 persuasion, +2 spice if you have a Spy on a post that "
                 "borders a Maker board space."),
         m("Southern Elders", 4, I, access=["bene_gesserit", "fremen"],

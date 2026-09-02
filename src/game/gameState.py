@@ -105,6 +105,7 @@ class ActionType(Enum):
     RESOLVE_TRASH        = "resolve_trash"
     RESOLVE_INFLUENCE    = "resolve_influence"
     RESOLVE_CONTRACT     = "resolve_contract"
+    RESOLVE_OPTIONAL     = "resolve_optional"   # accept/decline a cost->reward arrow
     PLAY_INTRIGUE        = "play_intrigue"
     COMBAT_PASS          = "combat_pass"
     NO_OP                = "no_op"
@@ -137,6 +138,8 @@ class GameAction:
     influence_faction: Optional[str]  = None
     # Contract choice (0 or 1 = which face-up contract)
     contract_index: int               = 0
+    # Optional cost->reward arrow: accept and pay, or decline
+    accept_optional: bool             = False
     # Heighliner (legacy)
     spice_cost: int                   = 0
     troop_count: int                  = 0
@@ -216,6 +219,22 @@ class PendingTrash:
         # Effect dict resolved once per card actually trashed (e.g. Shishakli:
         # "if you trash a card, draw a card").
         self.on_trash  = on_trash
+
+
+class PendingOptionalPayment:
+    """
+    A cost -> reward "arrow" effect.  Per the rulebook every arrow is optional:
+    the player MAY pay the cost to gain the reward, or decline.  `cost` is a
+    resource dict (spice / solari / water); `discard` is how many cards must be
+    discarded as part of the cost; `reward` is the effect dict gained on accept.
+    """
+    def __init__(self, player_id: int, cost: Dict, reward: Dict,
+                 discard: int = 0, label: str = ""):
+        self.player_id = player_id
+        self.cost      = dict(cost or {})
+        self.reward    = dict(reward or {})
+        self.discard   = int(discard)
+        self.label     = label
 
 
 class PendingInfluenceChoice:
@@ -328,6 +347,7 @@ class GameState:
         self.pending_trashes:           List[PendingTrash]         = []
         self.pending_influence_choices: List[PendingInfluenceChoice] = []
         self.pending_contract_choices:  List[PendingContractChoice] = []
+        self.pending_optional_payments: List[PendingOptionalPayment] = []
 
         # ===== COMBAT PHASE TURN TRACKING =====
         self.combat_turn_idx: int = 0
@@ -471,6 +491,7 @@ class GameState:
             "pending_trashes":          len(self.pending_trashes),
             "pending_influence_choices": len(self.pending_influence_choices),
             "pending_contract_choices": len(self.pending_contract_choices),
+            "pending_optional_payments": len(self.pending_optional_payments),
             # --- players (all public per rules) ---
             "players": [p.get_visible_state(p.id) for p in self.players],
             # --- research track ---
@@ -690,6 +711,8 @@ class GameState:
             self._step_resolve_influence(action)
         elif at == ActionType.RESOLVE_CONTRACT:
             self._step_resolve_contract(action)
+        elif at == ActionType.RESOLVE_OPTIONAL:
+            self._step_resolve_optional(action)
         elif at == ActionType.PLAY_INTRIGUE:
             self._step_play_intrigue(action)
         elif at == ActionType.COMBAT_PASS:
@@ -872,6 +895,24 @@ class GameState:
         if pending.count <= 0:
             self.pending_contract_choices.remove(pending)
 
+    def _step_resolve_optional(self, action: GameAction) -> None:
+        pid = action.player_id
+        pending = next((op for op in self.pending_optional_payments
+                        if op.player_id == pid), None)
+        if pending is None:
+            raise ValueError("No pending optional payment for player")
+        self.pending_optional_payments.remove(pending)
+        if not action.accept_optional:
+            return
+        p = self.players[pid]
+        if not self._can_pay_optional(pid, pending):
+            return                                  # can't afford -> treat as decline
+        for k, v in pending.cost.items():
+            setattr(p, k, getattr(p, k) - v)
+        for _ in range(pending.discard):
+            EffectResolver._discard_worst(p)
+        EffectResolver.resolve_single_effect(pending.reward, p, self)
+
     def _step_resolve_influence(self, action: GameAction) -> None:
         pid = action.player_id
         pending = next((c for c in self.pending_influence_choices
@@ -978,6 +1019,10 @@ class GameState:
             pit for pit in self.pending_intrigue_trashes
             if pit.player_id != player_id or p.intrigue_cards
         ]
+        self.pending_optional_payments = [
+            op for op in self.pending_optional_payments
+            if op.player_id != player_id or self._can_pay_optional(player_id, op)
+        ]
 
     def _has_mandatory_pending_for(self, player_id: int) -> bool:
         return (
@@ -987,8 +1032,15 @@ class GameState:
             any(p.player_id == player_id for p in self.pending_deployments) or
             any(p.player_id == player_id for p in self.pending_trashes) or
             any(p.player_id == player_id for p in self.pending_influence_choices) or
-            any(p.player_id == player_id for p in self.pending_contract_choices)
+            any(p.player_id == player_id for p in self.pending_contract_choices) or
+            any(p.player_id == player_id for p in self.pending_optional_payments)
         )
+
+    def _can_pay_optional(self, player_id: int, op: "PendingOptionalPayment") -> bool:
+        p = self.players[player_id]
+        if len(p.hand) < op.discard:
+            return False
+        return all(getattr(p, k, 0) >= v for k, v in op.cost.items())
 
     def _valid_pending_actions(self, player_id: int) -> List[GameAction]:
         actions: List[GameAction] = []
@@ -1033,6 +1085,14 @@ class GameState:
                                           player_id, trash_card_name=nm))
             actions.append(GameAction(ActionType.RESOLVE_TRASH,
                                       player_id, trash_card_name=None))  # decline
+
+        for op in self.pending_optional_payments:
+            if op.player_id != player_id:
+                continue
+            actions.append(GameAction(ActionType.RESOLVE_OPTIONAL, player_id,
+                                      accept_optional=True))
+            actions.append(GameAction(ActionType.RESOLVE_OPTIONAL, player_id,
+                                      accept_optional=False))   # decline
 
         for pic in self.pending_influence_choices:
             if pic.player_id != player_id:
@@ -2174,6 +2234,14 @@ class GameState:
 
     def add_pending_influence_choice(self, player_id: int, count: int = 1) -> None:
         self.pending_influence_choices.append(PendingInfluenceChoice(player_id, count))
+
+    def add_pending_optional_payment(self, player_id: int, cost: Dict, reward: Dict,
+                                     discard: int = 0, label: str = "") -> None:
+        """Queue a cost->reward arrow the player MAY take. Skipped silently if
+        the cost can't be met (indistinguishable from declining)."""
+        op = PendingOptionalPayment(player_id, cost, reward, discard, label)
+        if self._can_pay_optional(player_id, op):
+            self.pending_optional_payments.append(op)
 
     def _uplift_targets(self, player_id: int) -> List[str]:
         """Spaces holding one of this player's OTHER agents (not the one just

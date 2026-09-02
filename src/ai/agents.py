@@ -286,6 +286,18 @@ class HeuristicAgent(Agent):
             s = 2.0
         elif at == ActionType.RESOLVE_INTRIGUE_TRASH:
             s = 1.0
+        elif at == ActionType.RESOLVE_OPTIONAL:
+            op = next((o for o in gs.pending_optional_payments
+                       if o.player_id == pid), None)
+            if op is None:
+                s = 0.0
+            elif not a.accept_optional:
+                s = 0.2                                   # declining is free
+            else:
+                gain = _effect_value(gs, pid, op.reward)
+                cost = sum(_RES_VALUE.get(k, 0.3) * v for k, v in op.cost.items())
+                cost += 1.1 * op.discard                  # a discarded card ~ 1 draw
+                s = gain - cost
         elif at == ActionType.NO_OP:
             s = -5.0
         return s
