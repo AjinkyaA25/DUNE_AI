@@ -163,6 +163,10 @@ class EffectResolver:
         if "trash" in effect:
             game_state.add_pending_trash(player.id, effect["trash"])
 
+        # ===== TRASH A CARD -> REWARD IF YOU DO (Shishakli: trash -> draw) =====
+        if "trash_then" in effect:
+            game_state.add_pending_trash(player.id, 1, on_trash=effect["trash_then"])
+
         # ===== GAIN INFLUENCE WITH ANY FACTION (player choice) =====
         if "influence_any" in effect:
             game_state.add_pending_influence_choice(player.id, effect["influence_any"])
@@ -501,6 +505,18 @@ class EffectResolver:
             if n > 0:
                 player.troops_garrison -= n
                 gs.troops_in_conflict[player.id] = gs.troops_in_conflict.get(player.id, 0) + n
+
+        # -- Smuggler's Haven reveal: +2 spice if a Spy sits on a post that
+        #    borders a Maker board space (Imperial Basin / Hagga / Deep Desert) -
+        if "if_spy_at_maker_post" in effect:
+            from src.game.board.board import (MAKER_SPACES as _MK,
+                                              SPACE_TO_OBSERVATION_POSTS as _S2P)
+            maker_posts = set()
+            for _s in _MK:
+                maker_posts |= _S2P.get(_s, set())
+            if any(player.has_spy_at(pp) for pp in maker_posts):
+                EffectResolver.resolve_single_effect(
+                    effect["if_spy_at_maker_post"], player, gs)
 
         # -- Price is No Object agent: acquire a Row card by paying Solari ---
         if "acquire_with_solari" in effect:

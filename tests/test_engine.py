@@ -224,6 +224,50 @@ def test_card_corrections_batch3():
     assert p.water == w0 + 1 and p.spice == sp0 + 1
 
 
+def test_card_corrections_batch4():
+    from src.game.effects import EffectResolver
+    from src.data.card_definitions import create_imperium_cards
+    from src.game.gameState import GameAction, ActionType
+
+    cs = {c.name: c for c in create_imperium_cards()}
+    assert cs["Shishakli"].agent_effects == [{"trash_then": {"draw": 1}}]
+    assert cs["Smuggler's Haven"].agent_effects == [
+        {"pay_then": {"cost": {"spice": 4}, "vp": 1}}]
+
+    gs = setup_game(2, seed=9)
+    p = gs.players[0]
+
+    # Shishakli: trashing a card draws a card; declining does not.
+    from src.game.cards.card import Card, CardType
+    p.hand = [Card("Junk", CardType.STARTER) for _ in range(3)]
+    p.deck = [Card(f"D{i}", CardType.STARTER) for i in range(5)]
+    EffectResolver.resolve_single_effect({"trash_then": {"draw": 1}}, p, gs)
+    hand_n = len(p.hand)
+    gs.step(GameAction(ActionType.RESOLVE_TRASH, 0, trash_card_name="Junk"))
+    assert len(p.hand) == hand_n           # -1 trashed, +1 drawn
+    assert any(c.name == "Junk" for c in p.trash)
+
+    EffectResolver.resolve_single_effect({"trash_then": {"draw": 1}}, p, gs)
+    hand_n = len(p.hand)
+    gs.step(GameAction(ActionType.RESOLVE_TRASH, 0, trash_card_name=None))  # decline
+    assert len(p.hand) == hand_n           # no draw on decline
+
+    # Smuggler's Haven reveal: +2 spice only when a Spy borders a Maker space.
+    sp0 = p.spice
+    EffectResolver.resolve_single_effect({"if_spy_at_maker_post": {"spice": 2}}, p, gs)
+    assert p.spice == sp0                  # no maker-post spy yet
+    p.place_spy("Hagga Basin Post")
+    EffectResolver.resolve_single_effect({"if_spy_at_maker_post": {"spice": 2}}, p, gs)
+    assert p.spice == sp0 + 2
+
+    # Smuggler's Haven agent: 4 spice -> 1 VP.
+    p.spice = 4
+    vp0 = p.victory_points
+    EffectResolver.resolve_single_effect(
+        {"pay_then": {"cost": {"spice": 4}, "vp": 1}}, p, gs)
+    assert p.victory_points == vp0 + 1 and p.spice == 0
+
+
 def _city_card():
     from src.game.cards.card import Card, CardType, AccessSymbol
     c = Card("CityTest", CardType.STARTER)

@@ -210,9 +210,12 @@ class PendingDeployment:
 
 class PendingTrash:
     """Optional 'trash a card' (Desert Tactics, card effects). May be skipped."""
-    def __init__(self, player_id: int, count: int = 1):
+    def __init__(self, player_id: int, count: int = 1, on_trash=None):
         self.player_id = player_id
         self.count     = count
+        # Effect dict resolved once per card actually trashed (e.g. Shishakli:
+        # "if you trash a card, draw a card").
+        self.on_trash  = on_trash
 
 
 class PendingInfluenceChoice:
@@ -842,6 +845,9 @@ class GameState:
             # "When this card is trashed" effects (e.g. Sardaukar Soldier).
             for eff in getattr(card, "trash_effects", []):
                 EffectResolver.resolve_single_effect(eff, p, self)
+            # "If you trash a card, ..." reward on the pending (e.g. Shishakli).
+            if pending.on_trash:
+                EffectResolver.resolve_single_effect(pending.on_trash, p, self)
         pending.count -= 1
         if pending.count <= 0 or not name:
             self.pending_trashes.remove(pending)
@@ -2160,11 +2166,11 @@ class GameState:
     def add_pending_uplift(self, player_id: int, count: int) -> None:
         self.pending_uplifts.append(PendingUplift(player_id, count))
 
-    def add_pending_trash(self, player_id: int, count: int = 1) -> None:
+    def add_pending_trash(self, player_id: int, count: int = 1, on_trash=None) -> None:
         # Only queue if the player actually has something to trash.
         p = self.players[player_id]
         if p.hand or p.discard or p.in_play:
-            self.pending_trashes.append(PendingTrash(player_id, count))
+            self.pending_trashes.append(PendingTrash(player_id, count, on_trash))
 
     def add_pending_influence_choice(self, player_id: int, count: int = 1) -> None:
         self.pending_influence_choices.append(PendingInfluenceChoice(player_id, count))
