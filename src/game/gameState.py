@@ -1549,6 +1549,11 @@ class GameState:
             EffectResolver.resolve_single_effect({"troops": 2}, player, self)
         return True
 
+    def add_pending_deployment(self, player_id: int, max_deploy: int) -> None:
+        """Queue an optional 'deploy up to N troops to the Conflict' choice."""
+        if max_deploy > 0 and self.current_conflict is not None:
+            self.pending_deployments.append(PendingDeployment(player_id, max_deploy))
+
     def _do_deploy(self, player_id: int, n: int) -> None:
         """Move `n` troops from garrison straight into the current Conflict."""
         p = self.players[player_id]

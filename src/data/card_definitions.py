@@ -272,11 +272,11 @@ def create_imperium_cards() -> List[Card]:
           notes="Agent: place a Spy on the Emperor, Bene Gesserit, or Fremen "
                 "observation post only. Reveal: 1 persuasion + 1 solari."),
         m("Sardaukar Coordination", 4, I, access=["emperor", "landsraad"], tags=["emperor"],
-          agent={"deploy_recruited": 9}, persuasion=2,
+          agent={"deploy_recruited": 1}, persuasion=2,
           reveal={"swords_per_emperor_card": 1},
-          notes="Agent: MAY deploy troops you recruited this turn to the Conflict. "
-                "Reveal: 2 persuasion, +1 sword per Emperor card in play if you "
-                "have another Emperor card besides this one."),
+          notes="Agent: MAY deploy any number of troops you recruited this turn "
+                "to the Conflict (no cap). Reveal: 2 persuasion, +1 sword per "
+                "Emperor card in play if you have another Emperor card besides this one."),
         m("Sardaukar Soldier", 1, I, access=["city"], tags=["emperor"],
           persuasion=1, swords=1, trash={"intrigue": 1},
           notes="When trashed: gain 1 Intrigue card."),

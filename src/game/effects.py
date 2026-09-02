@@ -495,14 +495,13 @@ class EffectResolver:
                 elif len(top) == 2:
                     player.trash.append(top[1])
 
-        # -- Sardaukar Coordination agent: deploy troops recruited this turn -
-        if "deploy_recruited" in effect and gs.current_conflict is not None:
-            n = min(int(effect["deploy_recruited"]),
-                    getattr(player, "troops_recruited_this_turn", 0),
-                    player.troops_garrison)
-            if n > 0:
-                player.troops_garrison -= n
-                gs.troops_in_conflict[player.id] = gs.troops_in_conflict.get(player.id, 0) + n
+        # -- Sardaukar Coordination agent: MAY deploy troops you recruited this
+        #    turn to the Conflict (any amount, no cap beyond what you recruited) -
+        if "deploy_recruited" in effect:
+            cap = min(getattr(player, "troops_recruited_this_turn", 0),
+                      player.troops_garrison)
+            if not any(d.player_id == player.id for d in gs.pending_deployments):
+                gs.add_pending_deployment(player.id, cap)
 
         # -- Smuggler's Haven reveal: +2 spice if a Spy sits on a post that
         #    borders a Maker board space (Imperial Basin / Hagga / Deep Desert) -

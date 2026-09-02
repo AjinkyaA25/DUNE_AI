@@ -309,6 +309,23 @@ def test_arrow_effects_are_optional():
     assert not gs.pending_optional_payments
 
 
+def test_sardaukar_coordination_deploy_recruited_uncapped():
+    from src.game.effects import EffectResolver
+    gs = setup_game(2, seed=6)
+    p = gs.players[0]
+    gs.current_conflict = gs.current_conflict or object()  # ensure a conflict ref
+    p.troops_garrison = 5
+    p.troops_recruited_this_turn = 4          # e.g. recruited at the Sardaukar space
+    EffectResolver.resolve_single_effect({"deploy_recruited": 1}, p, gs)
+    pend = next(d for d in gs.pending_deployments if d.player_id == 0)
+    assert pend.max_deploy == 4               # all recruited troops, no 9/2 cap
+    # garrison-bounded when fewer troops on hand
+    gs.pending_deployments.clear()
+    p.troops_garrison = 2
+    EffectResolver.resolve_single_effect({"deploy_recruited": 1}, p, gs)
+    assert next(d for d in gs.pending_deployments if d.player_id == 0).max_deploy == 2
+
+
 def _city_card():
     from src.game.cards.card import Card, CardType, AccessSymbol
     c = Card("CityTest", CardType.STARTER)
