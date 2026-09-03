@@ -472,6 +472,28 @@ class EffectResolver:
             if fac:
                 gs.gain_influence_with_check(player.id, fac, int(effect["influence_faction_visited"]))
 
+        # -- The Beast's Spoils agent: one reward per DISTINCT face-up battle
+        #    icon among the Conflict cards this player has won ----------------
+        if "beast_spoils" in effect:
+            from src.game.combat.conflict import BattleIcon as _BI
+            icons = set()
+            for c in gs.won_conflicts.get(player.id, []):
+                if id(c) in gs._flipped_conflicts:
+                    continue
+                bi = getattr(c, "battle_icon", None)
+                if bi is None:
+                    continue
+                if bi == _BI.WILD:
+                    icons |= {_BI.DESERT_MOUSE, _BI.CRYSKNIFE, _BI.ORNITHOPTER}
+                else:
+                    icons.add(bi)
+            if _BI.DESERT_MOUSE in icons:
+                player.gain_spice(1)
+            if _BI.ORNITHOPTER in icons:
+                EffectResolver.resolve_single_effect({"troops": 1}, player, gs)
+            if _BI.CRYSKNIFE in icons:
+                gs.add_pending_trash(player.id, 1)
+
         # -- Long Live the Fighters agent: look at top 3, draw 1 / discard 1
         #    / trash 1 (all mandatory).  Auto: keep the strongest, trash the
         #    weakest starter-ish card, discard the middle. ------------------

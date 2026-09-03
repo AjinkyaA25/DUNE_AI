@@ -325,11 +325,18 @@ def create_imperium_cards() -> List[Card]:
         m("Strike Fleet", 5, I, access=["spy"], acquire={"spy": 1},
           agent={"if_spy_recalled": {"troops": 3}}, persuasion=1, swords=3,
           notes="Acquire: place a Spy."),
-        m("Subversive Advisor", 5, I, access=["spy"],
-          agent={"if_faction_agent": {"influence_any": 1, "trash_self": 1}}, persuasion=1),
+        m("Subversive Advisor", 5, I, access=["spy"], acquire={"spy": 1},
+          agent={"trash_self": 1,
+                 "if_faction_agent": {"influence_faction_visited": 2}}, persuasion=1,
+          notes="Acquire: place a Spy. Agent: a one-time Overthrow — trash this "
+                "card, and (if you visited a Faction space) gain 2 influence with "
+                "that Faction."),
         m("The Beast's Spoils", 3, I, access=["city"], tags=["emperor"],
-          agent={"spice": 1}, swords=3,
-          notes="Agent: rewards per face-up battle icon — approximated as flat 1 spice."),
+          agent={"beast_spoils": 1}, swords=3,
+          notes="Agent: one reward per distinct face-up battle icon among the "
+                "Conflict cards you have won — Desert Mouse -> 1 spice, "
+                "Crysknife -> trash a card, Ornithopter -> recruit 1 troop "
+                "(Wild counts as all three)."),
         m("Thumper", 3, I, access=["desert"], tags=["fremen"],
           agent={"if_agent_to_maker": {"spice": 2}}, persuasion=1, reveal={"spice": 1},
           notes="'Double the bonus spice harvested' approximated as +2 spice at a Maker space."),

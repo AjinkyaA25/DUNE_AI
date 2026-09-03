@@ -350,6 +350,43 @@ def test_card_corrections_batch5():
     assert sum(p.spies_on_board.values()) == 1 and len(p.intrigue_cards) == ig0 + 1
 
 
+def test_card_corrections_batch6():
+    from src.game.effects import EffectResolver
+    from src.data.card_definitions import create_imperium_cards
+    from src.game.combat.conflict import Conflict, BattleIcon
+    from src.game.gameState import ActionType
+
+    cs = {c.name: c for c in create_imperium_cards()}
+    assert cs["Subversive Advisor"].acquire_effects == [{"spy": 1}]
+    sa = cs["Subversive Advisor"].agent_effects[0]
+    assert sa["trash_self"] == 1
+    assert sa["if_faction_agent"] == {"influence_faction_visited": 2}
+
+    gs = setup_game(2, seed=2)
+    p = gs.players[0]
+
+    def _won(icon):
+        c = Conflict(name="w", conflict_level=1, first_place_reward={},
+                     second_place_reward={}, battle_icon=icon)
+        gs.won_conflicts[0].append(c)
+
+    # Only a Desert Mouse icon -> just 1 spice.
+    _won(BattleIcon.DESERT_MOUSE)
+    sp0 = p.spice
+    EffectResolver.resolve_single_effect({"beast_spoils": 1}, p, gs)
+    assert p.spice == sp0 + 1
+    assert not any(t.player_id == 0 for t in gs.pending_trashes)
+
+    # Add Crysknife + Ornithopter -> spice, a trash choice, and a troop.
+    _won(BattleIcon.CRYSKNIFE)
+    _won(BattleIcon.ORNITHOPTER)
+    sp0, tr0 = p.spice, p.troops_garrison
+    EffectResolver.resolve_single_effect({"beast_spoils": 1}, p, gs)
+    assert p.spice == sp0 + 1
+    assert p.troops_garrison == tr0 + 1
+    assert any(t.player_id == 0 for t in gs.pending_trashes)
+
+
 def test_sardaukar_coordination_deploy_recruited_uncapped():
     from src.game.effects import EffectResolver
     gs = setup_game(2, seed=6)
