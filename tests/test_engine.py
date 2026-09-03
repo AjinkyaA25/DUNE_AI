@@ -309,6 +309,47 @@ def test_arrow_effects_are_optional():
     assert not gs.pending_optional_payments
 
 
+def test_card_corrections_batch5():
+    from src.game.effects import EffectResolver
+    from src.data.card_definitions import create_imperium_cards
+    from src.game.cards.card import Card, CardType, AccessSymbol, CardTag
+    from src.game.gameState import GameAction, ActionType
+
+    cs = {c.name: c for c in create_imperium_cards()}
+    assert cs["Spy Network"].access_symbols == set()          # no access
+    assert cs["Spy Network"].acquire_effects == [{"spy": 1}]
+    assert cs["Strike Fleet"].acquire_effects == [{"spy": 1}]
+    assert cs["Steersman"].acquire_effects == [{"influence_spacing_guild": 1}]
+    assert cs["Steersman"].agent_effects == [{"draw": 1, "uplift": 1}]
+    assert AccessSymbol.FREMEN in cs["Stilgar, the Devoted"].access_symbols
+
+    gs = setup_game(2, seed=8)
+    p = gs.players[0]
+
+    # Space-Time Folding: discard a Guild card -> draw 2 (1 base + 1 bonus).
+    guild = Card("GuildJunk", CardType.IMPERIUM); guild.add_tag(CardTag.SPACING_GUILD)
+    p.hand = [guild, Card("X", CardType.STARTER)]
+    p.deck = [Card(f"D{i}", CardType.STARTER) for i in range(6)]
+    EffectResolver.resolve_single_effect(
+        {"discard_then_sg": {"base": {"draw": 1}, "sg_bonus": {"draw": 1}}}, p, gs)
+    hand_before = len(p.hand)
+    gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
+    assert guild in p.discard
+    assert len(p.hand) == hand_before - 1 + 2                 # -1 discard, +2 draw
+
+    # recall_spy_then is now a MAY (optional) — declining keeps the spy.
+    p.place_spy("Emperor Post")
+    p.place_spy("Fremen Post")
+    EffectResolver.resolve_single_effect({"recall_spy_then": {"intrigue": 1}}, p, gs)
+    assert gs.pending_optional_payments
+    ig0 = len(p.intrigue_cards)
+    gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=False))
+    assert sum(p.spies_on_board.values()) == 2 and len(p.intrigue_cards) == ig0
+    EffectResolver.resolve_single_effect({"recall_spy_then": {"intrigue": 1}}, p, gs)
+    gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
+    assert sum(p.spies_on_board.values()) == 1 and len(p.intrigue_cards) == ig0 + 1
+
+
 def test_sardaukar_coordination_deploy_recruited_uncapped():
     from src.game.effects import EffectResolver
     gs = setup_game(2, seed=6)

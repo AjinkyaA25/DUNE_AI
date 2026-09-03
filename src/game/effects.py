@@ -262,13 +262,11 @@ class EffectResolver:
             gs.add_pending_optional_payment(player.id, spec.get("cost", {}), rew,
                                             label="pay_then")
 
-        # -- recall a placed Spy, then gain rewards -------------------
+        # -- MAY recall a placed Spy, then gain rewards (an arrow) ----
         if "recall_spy_then" in effect:
-            posts = list(player.spies_on_board)
-            if posts:
-                player.recall_spy(posts[0])
-                player.recalled_spy_this_turn = True
-                EffectResolver.resolve_single_effect(effect["recall_spy_then"], player, gs)
+            gs.add_pending_optional_payment(
+                player.id, {"recall_spy": 1}, effect["recall_spy_then"],
+                label="recall_spy_then")
 
         if "recall_spies_swords" in effect:
             spec = effect["recall_spies_swords"]
@@ -626,6 +624,15 @@ class EffectResolver:
                     effect["discard_then_if_sg"], player, game_state)
             else:
                 EffectResolver._discard_worst(player)
+
+        # ===== SPACE-TIME FOLDING: MAY discard a card -> draw; +1 draw if the =====
+        # discarded card was a Spacing Guild card.
+        if "discard_then_sg" in effect:
+            spec = effect["discard_then_sg"]
+            game_state.add_pending_optional_payment(
+                player.id, {}, spec.get("base", {}), discard=1,
+                label="discard_then_sg", discard_tag="spacing_guild",
+                tag_bonus=spec.get("sg_bonus"))
 
         # ===== DISCARD N + PAY SOLARI -> GAIN VP (Corrinth City agent) =====
         # Arrow effect -> optional accept/decline.

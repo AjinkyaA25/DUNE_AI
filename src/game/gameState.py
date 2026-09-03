@@ -225,16 +225,22 @@ class PendingOptionalPayment:
     """
     A cost -> reward "arrow" effect.  Per the rulebook every arrow is optional:
     the player MAY pay the cost to gain the reward, or decline.  `cost` is a
-    resource dict (spice / solari / water); `discard` is how many cards must be
-    discarded as part of the cost; `reward` is the effect dict gained on accept.
+    resource dict (spice / solari / water, plus the pseudo-cost "recall_spy" =
+    recall N of your Spies); `discard` is how many cards must be discarded as
+    part of the cost; `reward` is the effect dict gained on accept.
+    `discard_tag` / `tag_bonus`: if a discarded card carries `discard_tag`,
+    also resolve `tag_bonus` (Space-Time Folding: +1 draw for a Guild card).
     """
     def __init__(self, player_id: int, cost: Dict, reward: Dict,
-                 discard: int = 0, label: str = ""):
-        self.player_id = player_id
-        self.cost      = dict(cost or {})
-        self.reward    = dict(reward or {})
-        self.discard   = int(discard)
-        self.label     = label
+                 discard: int = 0, label: str = "",
+                 discard_tag: str = None, tag_bonus: Dict = None):
+        self.player_id   = player_id
+        self.cost        = dict(cost or {})
+        self.reward      = dict(reward or {})
+        self.discard     = int(discard)
+        self.label       = label
+        self.discard_tag = discard_tag
+        self.tag_bonus   = dict(tag_bonus) if tag_bonus else None
 
 
 class PendingInfluenceChoice:
@@ -908,10 +914,28 @@ class GameState:
         if not self._can_pay_optional(pid, pending):
             return                                  # can't afford -> treat as decline
         for k, v in pending.cost.items():
-            setattr(p, k, getattr(p, k) - v)
+            if k == "recall_spy":
+                for post in list(p.spies_on_board)[:v]:
+                    p.recall_spy(post)
+                p.recalled_spy_this_turn = True
+            else:
+                setattr(p, k, getattr(p, k) - v)
+        discarded_tag = False
         for _ in range(pending.discard):
+            if pending.discard_tag:
+                from src.game.cards.card import CardTag
+                tag = CardTag(pending.discard_tag)
+                tagged = [c for c in p.hand if c.has_tag(tag)]
+                if tagged:
+                    tgt = min(tagged, key=lambda c: c.persuasion + c.swords)
+                    p.hand.remove(tgt)
+                    p.discard.append(tgt)
+                    discarded_tag = True
+                    continue
             EffectResolver._discard_worst(p)
         EffectResolver.resolve_single_effect(pending.reward, p, self)
+        if discarded_tag and pending.tag_bonus:
+            EffectResolver.resolve_single_effect(pending.tag_bonus, p, self)
 
     def _step_resolve_influence(self, action: GameAction) -> None:
         pid = action.player_id
@@ -1040,7 +1064,13 @@ class GameState:
         p = self.players[player_id]
         if len(p.hand) < op.discard:
             return False
-        return all(getattr(p, k, 0) >= v for k, v in op.cost.items())
+        for k, v in op.cost.items():
+            if k == "recall_spy":
+                if sum(p.spies_on_board.values()) < v:
+                    return False
+            elif getattr(p, k, 0) < v:
+                return False
+        return True
 
     def _valid_pending_actions(self, player_id: int) -> List[GameAction]:
         actions: List[GameAction] = []
@@ -2241,10 +2271,13 @@ class GameState:
         self.pending_influence_choices.append(PendingInfluenceChoice(player_id, count))
 
     def add_pending_optional_payment(self, player_id: int, cost: Dict, reward: Dict,
-                                     discard: int = 0, label: str = "") -> None:
+                                     discard: int = 0, label: str = "",
+                                     discard_tag: str = None,
+                                     tag_bonus: Dict = None) -> None:
         """Queue a cost->reward arrow the player MAY take. Skipped silently if
         the cost can't be met (indistinguishable from declining)."""
-        op = PendingOptionalPayment(player_id, cost, reward, discard, label)
+        op = PendingOptionalPayment(player_id, cost, reward, discard, label,
+                                    discard_tag, tag_bonus)
         if self._can_pay_optional(player_id, op):
             self.pending_optional_payments.append(op)
 
