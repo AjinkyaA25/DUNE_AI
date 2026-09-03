@@ -387,6 +387,56 @@ def test_card_corrections_batch6():
     assert any(t.player_id == 0 for t in gs.pending_trashes)
 
 
+def test_card_corrections_batch7():
+    from src.game.effects import EffectResolver
+    from src.data.card_definitions import create_imperium_cards
+    from src.game.cards.card import Card, CardType, CardTag
+
+    cs = {c.name: c for c in create_imperium_cards()}
+    assert cs["Tread in Darkness"].agent_effects == [
+        {"if_tag_other_bene": {"trash": 1, "draw": 1}}]
+    assert cs["Wheels Within Wheels"].reveal_effects == [{"spy": 1}]
+    ww_agent = cs["Wheels Within Wheels"].agent_effects[0]
+    assert ww_agent["if_influence_emperor_2"] == {"solari": 2}
+    assert ww_agent["if_influence_spacing_guild_2"] == {"spice": 1}
+
+    gs = setup_game(2, seed=1)
+    p = gs.players[0]
+
+    # Nested return_self_to_hand (Weirding Woman) now fires.
+    ww = Card("Weirding Woman", CardType.IMPERIUM); ww.add_tag(CardTag.BENE_GESSERIT)
+    bene = Card("BeneCard", CardType.IMPERIUM); bene.add_tag(CardTag.BENE_GESSERIT)
+    p.in_play = [ww, bene]
+    gs._self_ref_pending = []
+    EffectResolver.resolve_single_effect(
+        {"if_tag_other_bene": {"return_self_to_hand": 1}}, p, gs)
+    EffectResolver._resolve_self_referential(
+        {"if_tag_other_bene": {"return_self_to_hand": 1}}, ww, p, gs)
+    assert ww in p.hand and ww not in p.in_play
+
+    # ...but NOT when the condition is false (no other Bene card).
+    ww2 = Card("Weirding Woman", CardType.IMPERIUM); ww2.add_tag(CardTag.BENE_GESSERIT)
+    p.in_play = [ww2]
+    gs._self_ref_pending = []
+    EffectResolver.resolve_single_effect(
+        {"if_tag_other_bene": {"return_self_to_hand": 1}}, p, gs)
+    EffectResolver._resolve_self_referential(
+        {"if_tag_other_bene": {"return_self_to_hand": 1}}, ww2, p, gs)
+    assert ww2 in p.in_play
+
+    # Treacherous Maneuver: trashes itself + another Emperor card, gains influence.
+    gs2 = setup_game(2, seed=5)
+    q = gs2.players[0]
+    tm = Card("Treacherous Maneuver", CardType.IMPERIUM); tm.add_tag(CardTag.EMPEROR)
+    emp = Card("EmpCard", CardType.IMPERIUM); emp.add_tag(CardTag.EMPEROR)
+    q.in_play = [tm, emp]
+    gs2._current_agent_space = "Sardaukar"       # an Emperor faction space
+    inf0 = q.influence["emperor"]
+    EffectResolver.resolve_single_effect({"trash_pair_emperor_influence": 1}, q, gs2)
+    assert tm in q.trash and emp in q.trash and not q.in_play
+    assert q.influence["emperor"] == inf0 + 1
+
+
 def test_sardaukar_coordination_deploy_recruited_uncapped():
     from src.game.effects import EffectResolver
     gs = setup_game(2, seed=6)

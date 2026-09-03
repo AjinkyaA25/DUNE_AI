@@ -38,6 +38,7 @@ class EffectResolver:
     @staticmethod
     def resolve_agent_effects(card: 'Card', player: 'Player', game_state: 'GameState') -> None:
         for effect in card.agent_effects:
+            game_state._self_ref_pending = []
             EffectResolver.resolve_single_effect(effect, player, game_state)
             EffectResolver._resolve_self_referential(effect, card, player, game_state)
 
@@ -58,14 +59,28 @@ class EffectResolver:
 
     @staticmethod
     def _resolve_self_referential(effect: Dict, card, player, game_state) -> None:
-        """Handle effect keys that act on the card being played itself (top level)."""
+        """
+        Handle effect keys that act on the card being played itself.  These are
+        collected during `resolve_single_effect` (which has no card ref) via
+        `game_state._self_ref_pending`, so they fire correctly even when nested
+        inside a conditional (e.g. Weirding Woman, Treacherous Maneuver).
+        """
+        reqs = set(getattr(game_state, "_self_ref_pending", []))
         if effect.get("trash_self"):
+            reqs.add("trash_self")
+        if effect.get("return_self_to_hand"):
+            reqs.add("return_self_to_hand")
+        game_state._self_ref_pending = []
+
+        if "trash_self" in reqs:
             for pile in (player.in_play, player.hand, player.discard):
                 if card in pile:
                     pile.remove(card)
                     player.trash.append(card)
+                    for eff in getattr(card, "trash_effects", []):
+                        EffectResolver.resolve_single_effect(eff, player, game_state)
                     break
-        if effect.get("return_self_to_hand") and card in player.in_play:
+        if "return_self_to_hand" in reqs and card in player.in_play:
             player.in_play.remove(card)
             player.hand.append(card)
 
@@ -129,6 +144,16 @@ class EffectResolver:
           persuasion                                 — add to per-turn persuasion pool
           swords                                     — add to per-turn swords pool (reveal only)
         """
+        # ===== SELF-REFERENTIAL requests (drained later with the card ref) =====
+        # Recorded here so they fire even when nested in a conditional that
+        # only resolved because its precondition was true.
+        _sr = getattr(game_state, "_self_ref_pending", None)
+        if _sr is not None:
+            if effect.get("trash_self"):
+                _sr.append("trash_self")
+            if effect.get("return_self_to_hand"):
+                _sr.append("return_self_to_hand")
+
         # ===== BASIC RESOURCES =====
         if "solari" in effect:
             player.gain_solari(effect["solari"])
@@ -493,6 +518,50 @@ class EffectResolver:
                 EffectResolver.resolve_single_effect({"troops": 1}, player, gs)
             if _BI.CRYSKNIFE in icons:
                 gs.add_pending_trash(player.id, 1)
+
+        # -- Treacherous Maneuver agent: trash this card + another Emperor card
+        #    in play -> gain 1 influence with the Faction you visited ---------
+        if "trash_pair_emperor_influence" in effect:
+            tm = next((c for c in player.in_play
+                       if c.name == "Treacherous Maneuver"), None)
+            others = [c for c in player.in_play
+                      if c.has_tag(CardTag.EMPEROR) and c is not tm]
+            if tm is not None and others:
+                others.sort(key=lambda c: c.persuasion + c.swords
+                            + len(getattr(c, "agent_effects", [])))
+                for c in (tm, others[0]):
+                    player.in_play.remove(c)
+                    player.trash.append(c)
+                    for eff in getattr(c, "trash_effects", []):
+                        EffectResolver.resolve_single_effect(eff, player, gs)
+                fac = gs._faction_for_space(getattr(gs, "_current_agent_space", None))
+                if fac:
+                    gs.gain_influence_with_check(player.id, fac, 1)
+
+        # -- Undercover Asset reveal: choose 1 Spy OR N swords --------------
+        if "spy_or_swords" in effect:
+            spec = effect["spy_or_swords"]
+            contesting = (gs.troops_in_conflict.get(player.id, 0) > 0
+                          or gs.sandworms_in_conflict.get(player.id, 0) > 0)
+            if contesting:
+                gs.swords_this_reveal[player.id] = gs.swords_this_reveal.get(player.id, 0) \
+                    + int(spec.get("swords", 2))
+            else:
+                gs.add_pending_spy_placement(player.id, int(spec.get("spy", 1)),
+                                             allow_occupied=False)
+
+        # -- Unswerving Loyalty reveal (Fremen bond): deploy 1 OR retreat 1 --
+        if "deploy_or_retreat" in effect and cc is not None:
+            n = int(effect["deploy_or_retreat"])
+            in_conf = gs.troops_in_conflict.get(player.id, 0)
+            if in_conf > 0 and _losing_combat():
+                k = min(n, in_conf)
+                gs.troops_in_conflict[player.id] -= k
+                player.troops_garrison += k
+            elif player.troops_garrison > 0:
+                k = min(n, player.troops_garrison)
+                player.troops_garrison -= k
+                gs.troops_in_conflict[player.id] = in_conf + k
 
         # -- Long Live the Fighters agent: look at top 3, draw 1 / discard 1
         #    / trash 1 (all mandatory).  Auto: keep the strongest, trash the

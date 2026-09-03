@@ -342,26 +342,35 @@ def create_imperium_cards() -> List[Card]:
           notes="'Double the bonus spice harvested' approximated as +2 spice at a Maker space."),
         m("Treacherous Maneuver", 5, I,
           access=["emperor", "spacing_guild", "bene_gesserit", "fremen"], tags=["emperor"],
-          agent={"if_tag_other_emperor": {"trash_self": 1, "influence_any": 1}},
-          persuasion=1, reveal={"influence_emperor": 1}),
+          agent={"trash_pair_emperor_influence": 1},
+          persuasion=1, reveal={"influence_emperor": 1},
+          notes="Agent: if you have another Emperor card in play, trash BOTH it "
+                "and Treacherous Maneuver, then gain 1 influence with the Faction "
+                "whose space you visited. Reveal: 1 persuasion + 1 Emperor influence."),
         m("Tread in Darkness", 4, I, access=["landsraad", "city", "desert"],
           tags=["bene_gesserit"],
-          agent={"if_tag_other_bene": {"trash": 1, "solari": 1}}, persuasion=2, swords=1),
+          agent={"if_tag_other_bene": {"trash": 1, "draw": 1}}, persuasion=2, swords=1),
         m("Truthtrance", 4, I,
           access=["emperor", "spacing_guild", "bene_gesserit", "fremen"], tags=["bene_gesserit"],
           persuasion=1, notes="Complex Intrigue-prediction text not modelled; flat persuasion 1."),
         m("Undercover Asset", 2, I, access=["landsraad", "city", "desert"],
           tags=["emperor", "spacing_guild"],
-          agent={"ignore_influence_gates": 1}, reveal={"troops": 1},
-          notes="Agent: ignore board-space Influence requirements this turn (flag)."),
+          agent={"ignore_influence_gates": 1},
+          reveal={"spy_or_swords": {"spy": 1, "swords": 2}},
+          notes="Agent: ignore board-space Influence requirements this turn. "
+                "Reveal: choose 1 Spy OR 2 swords (takes swords when contesting "
+                "the Conflict, else the Spy)."),
         m("Unswerving Loyalty", 1, I, tags=["fremen"],
-          persuasion=1, reveal={"troops": 1, "if_fremen_bond": {"deploy": 1}}),
+          persuasion=1,
+          reveal={"troops": 1, "if_fremen_bond": {"deploy_or_retreat": 1}},
+          notes="Reveal: 1 persuasion + 1 troop; with a Fremen bond, choose to "
+                "deploy 1 troop OR retreat 1 troop."),
         m("Weirding Woman", 1, I, access=["city", "desert"], tags=["bene_gesserit"],
           agent={"if_tag_other_bene": {"return_self_to_hand": 1}}, persuasion=1, swords=1),
         m("Wheels Within Wheels", 2, I, access=["spy"], tags=["emperor", "spacing_guild"],
-          agent={"if_influence_emperor_2": {"persuasion": 2},
-                 "if_influence_spacing_guild_2": {"persuasion": 1}},
-          persuasion=1, reveal={"troops": 1}),
+          agent={"if_influence_emperor_2": {"solari": 2},
+                 "if_influence_spacing_guild_2": {"spice": 1}},
+          persuasion=1, reveal={"spy": 1}),
     ]  # 58 imperium cards
 
 

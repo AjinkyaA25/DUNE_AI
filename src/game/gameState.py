@@ -384,6 +384,9 @@ class GameState:
         # conditional reveal effects deferred until the player's pending choices
         # (spy placements etc.) resolve — so "any order" reward rules work.
         self._pending_reveal_conditionals: List[Tuple[Dict, int]] = []
+        # Scratch list for trash_self / return_self_to_hand requests collected
+        # during effect resolution (drained by _resolve_self_referential).
+        self._self_ref_pending: List[str] = []
         self._combat_intrigue_players: Set[int] = set()   # who played a Combat Intrigue this Conflict
         self._prev_vp: Dict[int, int] = {i: 1 for i in range(num_players)}
 
