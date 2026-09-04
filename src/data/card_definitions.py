@@ -574,7 +574,9 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         # Emperor's Invitation: draw a card, OR give the card you play this
         # round Emperor access.
         IC("Emperor's Invitation", _PLOT, [{"emperor_access_or_draw": 1}]),
-        IC("False Orders", _PLOT, [{"spy": 1}]),
+        # False Orders: spy on a post bordering a space you have an Agent on and
+        # bounce every OTHER player's Spy there (they re-place it normally).
+        IC("False Orders", _PLOT, [{"false_orders": 1}]),
         # Honor Guard references Sardaukar Commanders — Bloodlines expansion.
         # IC("Honor Guard", _PLOT, [{"troops": 1}]),
         # Insider Information: recall a Spy -> draw + trash a card, OR ignore a

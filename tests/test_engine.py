@@ -421,6 +421,42 @@ def test_battle_icons():
     assert p.battle_icons == []
 
 
+def test_false_orders():
+    from src.game.effects import EffectResolver
+    gs = setup_game(4, seed=1)
+    blue, red = gs.players[0], gs.players[1]
+    # Blue has an Agent on Research Station; Red is spying on a bordering post.
+    gs.agent_on_space["Research Station"] = 0
+    red.place_spy("Research Station Left Post")
+    blue_before = blue.spies_available
+    EffectResolver.resolve_single_effect({"false_orders": 1}, blue, gs)
+    # Blue now spies on a Research Station post; Red's spy was bounced (re-place pending).
+    assert sum(blue.spies_on_board.values()) == 1
+    assert blue.spies_available == blue_before - 1
+    assert not red.has_spy_at("Research Station Left Post")
+    assert any(p.player_id == 1 for p in gs.pending_spy_placements)
+
+
+def test_game_log_and_gauntlet():
+    from src.selfplay.game_log import record_game
+    from src.selfplay.gauntlet import mixed_seat
+    from src.ai.agents import make_agent
+
+    ag = {i: make_agent("heuristic", seed=i) for i in range(4)}
+    log = record_game(ag, num_players=4, seed=5)
+    assert log["summary"]["winner"] in range(4)
+    assert log["events"] and all("deltas" in e and "round" in e for e in log["events"])
+    assert log["summary"]["rounds_played"] >= 8
+    # every deploy event's delta matches its deploy_count
+    for e in log["events"]:
+        if e["action"] == "resolve_deploy" and e["deploy_count"] > 0:
+            d = e["deltas"].get(str(e["player"]), {})
+            assert d.get("troops_in_conflict", 0) == e["deploy_count"]
+
+    wr = mixed_seat(["random", "heuristic", "heuristic", "heuristic"], 12)
+    assert wr["heuristic"] > wr["random"]
+
+
 def test_combat_intrigue_batch():
     from src.game.effects import EffectResolver
     from src.data.card_definitions import create_intrigue_deck

@@ -716,6 +716,26 @@ class EffectResolver:
         if "ignore_influence_gates" in effect:
             player.ignore_influence_gates_this_turn = True
 
+        # -- False Orders: spy on a post bordering a space you have an Agent on;
+        #    bounce every OTHER player's Spy there (they must re-place it).
+        #    You may not target a post you already occupy. -------------------
+        if "false_orders" in effect and player.spies_available > 0:
+            from src.game.board.board import SPACE_TO_OBSERVATION_POSTS as _S2P
+            my_spaces = [s for s, o in gs.agent_on_space.items() if o == player.id]
+            cands = set()
+            for s in my_spaces:
+                cands |= _S2P.get(s, set())
+            cands = [pp for pp in cands if not player.has_spy_at(pp)]
+            if cands:
+                target = max(cands, key=lambda pp: sum(
+                    1 for q in gs.players
+                    if q.id != player.id and q.has_spy_at(pp)))
+                for q in gs.players:
+                    if q.id != player.id and q.has_spy_at(target):
+                        q.recall_spy(target)
+                        gs.add_pending_spy_placement(q.id, 1, allow_occupied=False)
+                player.place_spy(target, allow_occupied=False)
+
         # -- Emperor's Invitation: draw a card, OR let the card you play this
         #    round reach an Emperor space regardless of its icons.  Auto: take
         #    the access only when you can't otherwise reach an Emperor space. --
