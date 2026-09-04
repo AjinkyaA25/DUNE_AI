@@ -421,6 +421,27 @@ def test_battle_icons():
     assert p.battle_icons == []
 
 
+def test_battle_for_arrakeen_recall_spies():
+    from src.data.card_definitions import conflict_level_3_pool
+    from src.game.gameState import GameState
+    bfa = next(c for c in conflict_level_3_pool() if c.name == "Battle for Arrakeen")
+    assert bfa.first_place_reward == {
+        "vp": 1, "control": True, "may_recall_spies_for_vp": {"count": 2, "vp": 1}}
+    assert bfa.second_place_reward == {"intrigue": 1, "spice": 1, "solari": 3}
+
+    gs = GameState(num_players=4, seed=1)
+    p = gs.players[0]
+    p.place_spy("Emperor Post"); p.place_spy("Fremen Post"); p.place_spy("Green Post")
+    vp0 = p.victory_points
+    gs._apply_combat_reward(0, {"may_recall_spies_for_vp": {"count": 2, "vp": 1}}, bfa)
+    assert p.victory_points == vp0 + 1
+    assert sum(p.spies_on_board.values()) == 1        # 2 recalled
+
+    # Worm doubles the VP but not the spy count.
+    assert gs._scale_reward({"may_recall_spies_for_vp": {"count": 2, "vp": 1}}, True) == {
+        "may_recall_spies_for_vp": {"count": 2, "vp": 2}}
+
+
 def test_conflict_rewards_2026_09_03():
     from src.data.card_definitions import conflict_level_1_pool, conflict_level_2_pool
     l1 = {c.name: c for c in conflict_level_1_pool()}

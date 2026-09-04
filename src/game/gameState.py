@@ -1908,6 +1908,9 @@ class GameState:
                 scaled[k] = v
             elif k in _vp_convert and isinstance(v, dict):
                 scaled[k] = {"cost": v.get("cost", 0) * 2, "vp": v.get("vp", 1) * 2}
+            elif k == "may_recall_spies_for_vp" and isinstance(v, dict):
+                # Spy count can't scale past your 3 Spies — only the VP doubles.
+                scaled[k] = {"count": v.get("count", 2), "vp": v.get("vp", 1) * 2}
             elif isinstance(v, (int, float)):
                 scaled[k] = v * 2
             else:
@@ -1954,6 +1957,14 @@ class GameState:
                         player.troops_supply += cost
                     else:
                         setattr(player, res[0], have - cost)
+                    player.gain_vp(vp)
+            elif key == "may_recall_spies_for_vp":
+                # Battle for Arrakeen: recall N of your Spies from the board to
+                # gain a VP.  Auto-taken when you have enough Spies out.
+                count, vp = int(value.get("count", 2)), int(value.get("vp", 1))
+                if sum(player.spies_on_board.values()) >= count:
+                    for post in list(player.spies_on_board)[:count]:
+                        player.recall_spy(post)
                     player.gain_vp(vp)
             else:
                 EffectResolver.resolve_single_effect({key: value}, player, self)

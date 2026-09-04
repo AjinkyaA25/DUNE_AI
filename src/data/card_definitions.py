@@ -472,8 +472,8 @@ def conflict_level_3_pool() -> List[Conflict]:
     return [
         _cf("Battle for Arrakeen", 3,
             {"vp": 1, "control": True,
-             "may_pay_troops_for_vp": {"cost": 2, "vp": 1}},
-            {"draw": 1, "spice": 1, "solari": 3}, {"spice": 2, "solari": 2},
+             "may_recall_spies_for_vp": {"count": 2, "vp": 1}},
+            {"intrigue": 1, "spice": 1, "solari": 3}, {"spice": 2, "solari": 2},
             _CR, "Arrakeen"),
         _cf("Battle for Imperial Basin", 3,
             {"vp": 1, "control": True,
