@@ -522,20 +522,27 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         # ── Plot ────────────────────────────────────────────────────────────
         IC("Change Allegiances", _PLOT, [{"influence_swap": 1},
             {"pay_then": {"cost": {"spice": 3}, "influence_choice": 1}}]),
-        IC("Sietch Ritual", _PLOT, [{"discard_then": {"influence_choice": 1}}]),
+        IC("Sietch Ritual", _PLOT, [{"discard_then": {"influence_bene_or_fremen": 1}}]),
         IC("Unexpected Allies", _PLOT,
-           [{"water_summon": {"cost": 2, "sandworm": 1, "deploy": 2}}]),
+           [{"pay_then": {"cost": {"water": 2}, "break_shield_wall": 1, "sandworm": 1}}]),
+        # Cunning: draw a card; you MAY also spend 1 spice to trash a card
+        # (option A's draw == option B's draw, so folding them is exact).
         IC("Cunning", _PLOT, [{"draw": 1},
-            {"pay_then": {"cost": {"spice": 3}, "trash": 1, "draw": 1}}]),
+            {"pay_then": {"cost": {"spice": 1}, "trash": 1}}]),
         IC("Buy Access", _PLOT, [{"pay_then": {"cost": {"solari": 5}, "influence_choice": 2}}]),
-        IC("Call to Arms", _PLOT, [{"troops": 2}]),   # approx: flat 2 troops
+        IC("Call to Arms", _PLOT, [{"troops_per_card_acquired_this_turn": 1}]),
         IC("Councilor's Ambition", _PLOT, [{"if_councilor": {"water": 2}}]),
         IC("Depart for Arrakis", _PLOT, [{"pay_then": {"cost": {"spice": 2}, "troops": 3}},
             {"if_influence_spacing_guild_3": {"draw": 1}}]),
-        IC("Detonation", _PLOT, [{"break_shield_wall": 1, "deploy": 4}]),
-        IC("Distraction", _PLOT, [{"spy_special": 1}]),   # approx (real: triggered)
-        IC("Imperium Politics", _PLOT, [{"pay_then": {"cost": {"solari": 1}, "influence_choice": 1}}]),
-        IC("Inspire Awe", _PLOT, [{"acquire_free": {"max_cost": 3}}]),
+        # Detonation: deploy up to 4 troops; MAY also break the Shield Wall
+        # (optional wall-break icon). Two copies in the deck.
+        IC("Detonation", _PLOT, [{"deploy": 4}, {"may_break_shield_wall": 1}]),
+        IC("Detonation", _PLOT, [{"deploy": 4}, {"may_break_shield_wall": 1}]),
+        IC("Distraction", _PLOT, [{"if_units_in_conflict_3": {"spy_special": 1}}]),
+        IC("Imperium Politics", _PLOT,
+           [{"pay_then": {"cost": {"solari": 1}, "influence_emperor_or_spacing": 1}}]),
+        IC("Inspire Awe", _PLOT,
+           [{"acquire_free": {"max_cost": 3, "to_hand_if_sandworm": True}}]),
         IC("Intelligence Report", _PLOT, [{"if_spies_2": {"draw": 2}}]),
         IC("Leverage", _PLOT, [{"spice": 1, "solari": 1}]),   # approx: "if gained spice"
         IC("Manipulate", _PLOT, [{"refresh_imperium_row": 1}]),

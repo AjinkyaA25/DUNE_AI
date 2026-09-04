@@ -65,6 +65,8 @@ class Player:
         self.recalled_spy_this_turn = False
         self.agent_to_maker_this_turn = False
         self.agent_to_faction_this_turn = False
+        # Cards acquired during this player's current Reveal/buy turn (Call to Arms).
+        self.cards_acquired_this_turn = 0
 
         # ===== SPIES (BLOODLINES MECHANIC) =====
         # Players start with 3 spies

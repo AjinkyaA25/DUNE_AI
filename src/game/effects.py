@@ -271,6 +271,30 @@ class EffectResolver:
             for _ in range(int(effect["influence_choice"])):
                 gs.gain_influence_with_check(player.id, _best_gain_faction(), 1)
 
+        # -- gain influence, choosing between a RESTRICTED pair of Factions --
+        def _pick_from(cands):
+            return (next((f for f in cands if player.influence[f] == 3), None)
+                    or next((f for f in cands if player.influence[f] == 1), None)
+                    or min(cands, key=lambda f: player.influence[f]))
+
+        if "influence_bene_or_fremen" in effect:               # Sietch Ritual
+            for _ in range(int(effect["influence_bene_or_fremen"])):
+                gs.gain_influence_with_check(
+                    player.id, _pick_from(("bene_gesserit", "fremen")), 1)
+
+        if "influence_emperor_or_spacing" in effect:           # Imperium Politics
+            for _ in range(int(effect["influence_emperor_or_spacing"])):
+                gs.gain_influence_with_check(
+                    player.id, _pick_from(("emperor", "spacing_guild")), 1)
+
+        # -- Call to Arms: troops per card acquired this Reveal turn ----
+        if "troops_per_card_acquired_this_turn" in effect:
+            k = getattr(player, "cards_acquired_this_turn", 0)
+            if k:
+                EffectResolver.resolve_single_effect(
+                    {"troops": k * int(effect["troops_per_card_acquired_this_turn"])},
+                    player, gs)
+
         # -- lose influence from a safe Faction ------------------------
         if "lose_influence_any" in effect:
             for _ in range(int(effect["lose_influence_any"])):
@@ -317,13 +341,18 @@ class EffectResolver:
                 + k * int(effect["swords_per_friendship"])
 
         # -- acquire a cheap card from the Row for free --------------
+        # Inspire Awe: if you have a sandworm in the Conflict, the acquired
+        # card goes straight to hand instead of the discard pile.
         if "acquire_free" in effect:
-            mx = effect["acquire_free"].get("max_cost", 3)
+            spec = effect["acquire_free"]
+            mx = spec.get("max_cost", 3)
             opts = [c for c in gs.imperium_row if c.cost <= mx]
             if opts:
                 best = max(opts, key=lambda c: c.persuasion + c.swords + c.cost * 0.3)
                 gs.imperium_row.remove(best)
-                player.discard.append(best)
+                to_hand = (spec.get("to_hand_if_sandworm")
+                           and gs.sandworms_in_conflict.get(player.id, 0) > 0)
+                (player.hand if to_hand else player.discard).append(best)
                 gs.refill_imperium_row()
 
         # -- detonate the Shield Wall (unconditional) ---------------

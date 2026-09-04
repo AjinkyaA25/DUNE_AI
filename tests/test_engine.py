@@ -421,6 +421,52 @@ def test_battle_icons():
     assert p.battle_icons == []
 
 
+def test_intrigue_corrections_2026_09_04():
+    from src.game.effects import EffectResolver
+    from src.data.card_definitions import create_intrigue_deck
+    from collections import Counter
+
+    d = create_intrigue_deck()
+    assert Counter(c.name for c in d)["Detonation"] == 2
+
+    gs = setup_game(2, seed=3)
+    p = gs.players[0]
+
+    # Sietch Ritual: restricted influence choice (bene or fremen only).
+    p.influence["emperor"] = 5
+    EffectResolver.resolve_single_effect({"influence_bene_or_fremen": 1}, p, gs)
+    assert p.influence["emperor"] == 5
+    assert p.influence["bene_gesserit"] + p.influence["fremen"] == 1
+
+    # Imperium Politics: emperor or spacing only.
+    e0, s0 = p.influence["emperor"], p.influence["spacing_guild"]
+    EffectResolver.resolve_single_effect({"influence_emperor_or_spacing": 1}, p, gs)
+    assert (p.influence["emperor"] + p.influence["spacing_guild"]) == e0 + s0 + 1
+
+    # Distraction: special spy ONLY with 3+ units in the Conflict.
+    gs.troops_in_conflict[0] = 2
+    n0 = len(gs.pending_spy_placements)
+    EffectResolver.resolve_single_effect({"if_units_in_conflict_3": {"spy_special": 1}}, p, gs)
+    assert len(gs.pending_spy_placements) == n0
+    gs.troops_in_conflict[0] = 3
+    EffectResolver.resolve_single_effect({"if_units_in_conflict_3": {"spy_special": 1}}, p, gs)
+    assert len(gs.pending_spy_placements) == n0 + 1
+
+    # Call to Arms: troops per card acquired this turn.
+    p.cards_acquired_this_turn = 3
+    g0 = p.troops_garrison
+    EffectResolver.resolve_single_effect({"troops_per_card_acquired_this_turn": 1}, p, gs)
+    assert p.troops_garrison == g0 + 3
+
+    # Inspire Awe: acquired card -> hand only if a sandworm is in the Conflict.
+    if gs.imperium_row:
+        gs.sandworms_in_conflict[0] = 1
+        h0 = len(p.hand)
+        EffectResolver.resolve_single_effect(
+            {"acquire_free": {"max_cost": 99, "to_hand_if_sandworm": True}}, p, gs)
+        assert len(p.hand) == h0 + 1
+
+
 def test_battle_for_arrakeen_recall_spies():
     from src.data.card_definitions import conflict_level_3_pool
     from src.game.gameState import GameState

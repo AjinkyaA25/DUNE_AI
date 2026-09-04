@@ -1678,6 +1678,7 @@ class GameState:
         cards_to_reveal = list(player.hand)
         player.reveal_cards(cards_to_reveal)
         player._revealed_this_turn = len(cards_to_reveal)
+        player.cards_acquired_this_turn = 0
 
         swords = sum(c.swords for c in cards_to_reveal)
         self.swords_this_reveal[player_id] = (
@@ -1713,6 +1714,7 @@ class GameState:
             return False
         self.imperium_row.remove(card)
         self.players[player_id].discard.append(card)
+        self.players[player_id].cards_acquired_this_turn += 1
         # Refill row FIRST, then trigger acquire effects (FAQ requirement)
         self.refill_imperium_row()
         self._trigger_acquire_effects(player_id, card)
@@ -1731,6 +1733,7 @@ class GameState:
             return False
         card = stack.pop()
         self.players[player_id].discard.append(card)
+        self.players[player_id].cards_acquired_this_turn += 1
         self._trigger_acquire_effects(player_id, card)
         if self.use_choam:
             self.check_acquire_contracts(player_id, card.name)
