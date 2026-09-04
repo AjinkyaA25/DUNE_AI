@@ -619,9 +619,9 @@ class EffectResolver:
                 player.hand.append(top[0])                       # draw the best
                 if len(top) >= 3:
                     player.discard.append(top[1])                # discard the middle
-                    player.trash.append(top[2])                  # trash the worst
+                    gs._to_trash(player, top[2])                 # trash the worst
                 elif len(top) == 2:
-                    player.trash.append(top[1])
+                    gs._to_trash(player, top[1])
 
         # -- Sardaukar Coordination agent: MAY deploy troops you recruited this
         #    turn to the Conflict (any amount, no cap beyond what you recruited) -

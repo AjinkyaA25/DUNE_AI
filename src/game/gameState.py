@@ -889,6 +889,16 @@ class GameState:
             self._do_deploy(pid, n)
         self.pending_deployments.remove(pending)
 
+    def _to_trash(self, player, card) -> None:
+        """Trash a card.  The Spice Must Flow / Prepare the Way return to their
+        reserve stack instead of the player's permanent trash pile."""
+        if card.name == "The Spice Must Flow":
+            self.reserve_spice_must_flow.append(card)
+        elif card.name == "Prepare the Way":
+            self.reserve_prepare_the_way.append(card)
+        else:
+            player.trash.append(card)
+
     def _step_resolve_trash(self, action: GameAction) -> None:
         pid = action.player_id
         pending = next((t for t in self.pending_trashes if t.player_id == pid), None)
@@ -903,7 +913,7 @@ class GameState:
             if card is None:
                 raise ValueError(f"Card '{name}' not in hand or discard")
             (p.hand if card in p.hand else p.discard).remove(card)
-            p.trash.append(card)
+            self._to_trash(p, card)
             # "When this card is trashed" effects (e.g. Sardaukar Soldier).
             for eff in getattr(card, "trash_effects", []):
                 EffectResolver.resolve_single_effect(eff, p, self)

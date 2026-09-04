@@ -244,8 +244,8 @@ def create_imperium_cards() -> List[Card]:
           notes="Agent: 2 solari, +1 draw if 2+ Bene Gesserit influence. Reveal: "
                 "with a High Council seat, 2 persuasion (+1 more if you also have "
                 "your Swordmaster)."),
-        m("Prepare the Way", 2, I, access=["landsraad", "city"], tags=["bene_gesserit"],
-          agent={"if_influence_bene_gesserit_2": {"solari": 1}}, persuasion=2),
+        # Prepare the Way is a RESERVE stack in Uprising, not in the Imperium
+        # deck — see create_reserve_prepare_the_way().
         m("Price is No Object", 6, I, access=["emperor", "bene_gesserit"],
           tags=["emperor", "bene_gesserit"],
           agent={"acquire_with_solari": {"max_cost": 6}},
@@ -371,21 +371,23 @@ def create_imperium_cards() -> List[Card]:
           agent={"if_influence_emperor_2": {"solari": 2},
                  "if_influence_spacing_guild_2": {"spice": 1}},
           persuasion=1, reveal={"spy": 1}),
-    ]  # 58 imperium cards
+    ]  # 57 imperium cards (Prepare the Way moved to a reserve stack)
 
 
 # ---------------------------------------------------------------------------
-# Reserve cards — always available.  Prepare the Way lives in the imperium
-# deck in Uprising (built above with card_type RESERVE); The Spice Must Flow
-# has its own reserve stack.
+# Reserve cards — always available from their own stacks (NOT in the Imperium
+# deck).  10 The Spice Must Flow, 8 Prepare the Way.  A trashed reserve card
+# returns to its stack (GameState._to_trash), so the supply can recover.
 # ---------------------------------------------------------------------------
 
-def create_reserve_prepare_the_way(_count: int = 0) -> List[Card]:
-    # Uprising: Prepare the Way is part of the Imperium deck, not a reserve stack.
-    return []
+def create_reserve_prepare_the_way(count: int = 8) -> List[Card]:
+    return [_make("Prepare the Way", 2, CardType.RESERVE,
+                  access=["landsraad", "city"], tags=["bene_gesserit"],
+                  agent={"if_influence_bene_gesserit_2": {"solari": 1}},
+                  persuasion=2) for _ in range(count)]
 
 
-def create_reserve_spice_must_flow(count: int = 5) -> List[Card]:
+def create_reserve_spice_must_flow(count: int = 10) -> List[Card]:
     return [_make("The Spice Must Flow", 9, CardType.RESERVE, access=["desert"],
                   tags=["spacing_guild"], acquire={"spice": 1},
                   reveal={"spice": 1, "vp": 1}) for _ in range(count)]

@@ -421,6 +421,40 @@ def test_battle_icons():
     assert p.battle_icons == []
 
 
+def test_reserve_stacks():
+    from src.data.card_definitions import (create_imperium_cards,
+                                           create_reserve_prepare_the_way,
+                                           create_reserve_spice_must_flow)
+    from src.game.gameState import GameAction, ActionType
+
+    assert not any(c.name == "Prepare the Way" for c in create_imperium_cards())
+    assert len(create_reserve_prepare_the_way()) == 8
+    assert len(create_reserve_spice_must_flow()) == 10
+
+    gs = setup_game(4, seed=2)
+    assert len(gs.reserve_prepare_the_way) == 8
+    assert len(gs.reserve_spice_must_flow) == 10
+
+    # Trashing a reserve card returns it to its stack, not the trash pile.
+    p = gs.players[0]
+    tsmf = create_reserve_spice_must_flow(1)[0]
+    p.discard.append(tsmf)
+    n = len(gs.reserve_spice_must_flow)
+    gs.add_pending_trash(0, 1)
+    gs.step(GameAction(ActionType.RESOLVE_TRASH, 0,
+                       trash_card_name="The Spice Must Flow"))
+    assert len(gs.reserve_spice_must_flow) == n + 1
+    assert tsmf not in p.trash
+
+    ptw = create_reserve_prepare_the_way(1)[0]
+    p.hand.append(ptw)
+    n = len(gs.reserve_prepare_the_way)
+    gs.add_pending_trash(0, 1)
+    gs.step(GameAction(ActionType.RESOLVE_TRASH, 0, trash_card_name="Prepare the Way"))
+    assert len(gs.reserve_prepare_the_way) == n + 1
+    assert ptw not in p.trash
+
+
 def test_intrigue_leverage_manipulate():
     from src.game.effects import EffectResolver
     from src.data.card_definitions import create_intrigue_deck
