@@ -1394,6 +1394,7 @@ class GameState:
 
         has_matching_icon = required_icon in card_icons
         if (not has_matching_icon and required_icon == "emperor"
+                and card.access_symbols            # must be an agent-playable card
                 and getattr(player, "grant_emperor_access_this_turn", False)):
             has_matching_icon = True                 # Emperor's Invitation
         has_spy_icon      = (
