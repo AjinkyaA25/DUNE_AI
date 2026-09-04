@@ -292,6 +292,13 @@ class GameState:
         # All players start at 1 VP in Uprising regardless of player count
         for p in self.players:
             p.victory_points = 1
+        # Deal one starting battle-icon token per player from the fixed pool
+        # of 2 Desert Mouse + 2 Crysknife (a 4-player game).
+        _icon_pool = ["desert_mouse", "desert_mouse", "crysknife", "crysknife"]
+        _order = list(range(4))
+        self.rng.shuffle(_order)
+        for i in range(num_players):
+            self.players[i].battle_icons = [_icon_pool[_order[i]]]
 
         # ===== TURN ORDER =====
         self.first_player: int       = 0
@@ -1867,7 +1874,7 @@ class GameState:
 
         if conflict_card_goes_to is not None:
             self.won_conflicts[conflict_card_goes_to].append(conflict)
-            self._check_battle_icon_match(conflict_card_goes_to, conflict)
+            self._award_battle_icon(conflict_card_goes_to, conflict.battle_icon)
             winner_p = self.players[conflict_card_goes_to]
             if winner_p.leader is not None:
                 winner_p.leader.trigger("on_combat_win", winner_p, self, conflict)
@@ -1951,20 +1958,23 @@ class GameState:
             else:
                 EffectResolver.resolve_single_effect({key: value}, player, self)
 
-    def _check_battle_icon_match(self, player_id: int, won_conflict: Conflict) -> bool:
-        if not won_conflict.battle_icon:
+    def _award_battle_icon(self, player_id: int, icon) -> bool:
+        """
+        Give the winner this Conflict's battle icon.  Two matching NON-wild
+        icons immediately convert to 1 VP (the pair is consumed).  A "wild"
+        icon never matches immediately — it waits for Endgame.
+        """
+        if icon is None:
             return False
-        face_up = [
-            c for c in self.won_conflicts[player_id]
-            if c is not won_conflict and id(c) not in self._flipped_conflicts
-        ]
-        for existing in face_up:
-            if existing.battle_icon and existing.battle_icon != BattleIcon.WILD:
-                if existing.battle_icon == won_conflict.battle_icon:
-                    self._flipped_conflicts.add(id(existing))
-                    self._flipped_conflicts.add(id(won_conflict))
-                    self.players[player_id].gain_vp(1)
-                    return True
+        name = icon.value if hasattr(icon, "value") else str(icon)
+        p = self.players[player_id]
+        if name != "wild" and name in p.battle_icons:
+            p.battle_icons.remove(name)          # consume the matched pair
+            p.gain_vp(1)
+            return True
+        p.battle_icons.append(name)
+        return False
+
         return False
 
     def _cleanup_after_combat(self) -> None:
@@ -2377,18 +2387,18 @@ class GameState:
                     ic.resolve(p, self)
 
     def _resolve_endgame_battle_icons(self) -> None:
-        """Endgame only: a Wild battle icon matches any of the 3 real types."""
-        for pid, cards in self.won_conflicts.items():
-            face_up = [c for c in cards if id(c) not in self._flipped_conflicts
-                       and c.battle_icon is not None]
-            wilds = [c for c in face_up if c.battle_icon == BattleIcon.WILD]
-            reals = [c for c in face_up if c.battle_icon != BattleIcon.WILD]
-            for w in wilds:
-                if reals:
-                    partner = reals.pop()
-                    self._flipped_conflicts.add(id(w))
-                    self._flipped_conflicts.add(id(partner))
-                    self.players[pid].gain_vp(1)
+        """
+        Endgame only: a Wild battle icon matches ANY other icon (including
+        another Wild).  Non-wild pairs already scored immediately when won.
+        """
+        for pid in range(self.num_players):
+            p = self.players[pid]
+            wilds = sum(1 for i in p.battle_icons if i == "wild")
+            reals = sum(1 for i in p.battle_icons if i != "wild")
+            paired = min(wilds, reals)            # wild + real
+            wilds -= paired
+            p.gain_vp(paired + wilds // 2)        # leftover wilds pair with each other
+            p.battle_icons = []
 
     def _determine_winner(self) -> int:
         def sort_key(p: Player):

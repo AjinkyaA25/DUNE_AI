@@ -110,6 +110,14 @@ class Player:
         # ===== SANDWORM (UPRISING) =====
         self.has_maker_hooks = False  # Required to spawn sandworms (from Sietch Tabr)
 
+        # ===== BATTLE ICONS (UPRISING) =====
+        # Face-up, unmatched battle-icon tokens: "crysknife" / "desert_mouse" /
+        # "ornithopter" / "wild".  Each player starts with ONE (2 desert_mouse +
+        # 2 crysknife dealt among the 4 players).  Winning a Conflict adds its
+        # icon; two matching non-wild icons immediately convert to 1 VP; "wild"
+        # only matches at Endgame.  (GameState._award_battle_icon owns the logic.)
+        self.battle_icons: List[str] = []
+
         # ===== CONTRACTS (UPRISING) =====
         self.contracts_active: List['Contract'] = []  # Contracts player has taken but not completed
         self.contracts_completed: List['Contract'] = []  # Contracts player has completed
@@ -775,6 +783,9 @@ class Player:
 
             # Sandworm (public)
             "has_maker_hooks": self.has_maker_hooks,
+
+            # Battle-icon tokens, face-up & unmatched (public)
+            "battle_icons": list(self.battle_icons),
 
             # Contracts (public count)
             "contracts_active": len(self.contracts_active),

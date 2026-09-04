@@ -387,6 +387,40 @@ def test_card_corrections_batch6():
     assert any(t.player_id == 0 for t in gs.pending_trashes)
 
 
+def test_battle_icons():
+    from src.game.gameState import GameState
+    from collections import Counter
+
+    # Each player starts with exactly one token; pool = 2 mouse + 2 crysknife.
+    gs = GameState(num_players=4, seed=0)
+    assert all(len(p.battle_icons) == 1 for p in gs.players)
+    pool = Counter(i for p in gs.players for i in p.battle_icons)
+    assert pool == {"desert_mouse": 2, "crysknife": 2}
+
+    p = gs.players[0]
+    p.battle_icons = ["crysknife"]
+    vp0 = p.victory_points
+
+    # Winning a matching non-wild icon -> immediate VP, pair consumed.
+    assert gs._award_battle_icon(0, "crysknife") is True
+    assert p.victory_points == vp0 + 1
+    assert p.battle_icons == []
+
+    # A non-matching icon is just held.
+    gs._award_battle_icon(0, "desert_mouse")
+    assert p.battle_icons == ["desert_mouse"] and p.victory_points == vp0 + 1
+
+    # Wild never matches immediately.
+    gs._award_battle_icon(0, "wild")
+    assert sorted(p.battle_icons) == ["desert_mouse", "wild"]
+    assert p.victory_points == vp0 + 1
+
+    # ...but pairs with a real icon at Endgame.
+    gs._resolve_endgame_battle_icons()
+    assert p.victory_points == vp0 + 2
+    assert p.battle_icons == []
+
+
 def test_conflict_rewards_2026_09_03():
     from src.data.card_definitions import conflict_level_1_pool, conflict_level_2_pool
     l1 = {c.name: c for c in conflict_level_1_pool()}
@@ -406,6 +440,13 @@ def test_conflict_rewards_2026_09_03():
         "influence_any": 1, "may_pay_spice_for_vp": {"cost": 3, "vp": 1}}
     assert sf.second_place_reward == {"spice": 1, "water": 1, "troops": 1}
     assert sf.third_place_reward == {"spice": 1, "troops": 1}
+    assert l2["Seize Spice Refinery"].first_place_reward == {
+        "control": True, "spy": 1, "spice": 2, "troops": 1}
+    assert l2["Storms in the South"].first_place_reward == {"spice": 2, "spy_special": 1}
+    assert l2["Test of Loyalty"].first_place_reward == {
+        "influence_emperor": 1, "spy": 1, "solari": 2}
+    assert l2["Trade Dispute"].first_place_reward == {
+        "contract": 1, "trash": 1, "water": 1}
 
     # A sandworm doubles the VP-conversion cost AND payout.
     from src.game.gameState import GameState
