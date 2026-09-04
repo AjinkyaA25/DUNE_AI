@@ -1363,6 +1363,9 @@ class GameState:
         card_icons    = {s.value for s in card.access_symbols}
 
         has_matching_icon = required_icon in card_icons
+        if (not has_matching_icon and required_icon == "emperor"
+                and getattr(player, "grant_emperor_access_this_turn", False)):
+            has_matching_icon = True                 # Emperor's Invitation
         has_spy_icon      = (
             "spy" in card_icons and
             self._player_has_spy_connected_to(player_id, space_name)
@@ -1375,7 +1378,10 @@ class GameState:
             if not self.can_infiltrate(player_id, space_name):
                 return False, f"{space_name} is occupied and player cannot Infiltrate"
 
-        if space_name in INFLUENCE_GATED_SPACES:
+        _ignore_gates = (
+            getattr(player, "ignore_influence_gates_this_turn", False)
+            or any("ignore_influence_gates" in e for e in card.agent_effects))
+        if space_name in INFLUENCE_GATED_SPACES and not _ignore_gates:
             faction, required_inf = INFLUENCE_GATED_SPACES[space_name]
             if player.influence[faction] < required_inf:
                 return False, (
@@ -1518,6 +1524,9 @@ class GameState:
                         PendingDeployment(player_id, player.troops_garrison))
         finally:
             self._agent_turn_active = False
+            # One-shot access relaxers are consumed by this Agent turn.
+            player.ignore_influence_gates_this_turn = False
+            player.grant_emperor_access_this_turn = False
 
     def _apply_board_space_effects(
         self, player_id: int, space_name: str, space_option: Optional[str] = None
@@ -2074,6 +2083,8 @@ class GameState:
     def resolve_recall_phase(self) -> None:
         for player in self.players:
             player.reset_agents()
+            player.ignore_influence_gates_this_turn = False
+            player.grant_emperor_access_this_turn = False
             # An un-bought Manipulate card returns to the Imperium deck.
             if player.reserved_card is not None:
                 self.imperium_deck.append(player.reserved_card)

@@ -567,12 +567,24 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         IC("Adaptive Tactics", _PLOT,
            [{"pay_then": {"cost": {"spice": 1}, "troops": 1, "grant_deploy": 1}}]),
         IC("Bribery", _PLOT, [{"pay_then": {"cost": {"solari": 2}, "influence_choice": 1}}]),
-        IC("Coercive Negotiation", _PLOT, [{"contract": 1}]),   # approx (real: triggered)
-        IC("Emperor's Invitation", _PLOT, [{"draw": 1}]),   # 2nd option unclear
+        # Coercive Negotiation: with 3+ units in the Conflict, look at the top
+        # 3 RESERVE contracts and take one (not from the 2 face-up).
+        IC("Coercive Negotiation", _PLOT,
+           [{"if_units_in_conflict_3": {"take_contract_from_reserve": 3}}]),
+        # Emperor's Invitation: draw a card, OR give the card you play this
+        # round Emperor access.
+        IC("Emperor's Invitation", _PLOT, [{"emperor_access_or_draw": 1}]),
         IC("False Orders", _PLOT, [{"spy": 1}]),
-        IC("Honor Guard", _PLOT, [{"troops": 1}]),
-        IC("Insider Information", _PLOT, [{"recall_spy_then": {"trash": 1, "draw": 1}}]),
-        IC("Sleeper Unit", _PLOT, [{"recall_spy_then": {"troops": 2}}]),
+        # Honor Guard references Sardaukar Commanders — Bloodlines expansion.
+        # IC("Honor Guard", _PLOT, [{"troops": 1}]),
+        # Insider Information: recall a Spy -> draw + trash a card, OR ignore a
+        # board space's Influence requirement this turn.
+        IC("Insider Information", _PLOT,
+           [{"recall_spy_then": {"draw": 1, "trash": 1}}, {"ignore_influence_gates": 1}]),
+        # Sleeper Unit: pay 1 solari -> place a Spy, OR recall a Spy -> 2 troops.
+        IC("Sleeper Unit", _PLOT,
+           [{"pay_then": {"cost": {"solari": 1}, "spy": 1}},
+            {"recall_spy_then": {"troops": 2}}]),
         # ── Combat ──────────────────────────────────────────────────────────
         IC("Questionable Methods", _COMBAT, [{"lose_influence_any": 1, "swords": 5}]),
         IC("Devour", _COMBAT, [{"swords": 2, "if_sandworm_in_conflict": {"swords": 2, "trash": 1}}]),

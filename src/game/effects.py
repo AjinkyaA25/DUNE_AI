@@ -669,6 +669,39 @@ class EffectResolver:
                     allowed_posts=["Arrakeen Post", "Research Station Left Post",
                                    "Research Station Right Post"])
 
+        # -- ignore a board space's Influence requirement this turn ---------
+        # (Undercover Asset agent box, Insider Information intrigue.)
+        if "ignore_influence_gates" in effect:
+            player.ignore_influence_gates_this_turn = True
+
+        # -- Emperor's Invitation: draw a card, OR let the card you play this
+        #    round reach an Emperor space regardless of its icons.  Auto: take
+        #    the access only when you can't otherwise reach an Emperor space. --
+        if "emperor_access_or_draw" in effect:
+            from src.game.cards.card import AccessSymbol as _AS
+            has_emp = any(_AS.EMPEROR in c.access_symbols for c in player.hand)
+            if not has_emp and player.agents_available > 0:
+                player.grant_emperor_access_this_turn = True
+            else:
+                gs.draw_cards_for_player(player.id, 1)
+
+        # -- Coercive Negotiation: look at the top 3 reserve contracts and take
+        #    the best one (only with 3+ units in the Conflict — gated by the card).
+        if "take_contract_from_reserve" in effect and getattr(gs, "use_choam", False):
+            n = int(effect["take_contract_from_reserve"])
+            pool = gs.contract_bank[:n]
+            if pool:
+                def _cval(ct):
+                    base = sum(v for v in ct.rewards.values()
+                               if isinstance(v, (int, float)))
+                    return base + (6 if "vp" in ct.rewards else 0)
+                best = max(pool, key=_cval)
+                gs.contract_bank.remove(best)
+                player.take_contract(best)
+                if best.is_immediate() and (
+                        not best.requires_intrigue() or player.intrigue_cards):
+                    gs.complete_contract(player.id, best)
+
         # -- Smuggler's Haven reveal: +2 spice if a Spy sits on a post that
         #    borders a Maker board space (Imperial Basin / Hagga / Deep Desert) -
         if "if_spy_at_maker_post" in effect:

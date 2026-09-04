@@ -421,6 +421,39 @@ def test_battle_icons():
     assert p.battle_icons == []
 
 
+def test_ignore_gates_and_emperor_access():
+    from src.game.effects import EffectResolver
+    from src.game.cards.card import Card, CardType, AccessSymbol
+
+    gs = setup_game(4, seed=1)
+    p = gs.players[0]
+
+    # Shipping needs 2 Spacing Guild influence; a bare Desert card can't go.
+    desert = Card("D", CardType.STARTER); desert.add_access_symbol(AccessSymbol.DESERT)
+    p.influence["spacing_guild"] = 0
+    p.spice = 3                                    # Shipping also costs 3 spice
+    ok, _ = gs.can_send_agent(0, "Shipping", desert)
+    assert not ok
+    # Insider Information / Undercover Asset flag lifts the requirement.
+    EffectResolver.resolve_single_effect({"ignore_influence_gates": 1}, p, gs)
+    assert p.ignore_influence_gates_this_turn
+    ok, why = gs.can_send_agent(0, "Shipping", desert)
+    assert ok, why
+
+    # Emperor's Invitation: a non-Emperor card reaches Sardaukar (Emperor space).
+    gs2 = setup_game(4, seed=2)
+    q = gs2.players[0]
+    q.hand = [Card("DDP", CardType.STARTER)]
+    q.hand[0].add_access_symbol(AccessSymbol.DESERT)
+    q.spice = 4                                    # Sardaukar costs 4 spice
+    ok, _ = gs2.can_send_agent(0, "Sardaukar", q.hand[0])
+    assert not ok
+    EffectResolver.resolve_single_effect({"emperor_access_or_draw": 1}, q, gs2)
+    assert q.grant_emperor_access_this_turn        # no Emperor card in hand -> took access
+    ok, why = gs2.can_send_agent(0, "Sardaukar", q.hand[0])
+    assert ok, why
+
+
 def test_deploy_budget_does_not_stack():
     """2 (once) + every troop recruited this turn; a 2nd deploy icon adds no +2."""
     from src.game.effects import EffectResolver

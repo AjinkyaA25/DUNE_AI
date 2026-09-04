@@ -77,6 +77,12 @@ class Player:
         # recruited this turn.  Multiple deploy icons do NOT stack the +2.
         self.deploy_budget_this_turn = 0
         self.deployed_this_turn = 0
+        # Undercover Asset / Insider Information: ignore a board space's Influence
+        # requirement.  Emperor's Invitation: the card you play may reach an
+        # Emperor space regardless of its icons.  Cleared at end of Agent turn
+        # and at Recall.
+        self.ignore_influence_gates_this_turn = False
+        self.grant_emperor_access_this_turn = False
 
         # ===== SPIES (BLOODLINES MECHANIC) =====
         # Players start with 3 spies
