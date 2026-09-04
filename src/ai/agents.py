@@ -73,6 +73,86 @@ def _flatten(eff: dict) -> dict:
     return out
 
 
+def _cond_weight(gs: GameState, pid: int, key: str) -> float:
+    """
+    0..1 'how likely/true is this condition for me right now' — used to value
+    a card's CONDITIONAL agent/reveal effects at buy time, so a card whose
+    only payoff sits behind an alliance/influence threshold the player doesn't
+    have isn't priced the same as an unconditional card of the same cost
+    (e.g. Junction Headquarters without the Spacing Guild Alliance).
+    """
+    p = gs.players[pid]
+    if key.startswith("alliance_"):
+        return 1.0 if p.alliances.get(key[9:]) else 0.10
+    if key == "any_alliance":
+        return 1.0 if any(p.alliances.values()) else 0.10
+    if key.startswith("influence_"):                # influence_fremen_2
+        fac, _, n = key[10:].rpartition("_")
+        need = int(n) if n.isdigit() else 2
+        cur = p.influence.get(fac, 0)
+        if cur >= need:
+            return 1.0
+        return max(0.10, 0.40 - 0.10 * (need - cur))
+    if key.startswith("tag_other_"):
+        return 0.30                                  # rarely true yet, some upside
+    if key.startswith("contracts_"):
+        need = int(key[10:]) if key[10:].isdigit() else 2
+        return 1.0 if len(p.contracts_completed) >= need else 0.15
+    if key.startswith("spies_"):
+        need = int(key[6:]) if key[6:].isdigit() else 2
+        return 1.0 if sum(p.spies_on_board.values()) >= need else 0.30
+    if key.startswith("units_in_conflict_"):
+        return 0.30                                  # depends on future combat state
+    if key == "fremen_bond":
+        return 1.0 if p.influence.get("fremen", 0) >= 2 else 0.30
+    if key == "councilor":
+        return 1.0 if p.has_councilor else 0.15
+    if key == "swordmaster":
+        return 1.0 if p.has_swordmaster else 0.15
+    return 0.35                                      # unknown / per-turn flag: modest default
+
+
+def _card_effect_value(gs: GameState, pid: int, eff: dict, w: float = 1.0) -> float:
+    """
+    Recursively value a card's agent/reveal effect dict, discounting
+    conditional sub-effects by how likely their condition is to hold
+    (see `_cond_weight`) instead of either counting them at full value or
+    silently ignoring them.
+    """
+    v = 0.0
+    for k, sub in eff.items():
+        if k.startswith("if_") and isinstance(sub, dict):
+            v += _card_effect_value(gs, pid, sub, w * _cond_weight(gs, pid, k[3:]))
+        elif k == "pay_then" and isinstance(sub, dict):
+            cost = sub.get("cost", {})
+            p = gs.players[pid]
+            affordable = all(getattr(p, ck, 0) >= cv for ck, cv in cost.items())
+            reward = {kk: vv for kk, vv in sub.items() if kk != "cost"}
+            v += _card_effect_value(gs, pid, reward, w * (0.85 if affordable else 0.30))
+        elif k == "choose_by_combat" and isinstance(sub, dict):
+            best = max(_card_effect_value(gs, pid, sub.get("combat", {}), w),
+                       _card_effect_value(gs, pid, sub.get("else", {}), w))
+            v += 0.6 * best                          # situational — partial credit
+        elif k in ("discard_then", "discard_then_sg", "discard_then_if_sg",
+                  "recall_spy_then") and isinstance(sub, dict):
+            inner = sub.get("base", sub)
+            v += 0.7 * _card_effect_value(gs, pid, inner, w)
+        elif k == "trash_intrigue_for" and isinstance(sub, dict):
+            has_intrigue = bool(gs.players[pid].intrigue_cards)
+            v += _card_effect_value(gs, pid, sub, w * (0.7 if has_intrigue else 0.25))
+        elif isinstance(sub, (int, float)):
+            v += w * _RES_VALUE.get(k, 0.3) * sub
+            if k in _FACTION_OF:
+                cur = gs.players[pid].influence[_FACTION_OF[k]]
+                if cur < 2 <= cur + sub:
+                    v += w * 6.0
+                if cur < 4 <= cur + sub:
+                    v += w * 5.0
+        # other nested dicts (unrecognized structure) contribute nothing,
+        # same as before — but recognized ones are no longer invisible.
+    return v
+
+
 def _intrigue_value(gs: GameState, pid: int, ic) -> float:
     """How good is it to play this Intrigue right now?"""
     p = gs.players[pid]
@@ -213,8 +293,11 @@ class HeuristicAgent(Agent):
                 s += 1.5 * card.persuasion + 0.9 * card.swords
                 for e in (getattr(card, "agent_effects", []) +
                           getattr(card, "reveal_effects", [])):
-                    s += 0.8 * _effect_value(gs, pid, e)
-                s += 2.0 if card.cost >= 6 else 0.0
+                    s += 0.8 * _card_effect_value(gs, pid, e)
+                # NOTE: no flat "expensive = good" bonus — a costly card whose
+                # payoff sits behind a condition you don't meet (e.g. Junction
+                # Headquarters without the Spacing Guild Alliance) is priced by
+                # what it actually does for you right now, not its cost.
                 s -= 0.15 * card.cost
                 s += 5.0 * self.book.bonus(gs, pid, a)
 
