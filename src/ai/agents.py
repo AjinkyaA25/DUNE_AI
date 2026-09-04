@@ -153,6 +153,28 @@ def _card_effect_value(gs: GameState, pid: int, eff: dict, w: float = 1.0) -> fl
     return v
 
 
+def _acquire_card_value(gs: GameState, pid: int, card) -> float:
+    """
+    Shared valuation for buying a card, whether from the Imperium Row
+    (ACQUIRE_CARD) or a reserve stack (ACQUIRE_RESERVE — The Spice Must Flow /
+    Prepare the Way).  Previously ACQUIRE_RESERVE was a flat score that never
+    looked at the card at all, so TSMF's guaranteed 1 VP on acquire (worth
+    10.0 in _RES_VALUE) was invisible; and ACQUIRE_CARD ignored every card's
+    `acquire_effects` (free Spies, contracts, intrigue, influence, VP...) —
+    both are folded in here now.
+    """
+    s = 1.5 * card.persuasion + 0.9 * card.swords
+    for e in (getattr(card, "agent_effects", []) +
+              getattr(card, "reveal_effects", []) +
+              getattr(card, "acquire_effects", [])):
+        s += 0.8 * _card_effect_value(gs, pid, e)
+    # NOTE: no flat "expensive = good" bonus — a costly card whose payoff sits
+    # behind a condition you don't meet (e.g. Junction Headquarters without
+    # the Spacing Guild Alliance) is priced by what it does for you right now.
+    s -= 0.15 * card.cost
+    return s
+
+
 def _intrigue_value(gs: GameState, pid: int, ic) -> float:
     """How good is it to play this Intrigue right now?"""
     p = gs.players[pid]
@@ -290,19 +312,15 @@ class HeuristicAgent(Agent):
         elif at == ActionType.ACQUIRE_CARD:
             card = next((c for c in gs.imperium_row if c.name == a.acquire_card_name), None)
             if card:
-                s += 1.5 * card.persuasion + 0.9 * card.swords
-                for e in (getattr(card, "agent_effects", []) +
-                          getattr(card, "reveal_effects", [])):
-                    s += 0.8 * _card_effect_value(gs, pid, e)
-                # NOTE: no flat "expensive = good" bonus — a costly card whose
-                # payoff sits behind a condition you don't meet (e.g. Junction
-                # Headquarters without the Spacing Guild Alliance) is priced by
-                # what it actually does for you right now, not its cost.
-                s -= 0.15 * card.cost
+                s += _acquire_card_value(gs, pid, card)
                 s += 5.0 * self.book.bonus(gs, pid, a)
 
         elif at == ActionType.ACQUIRE_RESERVE:
-            s = 3.0 if a.reserve_type == "spice_must_flow" else 1.2
+            stack = (gs.reserve_spice_must_flow if a.reserve_type == "spice_must_flow"
+                     else gs.reserve_prepare_the_way)
+            card = stack[-1] if stack else None
+            if card:
+                s += _acquire_card_value(gs, pid, card)
 
         elif at == ActionType.PLAY_INTRIGUE:
             ic = next((c for c in p.intrigue_cards
