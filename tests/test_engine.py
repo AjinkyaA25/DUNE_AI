@@ -421,6 +421,65 @@ def test_battle_icons():
     assert p.battle_icons == []
 
 
+def test_troop_cap_and_deploy_budget_example():
+    """User's example: garrison 8, go to Heighliner (recruit 5) -> only 4
+    gained (12-troop cap); deploy budget = 2 + 4 recruited = 6 max."""
+    from src.game.effects import EffectResolver
+    gs = setup_game(4, seed=1)
+    p = gs.players[0]
+    p.troops_garrison = 8
+    p.troops_supply = 4
+    gs.troops_in_conflict[0] = 0
+    p.troops_recruited_this_turn = 0
+    EffectResolver.resolve_single_effect({"troops": 5}, p, gs)
+    assert p.troops_garrison == 12 and p.troops_supply == 0
+    # (troops_recruited_this_turn only increments inside an active agent turn;
+    # simulate that context directly.)
+    gs._agent_turn_active = True
+    p.troops_garrison, p.troops_supply, p.troops_recruited_this_turn = 8, 4, 0
+    EffectResolver.resolve_single_effect({"troops": 5}, p, gs)
+    gs._agent_turn_active = False
+    assert p.troops_recruited_this_turn == 4
+    assert p.troops_garrison == 12
+
+
+def test_spy_recall_when_all_three_placed():
+    gs = setup_game(4, seed=1)
+    p = gs.players[0]
+    p.place_spy("Emperor Post")
+    p.place_spy("Fremen Post")
+    p.place_spy("Green Post")
+    assert p.spies_available == 0
+    gs.add_pending_spy_placement(0, 1, allow_occupied=False)
+    from src.game.gameState import GameAction, ActionType
+    acts = [a for a in gs.get_valid_actions(0) if a.action_type == ActionType.RESOLVE_SPY]
+    assert acts                                  # a target post is offered
+    target = acts[0].spy_post_name
+    gs.step(GameAction(ActionType.RESOLVE_SPY, 0, spy_post_name=target))
+    # Still exactly 3 Spies total: one was recalled to make room, then re-placed.
+    assert sum(p.spies_on_board.values()) == 3
+    assert p.spies_available == 0
+    assert p.has_spy_at(target)
+
+
+def test_thumper_doubles_maker_bonus():
+    gs = setup_game(4, seed=1)
+    p = gs.players[0]
+    gs.maker_bonus_spice["Hagga Basin"] = 3
+    sp0 = p.spice
+    # Isolate just the bonus-collection step (avoid Hagga Basin's own special-
+    # space spice/sandworm choice, which isn't what's under test here).
+    bonus = gs.maker_bonus_spice["Hagga Basin"]
+    gs.maker_bonus_spice["Hagga Basin"] = 0
+    p.gain_spice(bonus)
+    p.maker_bonus_this_turn = bonus
+    assert p.spice == sp0 + 3
+    assert p.maker_bonus_this_turn == 3
+    from src.game.effects import EffectResolver
+    EffectResolver.resolve_single_effect({"double_maker_bonus": 1}, p, gs)
+    assert p.spice == sp0 + 6                         # doubled overall
+
+
 def test_contracts_and_tsmf_corrections():
     from src.game.contract.contract_definitions import create_uprising_contracts
     cs = create_uprising_contracts()

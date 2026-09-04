@@ -65,6 +65,9 @@ class Player:
         self.recalled_spy_this_turn = False
         self.agent_to_maker_this_turn = False
         self.agent_to_faction_this_turn = False
+        # Bonus spice just collected from a Maker space's accumulated pile this
+        # turn (Thumper: double it). Reset each Agent turn.
+        self.maker_bonus_this_turn = 0
         # Set by gain_spice(); Leverage may only be played after gaining spice
         # this turn.  Reset at the start of each Agent/Reveal turn.
         self.gained_spice_this_turn = False

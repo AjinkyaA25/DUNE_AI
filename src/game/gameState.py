@@ -865,7 +865,16 @@ class GameState:
             None)
         if pending is None:
             raise ValueError(f"Cannot place spy at '{post}'")
-        self.place_spy(pid, post, pending.allow_occupied)
+        player = self.players[pid]
+        if player.spies_available < 1:
+            # All 3 Spies are already on the board — Uprising errata makes
+            # placement mandatory anyway, so recall one to make room, then
+            # place the newly-gained Spy (regular/special/restricted, per the
+            # icon that triggered this) as normal.
+            if player.spies_on_board:
+                self.players[pid].recall_spy(next(iter(player.spies_on_board)))
+        if not self.place_spy(pid, post, pending.allow_occupied):
+            raise ValueError(f"Cannot place spy at '{post}'")
         pending.count -= 1
         if pending.count <= 0:
             self.pending_spy_placements.remove(pending)
@@ -1486,6 +1495,7 @@ class GameState:
         player.gained_spice_this_turn = False
         player.deploy_budget_this_turn = 0
         player.deployed_this_turn = 0
+        player.maker_bonus_this_turn = 0
         player.agent_to_maker_this_turn = space_name in MAKER_SPACES
         player.agent_to_faction_this_turn = self._faction_for_space(space_name) is not None
         spice_before = player.spice
@@ -1570,6 +1580,7 @@ class GameState:
             self.maker_bonus_spice[space_name] = 0
             if bonus > 0:
                 player.gain_spice(bonus)
+                player.maker_bonus_this_turn = bonus     # Thumper: double it
 
         if UPRISING_BOARD[space_name].special:
             self._apply_special_space(player_id, space_name, space_option)

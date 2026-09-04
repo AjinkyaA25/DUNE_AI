@@ -342,8 +342,11 @@ def create_imperium_cards() -> List[Card]:
                 "Crysknife -> trash a card, Ornithopter -> recruit 1 troop "
                 "(Wild counts as all three)."),
         m("Thumper", 3, I, access=["desert"], tags=["fremen"],
-          agent={"if_agent_to_maker": {"spice": 2}}, persuasion=1, reveal={"spice": 1},
-          notes="'Double the bonus spice harvested' approximated as +2 spice at a Maker space."),
+          agent={"if_agent_to_maker": {"double_maker_bonus": 1}}, persuasion=1,
+          reveal={"spice": 1},
+          notes="Agent: doubles the accumulated bonus spice collected at a "
+                "Maker space this turn (the board's own bonus is gained "
+                "normally; Thumper adds that same amount again)."),
         m("Treacherous Maneuver", 5, I,
           access=["emperor", "spacing_guild", "bene_gesserit", "fremen"], tags=["emperor"],
           agent={"trash_pair_emperor_influence": 1},

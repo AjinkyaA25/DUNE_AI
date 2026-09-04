@@ -347,6 +347,14 @@ class EffectResolver:
                 player.troops_garrison += n
                 EffectResolver.resolve_single_effect(spec.get("reward", {}), player, gs)
 
+        # -- Thumper: double the bonus spice you just collected from a Maker
+        #    space's accumulated pile (the board's own spice was already
+        #    gained; this adds that same amount again). ---------------------
+        if "double_maker_bonus" in effect:
+            bonus = getattr(player, "maker_bonus_this_turn", 0)
+            if bonus:
+                player.gain_spice(bonus)
+
         # -- Chani reveal: MAY retreat 2 troops from the Conflict for 4 swords —
         #    only when a unit (troop or worm) would still remain, otherwise the
         #    swords would fizzle (0 units => 0 combat strength from swords). ---
