@@ -553,11 +553,19 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         IC("Mercenaries", _PLOT, [{"pay_then": {"cost": {"solari": 3}, "intrigue": 1, "troops": 2}}]),
         IC("Opportunism", _PLOT, [{"opportunism_vp": 1}]),
         IC("Poison Snooper", _PLOT, [{"peek_top": 1}]),
-        IC("Seize Production", _PLOT, [{"solari": 2}]),   # Sardaukar-Commander option dropped
+        # Seize Production references Sardaukar Commanders — a BLOODLINES
+        # expansion mechanic, not base Uprising.  Excluded until Bloodlines.
+        # IC("Seize Production", _PLOT, [{"solari": 2}]),
         IC("Shaddam's Favor", _PLOT, [{"troops": 1, "if_influence_emperor_3": {"solari": 3}}]),
-        IC("Special Mission", _PLOT, [{"spy": 1}]),   # recall+wall option dropped
-        IC("Strategic Stockpiling", _PLOT, [{"pay_then": {"cost": {"spice": 5}, "vp": 1}}]),  # uncertain
-        IC("Adaptive Tactics", _PLOT, [{"pay_then": {"cost": {"spice": 1}, "troops": 1, "trash": 1}}]),
+        # Special Mission: place a Spy on a City post, OR recall a Spy for
+        # 2 spice + optional wall-break.  Two copies.
+        IC("Special Mission", _PLOT, [{"special_mission": 1}]),
+        IC("Special Mission", _PLOT, [{"special_mission": 1}]),
+        IC("Strategic Stockpiling", _PLOT,
+           [{"pay_then": {"cost": {"spice": 5}, "vp": 1}},
+            {"if_influence_fremen_3": {"pay_then": {"cost": {"water": 3}, "vp": 1}}}]),
+        IC("Adaptive Tactics", _PLOT,
+           [{"pay_then": {"cost": {"spice": 1}, "troops": 1, "grant_deploy": 1}}]),
         IC("Bribery", _PLOT, [{"pay_then": {"cost": {"solari": 2}, "influence_choice": 1}}]),
         IC("Coercive Negotiation", _PLOT, [{"contract": 1}]),   # approx (real: triggered)
         IC("Emperor's Invitation", _PLOT, [{"draw": 1}]),   # 2nd option unclear

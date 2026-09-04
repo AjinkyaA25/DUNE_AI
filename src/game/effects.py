@@ -392,11 +392,20 @@ class EffectResolver:
             gs.refill_imperium_row()
 
         # -- Market Opportunity: spice<->solari, whichever helps ----
+        # Market Opportunity: EITHER 5 solari -> 5 spice, OR 2 spice -> 5 solari.
+        # Auto-convert toward the resource the player currently has less of.
         if "market_convert" in effect:
-            if player.spice >= 2 and player.solari <= player.spice:
-                player.spice -= 2; player.gain_solari(5)
-            elif player.solari >= 5:
+            can_solari = player.solari >= 5        # -> 5 spice
+            can_spice  = player.spice >= 2         # -> 5 solari
+            if can_solari and can_spice:
+                if player.spice <= player.solari:
+                    player.solari -= 5; player.gain_spice(5)
+                else:
+                    player.spice -= 2; player.gain_solari(5)
+            elif can_solari:
                 player.solari -= 5; player.gain_spice(5)
+            elif can_spice:
+                player.spice -= 2; player.gain_solari(5)
 
         # -- Unexpected Allies: pay water -> sandworm + deploy troops --
         if "water_summon" in effect and cc is not None:
@@ -445,13 +454,14 @@ class EffectResolver:
             if hit:
                 EffectResolver.resolve_single_effect(effect["if_shadow_alliance"], player, gs)
 
-        # -- Opportunism: lose 2 Influence + pay 2 solari -> 1 VP -----
-        if "opportunism_vp" in effect:
-            g1 = _safe_lose_faction()
-            g2 = _safe_lose_faction(exclude=(g1,)) if g1 else None
-            if g1 and g2 and player.solari >= 2:
-                gs.lose_influence_with_check(player.id, g1, 1)
-                gs.lose_influence_with_check(player.id, g2, 1)
+        # -- Opportunism: lose 2 Influence (any factions, may be the same) +
+        #    pay 2 solari -> 1 VP.  Sheds from the highest track(s) first.
+        if "opportunism_vp" in effect and player.solari >= 2:
+            if sum(player.influence[f] for f in _FACS) >= 2:
+                for _ in range(2):
+                    f = max(_FACS, key=lambda x: player.influence[x])
+                    if player.influence[f] > 0:
+                        gs.lose_influence_with_check(player.id, f, 1)
                 player.solari -= 2
                 player.gain_vp(1)
 
@@ -630,6 +640,34 @@ class EffectResolver:
                       player.troops_garrison)
             if not any(d.player_id == player.id for d in gs.pending_deployments):
                 gs.add_pending_deployment(player.id, cap)
+
+        # -- Adaptive Tactics: grant a deploy action.  The per-turn deploy budget
+        #    is 2 (once) + every troop recruited this turn + `extra` (this card's
+        #    own troop, which isn't counted as "recruited").  Icons don't stack. --
+        if "grant_deploy" in effect and gs.current_conflict is not None:
+            extra = int(effect["grant_deploy"])
+            player.deploy_budget_this_turn = max(
+                getattr(player, "deploy_budget_this_turn", 0),
+                2 + getattr(player, "troops_recruited_this_turn", 0) + extra)
+            left = player.deploy_budget_this_turn - getattr(player, "deployed_this_turn", 0)
+            if left > 0 and not any(d.player_id == player.id
+                                    for d in gs.pending_deployments):
+                from src.game.gameState import PendingDeployment as _PD
+                gs.pending_deployments.append(_PD(player.id, player.troops_garrison))
+
+        # -- Special Mission: either place a Spy on a City observation post, OR
+        #    (if you have Spies to spare) recall one for 2 spice + optional
+        #    wall-break.  Approximated: recall when you have 2+ Spies out. --------
+        if "special_mission" in effect:
+            if sum(player.spies_on_board.values()) >= 2:
+                gs.add_pending_optional_payment(
+                    player.id, {"recall_spy": 1},
+                    {"spice": 2, "may_break_shield_wall": 1}, label="special_mission")
+            else:
+                gs.add_pending_spy_placement(
+                    player.id, 1, allow_occupied=False,
+                    allowed_posts=["Arrakeen Post", "Research Station Left Post",
+                                   "Research Station Right Post"])
 
         # -- Smuggler's Haven reveal: +2 spice if a Spy sits on a post that
         #    borders a Maker board space (Imperial Basin / Hagga / Deep Desert) -

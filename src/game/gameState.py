@@ -883,8 +883,11 @@ class GameState:
         pending = next((d for d in self.pending_deployments if d.player_id == pid), None)
         if pending is None:
             raise ValueError("No pending deployment for player")
+        p = self.players[pid]
+        budget_left = max(0, getattr(p, "deploy_budget_this_turn", 0)
+                          - getattr(p, "deployed_this_turn", 0))
         n = max(0, min(action.deploy_count, pending.max_deploy,
-                       self.players[pid].troops_garrison))
+                       p.troops_garrison, budget_left))
         if n > 0:
             self._do_deploy(pid, n)
         self.pending_deployments.remove(pending)
@@ -1144,7 +1147,9 @@ class GameState:
         for pd in self.pending_deployments:
             if pd.player_id != player_id:
                 continue
-            hi = min(pd.max_deploy, p.troops_garrison)
+            budget_left = max(0, getattr(p, "deploy_budget_this_turn", 0)
+                              - getattr(p, "deployed_this_turn", 0))
+            hi = min(pd.max_deploy, p.troops_garrison, budget_left)
             for n in range(0, hi + 1):
                 actions.append(GameAction(ActionType.RESOLVE_DEPLOY,
                                           player_id, deploy_count=n))
@@ -1442,6 +1447,8 @@ class GameState:
         player.troops_recruited_this_turn = 0
         player.recalled_spy_this_turn = False
         player.gained_spice_this_turn = False
+        player.deploy_budget_this_turn = 0
+        player.deployed_this_turn = 0
         player.agent_to_maker_this_turn = space_name in MAKER_SPACES
         player.agent_to_faction_this_turn = self._faction_for_space(space_name) is not None
         spice_before = player.spice
@@ -1497,14 +1504,18 @@ class GameState:
             if player.leader is not None:
                 player.leader.trigger("on_agent_placed", player, self, space_name)
 
-            # 9. Combat deployment
+            # 9. Combat deployment — a Combat space is a deploy icon: it opens a
+            #    per-turn budget of 2 (once) + every troop recruited this turn.
             space = UPRISING_BOARD[space_name]
             if space.is_combat_space and self.current_conflict is not None:
-                max_deploy = min(player.troops_garrison,
-                                 player.troops_recruited_this_turn + 2)
-                if max_deploy > 0:
+                player.deploy_budget_this_turn = max(
+                    player.deploy_budget_this_turn,
+                    2 + player.troops_recruited_this_turn)
+                if (player.deploy_budget_this_turn - player.deployed_this_turn > 0
+                        and not any(d.player_id == player_id
+                                    for d in self.pending_deployments)):
                     self.pending_deployments.append(
-                        PendingDeployment(player_id, max_deploy))
+                        PendingDeployment(player_id, player.troops_garrison))
         finally:
             self._agent_turn_active = False
 
@@ -1624,8 +1635,13 @@ class GameState:
         return True
 
     def add_pending_deployment(self, player_id: int, max_deploy: int) -> None:
-        """Queue an optional 'deploy up to N troops to the Conflict' choice."""
+        """Queue an optional 'deploy up to N troops to the Conflict' choice
+        (Sardaukar Coordination: recruited troops only, no +2 icon bonus)."""
         if max_deploy > 0 and self.current_conflict is not None:
+            p = self.players[player_id]
+            p.deploy_budget_this_turn = max(
+                p.deploy_budget_this_turn,
+                getattr(p, "deployed_this_turn", 0) + max_deploy)
             self.pending_deployments.append(PendingDeployment(player_id, max_deploy))
 
     def _do_deploy(self, player_id: int, n: int) -> None:
@@ -1633,6 +1649,7 @@ class GameState:
         p = self.players[player_id]
         n = max(0, min(n, p.troops_garrison))
         p.troops_garrison -= n
+        p.deployed_this_turn = getattr(p, "deployed_this_turn", 0) + n
         self.troops_in_conflict[player_id] = self.troops_in_conflict.get(player_id, 0) + n
 
     # -----------------------------------------------------------------------
@@ -1714,6 +1731,8 @@ class GameState:
         player._revealed_this_turn = len(cards_to_reveal)
         player.cards_acquired_this_turn = 0
         player.gained_spice_this_turn = False
+        player.deploy_budget_this_turn = 0
+        player.deployed_this_turn = 0
 
         swords = sum(c.swords for c in cards_to_reveal)
         self.swords_this_reveal[player_id] = (

@@ -421,6 +421,42 @@ def test_battle_icons():
     assert p.battle_icons == []
 
 
+def test_deploy_budget_does_not_stack():
+    """2 (once) + every troop recruited this turn; a 2nd deploy icon adds no +2."""
+    from src.game.effects import EffectResolver
+    from src.game.gameState import GameAction, ActionType
+
+    gs = setup_game(4, seed=1)
+    p = gs.players[0]
+    p.troops_garrison = 10
+
+    # Simulate a Combat space that recruited 1 troop (like Desert Tactics).
+    p.deploy_budget_this_turn = 0
+    p.deployed_this_turn = 0
+    p.troops_recruited_this_turn = 1
+    p.deploy_budget_this_turn = max(p.deploy_budget_this_turn,
+                                    2 + p.troops_recruited_this_turn)  # -> 3
+    gs.pending_deployments.append(
+        __import__("src.game.gameState", fromlist=["PendingDeployment"])
+        .PendingDeployment(0, p.troops_garrison))
+    hi = max(a.deploy_count for a in gs.get_valid_actions(0)
+             if a.action_type == ActionType.RESOLVE_DEPLOY)
+    assert hi == 3
+    gs.step(GameAction(ActionType.RESOLVE_DEPLOY, 0, deploy_count=3))
+    assert p.deployed_this_turn == 3
+
+    # Adaptive Tactics: +1 troop, +grant_deploy — the +2 does NOT come again.
+    p.troops_recruited_this_turn = 1        # unchanged; AT troop is "extra"
+    EffectResolver.resolve_single_effect(
+        {"troops": 1, "grant_deploy": 1}, p, gs)
+    # budget = 2 + recruited(1) + extra(1) = 4; already deployed 3 -> only 1 left
+    hi = max(a.deploy_count for a in gs.get_valid_actions(0)
+             if a.action_type == ActionType.RESOLVE_DEPLOY)
+    assert hi == 1
+    gs.step(GameAction(ActionType.RESOLVE_DEPLOY, 0, deploy_count=1))
+    assert p.deployed_this_turn == 4        # 2 icon + 1 desert-tactics + 1 AT
+
+
 def test_reserve_stacks():
     from src.data.card_definitions import (create_imperium_cards,
                                            create_reserve_prepare_the_way,

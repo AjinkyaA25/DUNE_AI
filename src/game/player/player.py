@@ -73,6 +73,10 @@ class Player:
         # Manipulate: a Row card set aside for THIS player at a discount.
         self.reserved_card = None
         self.reserved_discount = 0
+        # Per-turn deploy budget: 2 (once, from any deploy icon) + every troop
+        # recruited this turn.  Multiple deploy icons do NOT stack the +2.
+        self.deploy_budget_this_turn = 0
+        self.deployed_this_turn = 0
 
         # ===== SPIES (BLOODLINES MECHANIC) =====
         # Players start with 3 spies
