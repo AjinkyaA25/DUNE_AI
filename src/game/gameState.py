@@ -1886,14 +1886,21 @@ class GameState:
         return result
 
     def _scale_reward(self, reward: Dict, with_sandworm: bool) -> Dict:
+        """A sandworm in the Conflict doubles EVERY reward — flat resources and
+        VP, and also the 'spend X -> gain a VP' conversion (both cost and VP
+        double, e.g. Spice Freighters: pay 3 spice for 1 VP -> pay 6 for 2).
+        Only `control` (and the internal `battle_icon` marker) can't scale."""
         if not with_sandworm:
             return reward
+        _nodouble = ("control", "battle_icon")
+        _vp_convert = ("may_pay_spice_for_vp", "may_pay_solari_for_vp",
+                       "may_pay_troops_for_vp")
         scaled = {}
-        _nodouble = ("control", "battle_icon", "may_pay_spice_for_vp",
-                     "may_pay_solari_for_vp", "may_pay_troops_for_vp")
         for k, v in reward.items():
             if k in _nodouble:
                 scaled[k] = v
+            elif k in _vp_convert and isinstance(v, dict):
+                scaled[k] = {"cost": v.get("cost", 0) * 2, "vp": v.get("vp", 1) * 2}
             elif isinstance(v, (int, float)):
                 scaled[k] = v * 2
             else:

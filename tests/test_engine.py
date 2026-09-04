@@ -387,6 +387,35 @@ def test_card_corrections_batch6():
     assert any(t.player_id == 0 for t in gs.pending_trashes)
 
 
+def test_conflict_rewards_2026_09_03():
+    from src.data.card_definitions import conflict_level_1_pool, conflict_level_2_pool
+    l1 = {c.name: c for c in conflict_level_1_pool()}
+    l2 = {c.name: c for c in conflict_level_2_pool()}
+
+    assert l1["Skirmish (Crysknife)"].second_place_reward == {"spice": 1, "intrigue": 1}
+    assert l1["Skirmish (Crysknife)"].third_place_reward == {"spice": 1}
+    assert l1["Skirmish (Desert Mouse)"].first_place_reward == {"solari": 2}
+    assert l2["CHOAM Security"].first_place_reward == {
+        "contract": 1, "troops": 1, "influence_spacing_guild": 1}
+    assert l2["Protect the Sietches"].first_place_reward == {
+        "influence_fremen": 1, "water": 1, "troops": 1}
+    assert l2["Shadow Contest"].first_place_reward == {
+        "influence_bene_gesserit": 1, "intrigue": 1}
+    sf = l2["Spice Freighters"]
+    assert sf.first_place_reward == {
+        "influence_any": 1, "may_pay_spice_for_vp": {"cost": 3, "vp": 1}}
+    assert sf.second_place_reward == {"spice": 1, "water": 1, "troops": 1}
+    assert sf.third_place_reward == {"spice": 1, "troops": 1}
+
+    # A sandworm doubles the VP-conversion cost AND payout.
+    from src.game.gameState import GameState
+    gs = GameState(num_players=4, seed=1)
+    scaled = gs._scale_reward(dict(sf.first_place_reward), True)
+    assert scaled == {"influence_any": 2,
+                      "may_pay_spice_for_vp": {"cost": 6, "vp": 2}}
+    assert gs._scale_reward({"control": True, "vp": 1}, True) == {"control": True, "vp": 2}
+
+
 def test_card_corrections_batch7():
     from src.game.effects import EffectResolver
     from src.data.card_definitions import create_imperium_cards
