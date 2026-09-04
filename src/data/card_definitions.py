@@ -652,6 +652,7 @@ def setup_game(
     seed: int = None,
     use_choam: bool = True,
     leaders=None,
+    neutral_leaders: bool = False,
 ) -> GameState:
     """
     Return a fully initialized GameState with round 1 started and hands dealt.
@@ -659,7 +660,10 @@ def setup_game(
     use_choam=True enables the CHOAM contract module (Accept Contract /
     Dutiful Service take contracts; harvest / board-space contracts resolve).
     `leaders` is an optional list of leader names (see src/game/leader);
-    None → deal distinct random leaders.
+    None -> deal distinct random leaders.
+    `neutral_leaders=True` gives every player a no-op Leader instead (ignores
+    `leaders`) — Leader ability text is still unverified, so self-play/eval
+    tooling defaults to this; pass real leader names to opt back in.
     """
     if not (2 <= num_players <= 4):
         raise ValueError("num_players must be 2–4")
@@ -680,7 +684,7 @@ def setup_game(
 
     # Leaders
     from src.game.leader.leader_definitions import assign_leaders
-    assign_leaders(gs, leaders)
+    assign_leaders(gs, leaders, neutral=neutral_leaders)
 
     # Begin round 1 (deals 5 cards to each player, flips first conflict)
     gs.start_new_round()

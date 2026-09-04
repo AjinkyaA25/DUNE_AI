@@ -144,8 +144,29 @@ def get_leader(name: str) -> Leader:
     return fresh[name]
 
 
-def assign_leaders(gs, leaders: Optional[List[str]] = None) -> None:
-    """Attach a Leader to each player. `leaders` = explicit names, else random."""
+def create_neutral_leader() -> Leader:
+    """
+    A Leader with no passive, no Signet ability, and no setup tweaks — for
+    isolating board/card behaviour from the (still-unverified) Leader text.
+    Every call returns a fresh instance so `_per_turn_flags` never leaks
+    between players sharing this "leader".
+    """
+    return Leader("Neutral", complexity=0,
+                  notes="No abilities. Playing with Leaders disabled.")
+
+
+def assign_leaders(gs, leaders: Optional[List[str]] = None,
+                   neutral: bool = False) -> None:
+    """
+    Attach a Leader to each player.
+    `neutral=True` gives every player a no-op Leader (ignore Leader text
+    entirely). Otherwise `leaders` = explicit names, else random from the pool.
+    """
+    if neutral:
+        for player in gs.players:
+            player.leader = create_neutral_leader()
+        return
+
     pool = create_leaders()
     if not gs.use_choam:
         pool = [ld for ld in pool if ld.name != "Shaddam Corrino IV"]

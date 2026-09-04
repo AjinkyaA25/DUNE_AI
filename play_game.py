@@ -274,17 +274,21 @@ def run_game(
     log_dir: str      = "game_logs",
     show_ai_moves: bool = True,
     agent_specs=None,
+    neutral_leaders: bool = True,
 ) -> Dict:
     """
     Play one full game.  Returns the game log dict.
 
     human_id: which player index is the human (-1 = fully AI / self-play)
     agent_specs: optional list of per-seat agent specs (see src.ai.agents.make_agent)
+    neutral_leaders: Leader ability text is unverified, so games default to
+      no-op Leaders; pass False to play with the real (approximate) ones.
     """
     actual_seed = seed if seed is not None else pyrandom.randint(0, 999_999)
     pyrandom.seed(actual_seed)
 
-    gs = setup_game(num_players=num_players, seed=actual_seed)
+    gs = setup_game(num_players=num_players, seed=actual_seed,
+                    neutral_leaders=neutral_leaders)
     agents = _build_agents(num_players, human_id, agent_specs, actual_seed)
 
     game_id = str(uuid.uuid4())
@@ -398,6 +402,9 @@ def main() -> None:
                         help="Comma-separated per-seat agent specs, e.g. "
                              "'heuristic,value:models/value_best.npz,random,heuristic'. "
                              "Seats not listed default to 'heuristic'.")
+    parser.add_argument("--real-leaders", action="store_true",
+                        help="use real (unverified) Leader abilities instead "
+                             "of the default no-op Leaders")
     args = parser.parse_args()
 
     specs = args.agents.split(",") if args.agents else None
@@ -409,6 +416,7 @@ def main() -> None:
         log_dir=args.log,
         show_ai_moves=not args.quiet_ai,
         agent_specs=specs,
+        neutral_leaders=not args.real_leaders,
     )
 
 

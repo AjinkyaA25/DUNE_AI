@@ -164,8 +164,9 @@ def _print_combat_and_round_end(gs, res, strengths, vp_pre, rnd):
     print_standings(gs, f"END OF ROUND {rnd} - STANDINGS")
 
 
-def run(num_players, seed, agent_specs):
-    gs = setup_game(num_players=num_players, seed=seed)
+def run(num_players, seed, agent_specs, neutral_leaders=True):
+    gs = setup_game(num_players=num_players, seed=seed,
+                    neutral_leaders=neutral_leaders)
     agents = {i: make_agent((agent_specs[i] if agent_specs and i < len(agent_specs)
                              and agent_specs[i] else "heuristic"),
                             seed=(seed or 0) * 9 + i)
@@ -266,11 +267,14 @@ def main():
     ap.add_argument("--players", type=int, default=4, choices=[2, 3, 4])
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--agents", type=str, default=None)
+    ap.add_argument("--real-leaders", action="store_true",
+                    help="use real (unverified) Leader abilities instead of "
+                         "the default no-op Leaders")
     args = ap.parse_args()
     import random
     seed = args.seed if args.seed is not None else random.randint(0, 99999)
     specs = args.agents.split(",") if args.agents else None
-    run(args.players, seed, specs)
+    run(args.players, seed, specs, neutral_leaders=not args.real_leaders)
 
 
 if __name__ == "__main__":

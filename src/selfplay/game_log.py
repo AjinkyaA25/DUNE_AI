@@ -98,8 +98,11 @@ def _action_record(gs, a) -> Dict:
 
 
 def record_game(agents, num_players: int = 4, seed: Optional[int] = None,
-                leaders=None) -> Dict:
-    gs = setup_game(num_players=num_players, seed=seed, leaders=leaders)
+                leaders=None, neutral_leaders: bool = True) -> Dict:
+    """`neutral_leaders` defaults to True (Leader text is unverified); pass
+    `leaders=[...]` explicit names to play with real Leaders instead."""
+    gs = setup_game(num_players=num_players, seed=seed, leaders=leaders,
+                    neutral_leaders=neutral_leaders and leaders is None)
 
     events: List[Dict] = []
     rounds: List[Dict] = []
@@ -223,12 +226,16 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--agents", type=str, default="heuristic,heuristic,heuristic,heuristic")
     ap.add_argument("--out", type=str, default="game_log.jsonl")
+    ap.add_argument("--real-leaders", action="store_true",
+                    help="use real (unverified) Leader abilities instead of "
+                         "the default no-op Leaders")
     args = ap.parse_args()
 
     specs = (args.agents.split(",") + ["heuristic"] * args.players)[:args.players]
     agents = {i: make_agent(specs[i] or "heuristic", seed=(args.seed or 0) * 9 + i)
               for i in range(args.players)}
-    log = record_game(agents, num_players=args.players, seed=args.seed)
+    log = record_game(agents, num_players=args.players, seed=args.seed,
+                      neutral_leaders=not args.real_leaders)
 
     with open(args.out, "w") as f:
         f.write(json.dumps({"meta": {k: log[k] for k in
