@@ -421,6 +421,46 @@ def test_battle_icons():
     assert p.battle_icons == []
 
 
+def test_combat_intrigue_batch():
+    from src.game.effects import EffectResolver
+    from src.data.card_definitions import create_intrigue_deck
+    from collections import Counter
+
+    d = create_intrigue_deck()
+    assert Counter(c.name for c in d)["Contingency Plan"] == 3
+    assert len(d) == 56
+
+    gs = setup_game(4, seed=1)
+    p = gs.players[0]
+
+    # Go to Ground: retreat a troop from the Conflict -> gain a Spy.
+    gs.troops_in_conflict[0] = 2
+    p.troops_garrison = 0
+    n_spy = len(gs.pending_spy_placements)
+    EffectResolver.resolve_single_effect(
+        {"retreat_for": {"min": 1, "max": 2, "reward": {"spy": 1}}}, p, gs)
+    assert gs.troops_in_conflict[0] == 1 and p.troops_garrison == 1
+    assert len(gs.pending_spy_placements) == n_spy + 1
+
+    # Crysknife intrigue: 1 spice as a Plot; at Endgame matches a held icon.
+    sp0 = p.spice
+    EffectResolver.resolve_single_effect(
+        {"spice_or_match_icon": {"icon": "crysknife", "spice": 1}}, p, gs)
+    assert p.spice == sp0 + 1
+    gs.game_over = True
+    p.battle_icons = ["crysknife", "desert_mouse"]
+    vp0 = p.victory_points
+    EffectResolver.resolve_single_effect(
+        {"spice_or_match_icon": {"icon": "crysknife", "spice": 1}}, p, gs)
+    assert p.victory_points == vp0 + 1 and "crysknife" not in p.battle_icons
+
+    # Grasp Arrakis Endgame: 1 VP for 2+ unmatched real icons.
+    p.battle_icons = ["desert_mouse", "ornithopter"]
+    vp0 = p.victory_points
+    EffectResolver.resolve_single_effect({"grasp_arrakis_endgame": 1}, p, gs)
+    assert p.victory_points == vp0 + 1
+
+
 def test_ignore_gates_and_emperor_access():
     from src.game.effects import EffectResolver
     from src.game.cards.card import Card, CardType, AccessSymbol

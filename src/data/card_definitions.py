@@ -589,28 +589,45 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         IC("Questionable Methods", _COMBAT, [{"lose_influence_any": 1, "swords": 5}]),
         IC("Devour", _COMBAT, [{"swords": 2, "if_sandworm_in_conflict": {"swords": 2, "trash": 1}}]),
         IC("Find Weakness", _COMBAT, [{"swords": 2}, {"recall_spy_then": {"swords": 3}}]),
-        IC("Go to Ground", _COMBAT, [{"retreat": 2}]),
+        IC("Go to Ground", _COMBAT,
+           [{"retreat_for": {"min": 1, "max": 2, "reward": {"spy": 1}}}]),
         IC("Impress", _COMBAT, [{"swords": 2, "acquire_free": {"max_cost": 3}}]),
-        IC("Reach Agreement", _COMBAT, [{"retreat": 2}]),
+        IC("Reach Agreement", _COMBAT,
+           [{"retreat_for": {"min": 1, "max": 2, "reward": {"contract": 1}}}]),
         IC("Return the Favor", _COMBAT, [{"swords": 1, "swords_per_friendship": 1}]),
         IC("Ripples in the Sand", _COMBAT, [{"swords": 3, "if_sandworm_in_conflict": {"intrigue": 1}}]),
-        IC("Spice is Power", _COMBAT, [{"pay_then": {"cost": {"spice": 3}, "swords": 5}}]),
+        # Spice is Power: retreat 3 troops -> 3 spice (only if losing), OR spend
+        # 3 spice -> 6 swords.
+        IC("Spice is Power", _COMBAT,
+           [{"retreat_for": {"min": 3, "max": 3, "reward": {"spice": 3},
+                             "only_if_losing": True}},
+            {"pay_then": {"cost": {"spice": 3}, "swords": 6}}]),
         IC("Spring the Trap", _COMBAT, [{"recall_spies_swords": {"count": 2, "swords": 7}}]),
-        IC("Tactical Option", _COMBAT, [{"swords": 2}]),
+        IC("Tactical Option", _COMBAT, [{"tactical_option": 1}]),
         IC("Desert Support", _COMBAT, [{"pay_then": {"cost": {"water": 1}, "swords": 5}}]),
         # ── Dual timing ─────────────────────────────────────────────────────
         IC("Counterattack", _PC, [{"deploy": 2}, {"if_opp_combat_intrigue": {"swords": 4}}]),
         IC("Backed by CHOAM", _PC, [{"lose_influence_any": 1, "solari": 4},
             {"if_contracts_2": {"swords": 4}}]),
+        # Contingency Plan: Plot -> 2 solari; Combat -> 3 swords.  Three copies.
         IC("Contingency Plan", _PC, [{"choose_by_combat": {"combat": {"swords": 3},
                                                            "else": {"solari": 2}}}]),
-        IC("Tenuous Bond", _PC, [{"influence_swap": 1},
-            {"if_opp_combat_intrigue": {"swords": 4}}]),
-        IC("Grasp Arrakis", _CE, [{"if_units_in_conflict": {"swords": 3}},
-            {"flip_conflicts_vp": {"count": 2, "vp": 1}}]),
-        IC("Crysknife", _PE, [{"flip_conflicts_vp": {"icon": "crysknife", "count": 1, "vp": 1}}]),
-        IC("Desert Mouse", _PE, [{"flip_conflicts_vp": {"icon": "desert_mouse", "count": 1, "vp": 1}}]),
-        IC("Ornithopter", _PE, [{"flip_conflicts_vp": {"icon": "ornithopter", "count": 1, "vp": 1}}]),
+        IC("Contingency Plan", _PC, [{"choose_by_combat": {"combat": {"swords": 3},
+                                                           "else": {"solari": 2}}}]),
+        IC("Contingency Plan", _PC, [{"choose_by_combat": {"combat": {"swords": 3},
+                                                           "else": {"solari": 2}}}]),
+        # Tenuous Bond: Plot -> influence swap; Combat -> 4 swords if you trashed
+        # a 1+ persuasion card this round.
+        IC("Tenuous Bond", _PC, [{"choose_by_combat": {
+            "combat": {"if_trashed_costly": {"swords": 4}},
+            "else": {"influence_swap": 1}}}]),
+        # Grasp Arrakis: Combat -> 3 swords; Endgame -> 1 VP if you hold 2+
+        # unmatched battle icons.
+        IC("Grasp Arrakis", _CE, [{"choose_by_combat": {"combat": {"swords": 3}, "else": {}}},
+            {"grasp_arrakis_endgame": 1}]),
+        IC("Crysknife", _PE, [{"spice_or_match_icon": {"icon": "crysknife", "spice": 1}}]),
+        IC("Desert Mouse", _PE, [{"spice_or_match_icon": {"icon": "desert_mouse", "spice": 1}}]),
+        IC("Ornithopter", _PE, [{"spice_or_match_icon": {"icon": "ornithopter", "spice": 1}}]),
         # ── Endgame ─────────────────────────────────────────────────────────
         IC("CHOAM Profits", _END, [{"if_contracts_4": {"vp": 1}}]),
         IC("Secure Spice Trade", _END, [{"if_tsmf_2": {"vp": 1, "spice": 2}}]),

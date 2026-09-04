@@ -83,6 +83,9 @@ class Player:
         # and at Recall.
         self.ignore_influence_gates_this_turn = False
         self.grant_emperor_access_this_turn = False
+        # Tenuous Bond: set when you trash a card with a Persuasion cost (i.e.
+        # any non-starter card).  Reset at Recall.
+        self.trashed_costly_card_this_round = False
 
         # ===== SPIES (BLOODLINES MECHANIC) =====
         # Players start with 3 spies

@@ -315,6 +315,7 @@ class GameState:
 
         # Combat intrigue phase
         self.combat_intrigue_pass_count: int   = 0
+        self._combat_advance_after_pending: Optional[int] = None
         self.last_combat_actor: Optional[int]  = None
 
         # ===== CONFLICT =====
@@ -661,6 +662,16 @@ class GameState:
             self._prune_dead_pendings(self._agent_turn_open)
         self._maybe_end_agent_turn()
 
+        # A Combat intrigue that queued a choice defers the combat-turn advance
+        # until that player has resolved it.
+        ap = getattr(self, "_combat_advance_after_pending", None)
+        if ap is not None:
+            self._prune_dead_pendings(ap)
+            if not self._has_mandatory_pending_for(ap):
+                self._combat_advance_after_pending = None
+                if self.phase == Phase.COMBAT:
+                    self._advance_combat_turn()
+
         # Auto-advance phases that need no player decisions
         self._auto_advance()
 
@@ -895,6 +906,8 @@ class GameState:
     def _to_trash(self, player, card) -> None:
         """Trash a card.  The Spice Must Flow / Prepare the Way return to their
         reserve stack instead of the player's permanent trash pile."""
+        if getattr(card, "cost", 0) >= 1:
+            player.trashed_costly_card_this_round = True   # Tenuous Bond
         if card.name == "The Spice Must Flow":
             self.reserve_spice_must_flow.append(card)
         elif card.name == "Prepare the Way":
@@ -1029,7 +1042,12 @@ class GameState:
             # continues with the next participant.
             self.combat_intrigue_pass_count = 0
             self.last_combat_actor = pid
-            self._advance_combat_turn()
+            # If the intrigue queued a mandatory choice (spy / contract / ...),
+            # let this player resolve it before combat play moves on.
+            if self._has_mandatory_pending_for(pid):
+                self._combat_advance_after_pending = pid
+            else:
+                self._advance_combat_turn()
 
     def _step_combat_pass(self, action: GameAction) -> None:
         pid = action.player_id
@@ -1047,7 +1065,14 @@ class GameState:
             safety += 1
             if self.game_over:
                 break
-            if self.phase == Phase.MAKERS:
+            if (self.phase == Phase.COMBAT
+                    and self._combat_advance_after_pending is None
+                    and not self.get_combat_participants()
+                    and not any(self._has_mandatory_pending_for(q)
+                                for q in range(self.num_players))):
+                # Everyone retreated / no one deployed -> resolve the empty Conflict.
+                self.resolve_combat()
+            elif self.phase == Phase.MAKERS:
                 self.resolve_makers_phase()          # -> RECALL
             elif self.phase == Phase.RECALL:
                 # The round always completes (Makers + Recall) before the
@@ -1287,6 +1312,11 @@ class GameState:
 
     def get_current_player_id(self) -> int:
         if self.phase == Phase.COMBAT:
+            # A player with an unresolved mandatory choice (from a Combat
+            # intrigue's spy/contract reward) acts before combat play resumes.
+            for pid in self.turn_order:
+                if self._has_mandatory_pending_for(pid):
+                    return pid
             actor = self._current_combat_actor()
             return actor if actor is not None else self.turn_order[0]
         if self.current_turn_idx >= len(self.turn_order):
@@ -2085,6 +2115,7 @@ class GameState:
             player.reset_agents()
             player.ignore_influence_gates_this_turn = False
             player.grant_emperor_access_this_turn = False
+            player.trashed_costly_card_this_round = False
             # An un-bought Manipulate card returns to the Imperium deck.
             if player.reserved_card is not None:
                 self.imperium_deck.append(player.reserved_card)

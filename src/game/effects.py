@@ -334,6 +334,48 @@ class EffectResolver:
             gs.troops_in_conflict[player.id] -= n
             player.troops_garrison += n
 
+        # -- retreat min (or max, if losing) troops -> gain a reward ---------
+        # (Go to Ground -> Spy, Reach Agreement -> contract, Spice is Power
+        #  option A -> 3 spice.)  `only_if_losing` skips it in a winning fight.
+        if "retreat_for" in effect:
+            spec = effect["retreat_for"]
+            in_conf = gs.troops_in_conflict.get(player.id, 0)
+            lo = int(spec.get("min", 1))
+            if in_conf >= lo and not (spec.get("only_if_losing") and not _losing_combat()):
+                n = min(int(spec.get("max", lo)) if _losing_combat() else lo, in_conf)
+                gs.troops_in_conflict[player.id] -= n
+                player.troops_garrison += n
+                EffectResolver.resolve_single_effect(spec.get("reward", {}), player, gs)
+
+        # -- Tactical Option: 2 swords, OR pull ALL your troops out of a
+        #    hopeless Conflict. ---------------------------------------------
+        if "tactical_option" in effect:
+            if _losing_combat() and gs.troops_in_conflict.get(player.id, 0) > 0:
+                n = gs.troops_in_conflict.get(player.id, 0)
+                gs.troops_in_conflict[player.id] = 0
+                player.troops_garrison += n
+            else:
+                gs.swords_this_reveal[player.id] = \
+                    gs.swords_this_reveal.get(player.id, 0) + 2
+
+        # -- Crysknife / Desert Mouse / Ornithopter intrigue: 1 spice when
+        #    played as a Plot; at Endgame, match one held icon of its type
+        #    for 1 VP instead. --------------------------------------------
+        if "spice_or_match_icon" in effect:
+            spec = effect["spice_or_match_icon"]
+            if getattr(gs, "game_over", False):
+                icon = spec["icon"]
+                if icon in player.battle_icons:
+                    player.battle_icons.remove(icon)
+                    player.gain_vp(1)
+            else:
+                player.gain_spice(int(spec.get("spice", 1)))
+
+        # -- Grasp Arrakis Endgame: 1 VP if you hold 2+ unmatched real icons --
+        if "grasp_arrakis_endgame" in effect and getattr(gs, "game_over", False):
+            if sum(1 for i in player.battle_icons if i != "wild") >= 2:
+                player.gain_vp(1)
+
         # -- swords per Faction friendship (2+ influence) -------------
         if "swords_per_friendship" in effect:
             k = sum(1 for f in _FACS if player.influence[f] >= 2)
@@ -923,6 +965,8 @@ class EffectResolver:
                 return getattr(player, "agent_to_maker_this_turn", False)
             if key == "faction_agent":
                 return getattr(player, "agent_to_faction_this_turn", False)
+            if key == "trashed_costly":              # trashed a 1+ persuasion card
+                return getattr(player, "trashed_costly_card_this_round", False)
             if key == "any_alliance":
                 return any(player.alliances.values())
             if key.startswith("alliance_"):
@@ -945,7 +989,7 @@ class EffectResolver:
         for k, sub in list(effect.items()):
             if k.startswith("if_") and k[3:] in (
                     "fremen_bond", "councilor", "swordmaster", "spy_recalled",
-                    "agent_to_maker", "faction_agent", "any_alliance"):
+                    "agent_to_maker", "faction_agent", "any_alliance", "trashed_costly"):
                 if _cond(k[3:]):
                     EffectResolver.resolve_single_effect(sub, player, game_state)
             elif (k.startswith("if_alliance_") or k.startswith("if_influence_")
