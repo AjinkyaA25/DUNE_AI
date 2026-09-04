@@ -543,9 +543,10 @@ def create_intrigue_deck() -> List[IntrigueCard]:
            [{"pay_then": {"cost": {"solari": 1}, "influence_emperor_or_spacing": 1}}]),
         IC("Inspire Awe", _PLOT,
            [{"acquire_free": {"max_cost": 3, "to_hand_if_sandworm": True}}]),
-        IC("Intelligence Report", _PLOT, [{"if_spies_2": {"draw": 2}}]),
-        IC("Leverage", _PLOT, [{"spice": 1, "solari": 1}]),   # approx: "if gained spice"
-        IC("Manipulate", _PLOT, [{"refresh_imperium_row": 1}]),
+        IC("Intelligence Report", _PLOT, [{"draw": 1}, {"if_spies_2": {"draw": 1}}]),
+        IC("Leverage", _PLOT, [{"solari": 1, "contract": 1}],
+           condition={"gained_spice_this_turn": True}),
+        IC("Manipulate", _PLOT, [{"manipulate": 1}]),
         IC("Market Opportunity", _PLOT, [{"market_convert": 1}]),
         IC("Mercenaries", _PLOT, [{"pay_then": {"cost": {"solari": 3}, "intrigue": 1, "troops": 2}}]),
         IC("Opportunism", _PLOT, [{"opportunism_vp": 1}]),

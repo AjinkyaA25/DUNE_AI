@@ -134,6 +134,9 @@ class IntrigueCard:
         """Evaluate self.condition against current state."""
         c = self.condition
 
+        if c.get("gained_spice_this_turn") and not getattr(
+                player, "gained_spice_this_turn", False):
+            return False, "Requires having gained spice this turn"
         if "min_solari" in c and player.solari < c["min_solari"]:
             return False, f"Requires {c['min_solari']} Solari"
         if "min_spice" in c and player.spice < c["min_spice"]:

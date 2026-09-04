@@ -537,6 +537,11 @@ class GameState:
                     actions.append(GameAction(ActionType.ACQUIRE_CARD,
                                               player_id,
                                               acquire_card_name=card.name))
+            # Manipulate: a Row card set aside for this player at a discount.
+            if p.reserved_card is not None and \
+                    max(0, p.reserved_card.cost - p.reserved_discount) <= persuasion:
+                actions.append(GameAction(ActionType.ACQUIRE_CARD, player_id,
+                                          acquire_card_name=p.reserved_card.name))
             if self.reserve_prepare_the_way:
                 ptw = self.reserve_prepare_the_way[-1]
                 if ptw.cost <= persuasion:
@@ -793,6 +798,24 @@ class GameState:
 
     def _step_acquire_card(self, action: GameAction) -> None:
         pid  = action.player_id
+        p    = self.players[pid]
+        # Manipulate's reserved card (set aside for this player, cost reduced).
+        if p.reserved_card is not None and \
+                p.reserved_card.name == action.acquire_card_name:
+            card = p.reserved_card
+            cost = max(0, card.cost - p.reserved_discount)
+            if cost > self.persuasion_pool[pid]:
+                raise ValueError(
+                    f"Insufficient persuasion for reserved '{card.name}' (cost {cost})")
+            self.persuasion_pool[pid] -= cost
+            p.reserved_card = None
+            p.reserved_discount = 0
+            p.discard.append(card)
+            p.cards_acquired_this_turn += 1
+            self._trigger_acquire_effects(pid, card)
+            if self.use_choam:
+                self.check_acquire_contracts(pid, card.name)
+            return
         card = next((c for c in self.imperium_row if c.name == action.acquire_card_name), None)
         if card is None:
             raise ValueError(f"Card '{action.acquire_card_name}' not in Imperium row")
@@ -1408,6 +1431,7 @@ class GameState:
         self._current_agent_space = space_name       # can't uplift THIS agent
         player.troops_recruited_this_turn = 0
         player.recalled_spy_this_turn = False
+        player.gained_spice_this_turn = False
         player.agent_to_maker_this_turn = space_name in MAKER_SPACES
         player.agent_to_faction_this_turn = self._faction_for_space(space_name) is not None
         spice_before = player.spice
@@ -1679,6 +1703,7 @@ class GameState:
         player.reveal_cards(cards_to_reveal)
         player._revealed_this_turn = len(cards_to_reveal)
         player.cards_acquired_this_turn = 0
+        player.gained_spice_this_turn = False
 
         swords = sum(c.swords for c in cards_to_reveal)
         self.swords_this_reveal[player_id] = (
@@ -2020,6 +2045,11 @@ class GameState:
     def resolve_recall_phase(self) -> None:
         for player in self.players:
             player.reset_agents()
+            # An un-bought Manipulate card returns to the Imperium deck.
+            if player.reserved_card is not None:
+                self.imperium_deck.append(player.reserved_card)
+                player.reserved_card = None
+                player.reserved_discount = 0
 
         for space in ALL_BOARD_SPACES:
             self.agent_on_space[space] = None

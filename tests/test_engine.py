@@ -421,6 +421,50 @@ def test_battle_icons():
     assert p.battle_icons == []
 
 
+def test_intrigue_leverage_manipulate():
+    from src.game.effects import EffectResolver
+    from src.data.card_definitions import create_intrigue_deck
+    from src.game.gameState import GameAction, ActionType
+
+    d = {c.name: c for c in create_intrigue_deck()}
+
+    # Leverage: unplayable until you have gained spice this turn.
+    gs = setup_game(2, seed=7)
+    p = gs.players[0]
+    p.gained_spice_this_turn = False
+    ok, _ = d["Leverage"].can_play(p, gs, is_agent_turn=True)
+    assert not ok
+    p.gain_spice(1)                              # sets the flag
+    assert p.gained_spice_this_turn
+    ok, _ = d["Leverage"].can_play(p, gs, is_agent_turn=True)
+    assert ok
+    sol0 = p.solari
+    EffectResolver.resolve_single_effect({"solari": 1, "contract": 1}, p, gs)
+    assert p.solari == sol0 + 1
+
+    # Manipulate: reserve the best Row card at cost -1, only this player buys it.
+    gs2 = setup_game(2, seed=8)
+    q = gs2.players[0]
+    row_before = list(gs2.imperium_row)
+    EffectResolver.resolve_single_effect({"manipulate": 1}, q, gs2)
+    assert q.reserved_card is not None and q.reserved_card not in gs2.imperium_row
+    assert q.reserved_card in row_before
+    assert len(gs2.imperium_row) == len(row_before)          # refilled
+    assert q.reserved_discount == 1
+
+    # It shows up as a buy option at the reduced price during the buy phase.
+    gs2.player_in_reveal_buy = 0
+    gs2.persuasion_pool[0] = max(0, q.reserved_card.cost - 1)
+    buys = [a.acquire_card_name for a in gs2.get_valid_actions(0)
+            if a.action_type == ActionType.ACQUIRE_CARD]
+    assert q.reserved_card.name in buys
+    name, price = q.reserved_card.name, max(0, q.reserved_card.cost - 1)
+    gs2.step(GameAction(ActionType.ACQUIRE_CARD, 0, acquire_card_name=name))
+    assert q.reserved_card is None
+    assert gs2.persuasion_pool[0] == 0
+    assert any(c.name == name for c in q.discard)
+
+
 def test_intrigue_corrections_2026_09_04():
     from src.game.effects import EffectResolver
     from src.data.card_definitions import create_intrigue_deck

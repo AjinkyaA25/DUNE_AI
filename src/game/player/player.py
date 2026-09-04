@@ -65,8 +65,14 @@ class Player:
         self.recalled_spy_this_turn = False
         self.agent_to_maker_this_turn = False
         self.agent_to_faction_this_turn = False
+        # Set by gain_spice(); Leverage may only be played after gaining spice
+        # this turn.  Reset at the start of each Agent/Reveal turn.
+        self.gained_spice_this_turn = False
         # Cards acquired during this player's current Reveal/buy turn (Call to Arms).
         self.cards_acquired_this_turn = 0
+        # Manipulate: a Row card set aside for THIS player at a discount.
+        self.reserved_card = None
+        self.reserved_discount = 0
 
         # ===== SPIES (BLOODLINES MECHANIC) =====
         # Players start with 3 spies
@@ -136,6 +142,8 @@ class Player:
     def gain_spice(self, amount: int):
         """Gain spice"""
         self.spice += amount
+        if amount > 0:
+            self.gained_spice_this_turn = True   # Leverage precondition
 
     def gain_water(self, amount: int):
         """Gain water"""

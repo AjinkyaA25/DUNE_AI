@@ -381,6 +381,16 @@ class EffectResolver:
             gs.imperium_deck.append(worst)
             gs.refill_imperium_row()
 
+        # -- Manipulate: set aside the BEST Row card for yourself at a
+        #    discount (only you may buy it, this round), then refill. --------
+        if "manipulate" in effect and gs.imperium_row:
+            best = max(gs.imperium_row,
+                       key=lambda c: c.persuasion + c.swords + c.cost * 0.3)
+            gs.imperium_row.remove(best)
+            player.reserved_card = best
+            player.reserved_discount = int(effect["manipulate"])
+            gs.refill_imperium_row()
+
         # -- Market Opportunity: spice<->solari, whichever helps ----
         if "market_convert" in effect:
             if player.spice >= 2 and player.solari <= player.spice:
