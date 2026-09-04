@@ -134,9 +134,11 @@ def create_imperium_cards() -> List[Card]:
           persuasion=1),
         m("Chani, Clever Tactician", 5, I, access=["fremen", "city", "desert"], tags=["fremen"],
           agent={"if_units_in_conflict_3": {"intrigue": 1}}, persuasion=2,
-          reveal={"if_fremen_bond": {"persuasion": 2}},
-          notes="Reveal also: MAY retreat 2 troops from the Conflict to garrison "
-                "for 4 swords — optional/situational, not modelled."),
+          reveal={"if_fremen_bond": {"persuasion": 2}, "chani_retreat": 1},
+          notes="Reveal: 2 persuasion with a Fremen bond; also MAY retreat 2 "
+                "troops from the Conflict for 4 swords, only when you'd still "
+                "have a unit left in the Conflict afterward (else the swords "
+                "would fizzle, so it's skipped)."),
         m("Corrinth City", 6, I, access=["emperor", "landsraad"], tags=["emperor"],
           agent={"discard_pay_vp": {"discard": 2, "solari": 5, "vp": 1}}, persuasion=0,
           reveal={"hc_seat_or_solari": 5},
@@ -248,12 +250,14 @@ def create_imperium_cards() -> List[Card]:
         # deck — see create_reserve_prepare_the_way().
         m("Price is No Object", 6, I, access=["emperor", "bene_gesserit"],
           tags=["emperor", "bene_gesserit"],
-          agent={"acquire_with_solari": {"max_cost": 6}},
+          agent={"acquire_with_solari": {"max_cost": 9}},
           persuasion=2, reveal={"solari": 2}, acquire={"solari": 2},
-          notes="Agent: MAY acquire an Imperium Row card by paying Solari equal "
-                "to its cost instead of Persuasion (auto-buys the best affordable; "
-                "max_cost 6 unverified). Reveal: 2 persuasion + 2 solari. "
-                "Acquire: gain 2 solari."),
+          notes="Agent: MAY acquire a card by paying Solari equal to its cost "
+                "instead of Persuasion — this includes the reserve stacks (9 "
+                "solari for The Spice Must Flow, 2 for Prepare the Way), not "
+                "just the Imperium Row. Only auto-buys when a card clearly "
+                "clears a quality bar; buying nothing is often correct. "
+                "Reveal: 2 persuasion + 2 solari. Acquire: gain 2 solari."),
         m("Priority Contracts", 6, I, access=["landsraad", "desert"], tags=["spacing_guild"],
           agent={"contract": 1}, persuasion=0,
           reveal={"choose_by_contracts": {"n": 4, "yes": {"vp": 1}, "no": {"spice": 2}}},
@@ -352,7 +356,9 @@ def create_imperium_cards() -> List[Card]:
           agent={"if_tag_other_bene": {"trash": 1, "draw": 1}}, persuasion=2, swords=1),
         m("Truthtrance", 4, I,
           access=["emperor", "spacing_guild", "bene_gesserit", "fremen"], tags=["bene_gesserit"],
-          persuasion=1, notes="Complex Intrigue-prediction text not modelled; flat persuasion 1."),
+          persuasion=1, notes="Confirmed: same as the Diplomacy starter card "
+                              "(all-4-faction access, 1 persuasion), just with "
+                              "a Bene Gesserit tag — no Intrigue-prediction text."),
         m("Undercover Asset", 2, I, access=["landsraad", "city", "desert"],
           tags=["emperor", "spacing_guild"],
           agent={"ignore_influence_gates": 1},
@@ -388,9 +394,9 @@ def create_reserve_prepare_the_way(count: int = 8) -> List[Card]:
 
 
 def create_reserve_spice_must_flow(count: int = 10) -> List[Card]:
-    return [_make("The Spice Must Flow", 9, CardType.RESERVE, access=["desert"],
-                  tags=["spacing_guild"], acquire={"spice": 1},
-                  reveal={"spice": 1, "vp": 1}) for _ in range(count)]
+    return [_make("The Spice Must Flow", 9, CardType.RESERVE,
+                  tags=["spacing_guild"], acquire={"vp": 1},
+                  reveal={"spice": 1}) for _ in range(count)]
 
 
 # ---------------------------------------------------------------------------

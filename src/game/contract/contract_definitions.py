@@ -197,16 +197,6 @@ def create_uprising_contracts() -> list:
     )
     contracts.append(spice_refinery_water)
 
-    # Spice Refinery (Draw + Troops) - from image 8
-    # Visit Spice Refinery → Draw 1 card, gain 1 troop, complete
-    spice_refinery_draw_troops = Contract(
-        name="Spice Refinery (Draw + Troops)",
-        contract_type=ContractType.BOARD_SPACE,
-        rewards={"draw": 1, "troops": 1},
-        trigger_condition={"board_space": "Spice Refinery"}
-    )
-    contracts.append(spice_refinery_draw_troops)
-
     # ===== HARVEST CONTRACTS =====
     # Complete when gaining 3+ or 4+ spice at maker spaces
     # (Hagga Basin, Imperial Basin, Deep Desert)
@@ -221,12 +211,12 @@ def create_uprising_contracts() -> list:
     )
     contracts.append(harvest_4_solari)
 
-    # Harvest 4+ (Solari + Special Spy)
-    # At maker space, gain 4+ spice → Gain 3 solari, 1 spy (special), complete
+    # Harvest 4+ (Solari + Spy)
+    # At maker space, gain 4+ spice → Gain 3 solari, 1 spy (normal), complete
     harvest_4_spy = Contract(
         name="Harvest 4+ (Spy)",
         contract_type=ContractType.HARVEST,
-        rewards={"solari": 3, "spy_special": 1},
+        rewards={"solari": 3, "spy": 1},
         trigger_condition={"min_spice": 4}
     )
     contracts.append(harvest_4_spy)
@@ -241,12 +231,12 @@ def create_uprising_contracts() -> list:
     )
     contracts.append(harvest_3_solari)
 
-    # Harvest 3+ (Solari + Special Spy)
-    # At maker space, gain 3+ spice → Gain 2 solari, 1 spy (special), complete
+    # Harvest 3+ (Solari + Spy)
+    # At maker space, gain 3+ spice → Gain 2 solari, 1 spy (normal), complete
     harvest_3_spy = Contract(
         name="Harvest 3+ (Spy)",
         contract_type=ContractType.HARVEST,
-        rewards={"solari": 2, "spy_special": 1},
+        rewards={"solari": 2, "spy": 1},
         trigger_condition={"min_spice": 3}
     )
     contracts.append(harvest_3_spy)
@@ -320,11 +310,13 @@ def get_contract_by_name(name: str) -> Contract:
             return contract
     return None
 
-# Total contracts: 28
-# - Board Space: 19 contracts
-# - Harvest: 4 contracts
+# Total contracts: 26
+# - Board Space: 17 contracts (removed the fabricated "Spice Refinery
+#   (Draw + Troops)" — no such contract exists)
+# - Harvest: 4 contracts (all regular Spies, not special)
 # - Acquire Card: 1 contract
 # - Alliance: 1 contract
 # - Immediate: 2 contracts
-# - Special Spy contracts: 3 (Deliver Supplies Spy, Harvest 4+ Spy, Harvest 3+ Spy)
-# - Normal Spy contracts: 2 (Arrakeen Troop, Research Station Spy)
+# - Special Spy contracts: 1 (Deliver Supplies Spy)
+# - Normal Spy contracts: 4 (Arrakeen Troop, Research Station Spy,
+#   Harvest 4+ Spy, Harvest 3+ Spy)

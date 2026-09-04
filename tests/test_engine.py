@@ -421,6 +421,57 @@ def test_battle_icons():
     assert p.battle_icons == []
 
 
+def test_contracts_and_tsmf_corrections():
+    from src.game.contract.contract_definitions import create_uprising_contracts
+    cs = create_uprising_contracts()
+    assert not any("Draw + Troops" in c.name for c in cs)
+    harvest = [c for c in cs if c.contract_type.name == "HARVEST"]
+    assert all("spy_special" not in c.rewards for c in harvest)
+    assert any(c.rewards.get("spy") == 1 for c in harvest)
+
+    from src.data.card_definitions import create_reserve_spice_must_flow
+    t = create_reserve_spice_must_flow(1)[0]
+    assert t.access_symbols == set()
+    assert t.acquire_effects == [{"vp": 1}]
+    assert t.reveal_resources == {"spice": 1}
+    assert t.reveal_effects == []
+
+
+def test_chani_retreat_needs_remaining_unit():
+    from src.game.effects import EffectResolver
+    gs = setup_game(4, seed=3)
+    p = gs.players[0]
+
+    # Exactly 2 troops, no worm -> retreating would empty the Conflict -> skip.
+    gs.troops_in_conflict[0] = 2
+    p.troops_garrison = 0
+    gs.swords_this_reveal[0] = 0
+    EffectResolver.resolve_single_effect({"chani_retreat": 1}, p, gs)
+    assert gs.troops_in_conflict[0] == 2 and gs.swords_this_reveal[0] == 0
+
+    # 3 troops -> 1 remains after retreating 2 -> takes it.
+    gs.troops_in_conflict[0] = 3
+    EffectResolver.resolve_single_effect({"chani_retreat": 1}, p, gs)
+    assert gs.troops_in_conflict[0] == 1 and p.troops_garrison == 2
+    assert gs.swords_this_reveal[0] == 4
+
+
+def test_price_is_no_object_reaches_reserve_stacks():
+    from src.game.effects import EffectResolver
+    gs = setup_game(4, seed=2)
+    p = gs.players[0]
+    p.solari = 9
+    n_tsmf = len(gs.reserve_spice_must_flow)
+    vp0 = p.victory_points
+    EffectResolver.resolve_single_effect(
+        {"acquire_with_solari": {"max_cost": 9}}, p, gs)
+    # TSMF's acquire-VP makes it the highest-scoring option at 9 solari.
+    assert len(gs.reserve_spice_must_flow) == n_tsmf - 1
+    assert p.victory_points == vp0 + 1
+    assert p.solari == 0
+    assert any(c.name == "The Spice Must Flow" for c in p.discard)
+
+
 def test_false_orders():
     from src.game.effects import EffectResolver
     gs = setup_game(4, seed=1)

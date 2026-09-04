@@ -347,6 +347,18 @@ class EffectResolver:
                 player.troops_garrison += n
                 EffectResolver.resolve_single_effect(spec.get("reward", {}), player, gs)
 
+        # -- Chani reveal: MAY retreat 2 troops from the Conflict for 4 swords —
+        #    only when a unit (troop or worm) would still remain, otherwise the
+        #    swords would fizzle (0 units => 0 combat strength from swords). ---
+        if "chani_retreat" in effect:
+            in_conf = gs.troops_in_conflict.get(player.id, 0)
+            worms = gs.sandworms_in_conflict.get(player.id, 0)
+            if in_conf >= 2 and (in_conf - 2 + worms) >= 1:
+                gs.troops_in_conflict[player.id] -= 2
+                player.troops_garrison += 2
+                gs.swords_this_reveal[player.id] = \
+                    gs.swords_this_reveal.get(player.id, 0) + 4
+
         # -- Tactical Option: 2 swords, OR pull ALL your troops out of a
         #    hopeless Conflict. ---------------------------------------------
         if "tactical_option" in effect:
@@ -776,16 +788,38 @@ class EffectResolver:
                 EffectResolver.resolve_single_effect(
                     effect["if_spy_at_maker_post"], player, gs)
 
-        # -- Price is No Object agent: acquire a Row card by paying Solari ---
+        # -- Price is No Object agent: MAY acquire a card by paying Solari equal
+        #    to its cost instead of Persuasion — the Row OR either reserve stack
+        #    (9 solari for The Spice Must Flow, 2 for Prepare the Way). Only
+        #    auto-buys when a card clears a quality bar; often no card is fine. -
         if "acquire_with_solari" in effect:
+            def _pno_score(c):
+                v = c.persuasion + c.swords + c.cost * 0.3
+                if any("vp" in e for e in getattr(c, "acquire_effects", [])):
+                    v += 6                            # e.g. TSMF's acquire VP
+                return v
+
             mx = int(effect["acquire_with_solari"].get("max_cost", 99))
-            opts = [c for c in gs.imperium_row if c.cost <= mx and c.cost <= player.solari]
-            if opts:
-                best = max(opts, key=lambda c: c.persuasion + c.swords + c.cost * 0.3)
-                player.solari -= best.cost
-                gs.imperium_row.remove(best)
-                player.discard.append(best)
-                gs.refill_imperium_row()
+            opts = [(c, "row") for c in gs.imperium_row if c.cost <= mx]
+            if gs.reserve_spice_must_flow and gs.reserve_spice_must_flow[-1].cost <= mx:
+                opts.append((gs.reserve_spice_must_flow[-1], "tsmf"))
+            if gs.reserve_prepare_the_way and gs.reserve_prepare_the_way[-1].cost <= mx:
+                opts.append((gs.reserve_prepare_the_way[-1], "ptw"))
+            afford = [(c, src) for c, src in opts if c.cost <= player.solari]
+            if afford:
+                best, src = max(afford, key=lambda t: _pno_score(t[0]))
+                if _pno_score(best) >= 3.0:           # quality bar
+                    player.solari -= best.cost
+                    if src == "row":
+                        gs.imperium_row.remove(best)
+                        gs.refill_imperium_row()
+                    elif src == "tsmf":
+                        gs.reserve_spice_must_flow.pop()
+                    else:
+                        gs.reserve_prepare_the_way.pop()
+                    player.discard.append(best)
+                    player.cards_acquired_this_turn += 1
+                    gs._trigger_acquire_effects(player.id, best)
 
         if "if_opp_combat_intrigue" in effect:
             if any(q != player.id for q in getattr(gs, "_combat_intrigue_players", set())):
