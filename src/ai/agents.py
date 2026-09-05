@@ -29,7 +29,7 @@ _RES_VALUE = {
     "maker_hooks": 1.5, "uplift": 3.0, "spy": 1.2, "spy_special": 1.4,
     "influence_emperor": 1.6, "influence_spacing_guild": 1.6,
     "influence_bene_gesserit": 1.6, "influence_fremen": 1.6,
-    "sandworm": 3.0, "sandworm_maker_space": 3.0,
+    "sandworm": 3.0, "sandworm_maker_space": 3.0, "contract": 1.5,
 }
 _INF_KEYS = ("influence_emperor", "influence_spacing_guild",
              "influence_bene_gesserit", "influence_fremen")
@@ -133,6 +133,15 @@ def _card_effect_value(gs: GameState, pid: int, eff: dict, w: float = 1.0) -> fl
             best = max(_card_effect_value(gs, pid, sub.get("combat", {}), w),
                        _card_effect_value(gs, pid, sub.get("else", {}), w))
             v += 0.6 * best                          # situational — partial credit
+        elif k == "choose_by_contracts" and isinstance(sub, dict):
+            have = len(gs.players[pid].contracts_completed)
+            need = sub.get("n", 4)
+            branch = sub.get("yes") if have >= need else sub.get("no")
+            if isinstance(branch, dict):
+                v += _card_effect_value(gs, pid, branch, w)
+        elif k == "persuasion_per_contract" and isinstance(sub, (int, float)):
+            n = len(gs.players[pid].contracts_completed)
+            v += w * _RES_VALUE.get("persuasion", 0.8) * n * sub
         elif k in ("discard_then", "discard_then_sg", "discard_then_if_sg",
                   "recall_spy_then") and isinstance(sub, dict):
             inner = sub.get("base", sub)

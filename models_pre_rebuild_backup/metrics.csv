@@ -1,0 +1,9 @@
+iter,gen_agent,samples,val_logloss,a_vs_fair,promoted,seconds
+1,value:models\value_v01.npz:T0.7,100612,0.1603,1.375,1,61.6
+2,value:models\value_v02.npz:T0.7,95947,0.2362,1.100,1,256.4
+3,value:models\value_v02.npz:T0.7,95056,0.2811,0.850,0,264.1
+4,value:models\value_v02.npz:T0.7,95441,0.3223,1.000,0,280.8
+5,value:models\value_v02.npz:T0.7,95527,0.3460,0.950,0,278.0
+6,value:models\value_v02.npz:T0.7,95949,0.3459,0.946,0,286.7
+7,value:models\value_v02.npz:T0.7,95662,0.3576,0.846,0,280.6
+8,value:models\value_v02.npz:T0.7,96346,0.3550,0.875,0,285.7
