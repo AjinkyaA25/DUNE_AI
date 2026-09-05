@@ -177,6 +177,18 @@ def _acquire_card_value(gs: GameState, pid: int, card) -> float:
               getattr(card, "reveal_effects", []) +
               getattr(card, "acquire_effects", [])):
         s += 0.8 * _card_effect_value(gs, pid, e)
+    # Faction-access is a DURABLE asset, not a one-off effect: every future
+    # Agent turn you send this card to Emperor/Spacing Guild/Bene Gesserit/
+    # Fremen edges you toward a friendship (2 influence = 1 VP) and an
+    # alliance (4 influence + highest = 1 more VP) — a meaningful fraction of
+    # the ~4 friendships + ~1-2 alliances that make up most of a path to 10 VP.
+    # Bigger boost the closer you already are to a threshold crossing.
+    p = gs.players[pid]
+    for sym in getattr(card, "access_symbols", ()):
+        fac = getattr(sym, "value", sym)
+        if fac in _FACTION_OF.values():
+            cur = p.influence.get(fac, 0)
+            s += 1.2 + (2.0 if cur == 1 else 0.0) + (1.5 if cur == 3 else 0.0)
     # NOTE: no flat "expensive = good" bonus — a costly card whose payoff sits
     # behind a condition you don't meet (e.g. Junction Headquarters without
     # the Spacing Guild Alliance) is priced by what it does for you right now.
