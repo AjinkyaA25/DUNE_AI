@@ -1,0 +1,16 @@
+iter,gen_agent,samples,val_logloss,a_vs_fair,promoted,seconds
+1,value:models\value_v01.npz:T0.7,139620,0.3368,1.717,1,104.1
+2,value:models\value_v01.npz:T0.7,124553,0.3593,0.760,0,348.0
+3,value:models\value_v01.npz:T0.7,124680,0.3334,0.790,0,338.3
+4,value:models\value_v01.npz:T0.7,124880,0.3415,0.783,0,367.5
+5,value:models\value_v01.npz:T0.7,124616,0.3339,0.917,0,382.1
+6,value:models\value_v01.npz:T0.7,124660,0.3340,1.030,0,357.3
+7,value:models\value_v01.npz:T0.7,125907,0.3250,0.963,0,351.9
+8,value:models\value_v01.npz:T0.7,124851,0.3536,0.910,0,382.8
+9,value:models\value_v09.npz:T0.7,124607,0.3648,1.100,1,373.5
+10,value:models\value_v09.npz:T0.7,124715,0.3549,0.885,0,357.6
+11,value:models\value_v09.npz:T0.7,124791,0.3493,0.997,0,355.4
+12,value:models\value_v12.npz:T0.7,124222,0.3538,1.055,1,355.9
+13,value:models\value_v13.npz:T0.7,125280,0.3648,1.080,1,355.4
+14,value:models\value_v13.npz:T0.7,124986,0.3636,0.907,0,370.7
+15,value:models\value_v13.npz:T0.7,125029,0.3508,1.040,0,436.4

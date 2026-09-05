@@ -177,22 +177,27 @@ def _acquire_card_value(gs: GameState, pid: int, card) -> float:
               getattr(card, "reveal_effects", []) +
               getattr(card, "acquire_effects", [])):
         s += 0.8 * _card_effect_value(gs, pid, e)
-    # Faction-access is a DURABLE asset, not a one-off effect: every future
-    # Agent turn you send this card to Emperor/Spacing Guild/Bene Gesserit/
-    # Fremen edges you toward a friendship (2 influence = 1 VP) and an
-    # alliance (4 influence + highest = 1 more VP) — a meaningful fraction of
-    # the ~4 friendships + ~1-2 alliances that make up most of a path to 10 VP.
-    # Bigger boost the closer you already are to a threshold crossing.
+    # Faction-access is a DURABLE asset — but only cheaply usable with a 3rd
+    # Agent (Swordmaster): with only 2 Agents, spending one on a faction space
+    # is a much bigger opportunity cost against board-space value, so the
+    # access is worth much less until you have Swordmaster.
     p = gs.players[pid]
+    fac_mult = 1.0 if p.has_swordmaster else 0.35
     for sym in getattr(card, "access_symbols", ()):
         fac = getattr(sym, "value", sym)
         if fac in _FACTION_OF.values():
             cur = p.influence.get(fac, 0)
-            s += 1.2 + (2.0 if cur == 1 else 0.0) + (1.5 if cur == 3 else 0.0)
+            s += fac_mult * (1.2 + (2.0 if cur == 1 else 0.0)
+                             + (1.5 if cur == 3 else 0.0))
     # NOTE: no flat "expensive = good" bonus — a costly card whose payoff sits
     # behind a condition you don't meet (e.g. Junction Headquarters without
     # the Spacing Guild Alliance) is priced by what it does for you right now.
     s -= 0.15 * card.cost
+    # TSMF is a late-game VP dump, not a card that compounds into future turns
+    # like a Row card does — rarely worth it before round 4; from then on it
+    # competes normally (i.e. only wins out when the Row has nothing better).
+    if card.name == "The Spice Must Flow" and gs.round < 4:
+        s *= 0.15
     return s
 
 
