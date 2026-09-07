@@ -34,10 +34,30 @@ def _play_one(game_idx: int):
     agents = {s: make_agent(cfg["agent_spec"], seed=seed * 4 + s,
                             opening_book=book)
               for s in range(n)}
+    # Optionally seat one or more "rogue" sparring partners (e.g. bully:T0.5),
+    # rotating which seat(s) they occupy across games so the training data
+    # isn't seat-biased. Their own decision points are dropped below — we want
+    # the value net to learn from how the OTHER seats fare against them, not
+    # to imitate the rogue's policy.
+    rogue_pids = set()
+    rogue_spec = cfg.get("rogue_spec")
+    if rogue_spec:
+        for k in range(min(cfg.get("rogue_seats", 1), n - 1)):
+            rp = (game_idx + k) % n
+            rogue_pids.add(rp)
+            agents[rp] = make_agent(rogue_spec, seed=seed * 4 + rp + 991,
+                                    opening_book=book)
     res = play_game(agents, num_players=n, seed=seed, record=True,
                     use_choam=cfg["use_choam"])
     if not res.feats:
         return None
+    if rogue_pids:
+        keep = [i for i, pd in enumerate(res.feat_pids) if pd not in rogue_pids]
+        res.feats = [res.feats[i] for i in keep]
+        res.feat_pids = [res.feat_pids[i] for i in keep]
+        res.feat_rounds = [res.feat_rounds[i] for i in keep]
+        if not res.feats:
+            return None
     X = np.stack(res.feats).astype(np.float32)
     # A flat 1.0/0.0 win label carries no notion of WHEN the win happens —
     # a 1-ply value-maximizer has no reason to prefer a state that wins
@@ -68,10 +88,12 @@ def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
                       num_players: int = 4, workers: int = 4,
                       out_dir: str = "data/selfplay", base_seed: int = 0,
                       use_book: bool = True, use_choam: bool = True,
-                      shard_tag: str = "s") -> dict:
+                      shard_tag: str = "s", rogue_spec: str = None,
+                      rogue_seats: int = 1) -> dict:
     os.makedirs(out_dir, exist_ok=True)
     cfg = dict(num_players=num_players, agent_spec=agent_spec,
-               base_seed=base_seed, use_book=use_book, use_choam=use_choam)
+               base_seed=base_seed, use_book=use_book, use_choam=use_choam,
+               rogue_spec=rogue_spec, rogue_seats=rogue_seats)
     t0 = time.time()
 
     results = []
@@ -104,6 +126,7 @@ def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
         "shard": os.path.basename(shard),
         "n_games": n_games, "n_samples": int(len(y)),
         "agent_spec": agent_spec, "num_players": num_players,
+        "rogue_spec": rogue_spec, "rogue_seats": rogue_seats if rogue_spec else 0,
         "use_book": use_book, "truncated_games": truncs,
         "positive_rate": float(y.mean()),
         "avg_rounds_played": round(sum(rounds_played) / max(1, len(rounds_played)), 2),

@@ -365,10 +365,31 @@ def _conflict_worth(gs: GameState, pid: int) -> float:
     v += 3.0 * r.get("vp", 0)
     if r.get("control"):
         v += 1.6
-    if any(k.startswith("may_pay") for k in r):
-        v += 1.2
     v += sum(_RES_VALUE.get(k, 0.3) * n for k, n in r.items()
              if isinstance(n, (int, float)))
+    # resource -> VP conversions the winner may take (Battle for Imperial Basin
+    # = pay 4 spice, Battle for Spice Refinery = pay 6 solari, Battle for
+    # Arrakeen = recall 2 Spies).  Worth a near-full VP when the player can
+    # already pay right now, a fraction of one when they'd still have to find
+    # the resource before combat resolves.  A worm makes each convertible
+    # twice (engine `times`) — priced in via the doubled reward when a worm is
+    # actually committed, not speculatively here.
+    p_conv = gs.players[pid]
+    for k, val in r.items():
+        if not isinstance(val, dict):
+            continue
+        if k in ("may_pay_spice_for_vp", "may_pay_solari_for_vp"):
+            res = "spice" if "spice" in k else "solari"
+            cost, cvp = val.get("cost", 3), val.get("vp", 1)
+            v += (2.8 if getattr(p_conv, res, 0) >= cost else 1.0) * cvp
+        elif k == "may_pay_troops_for_vp":
+            cost, cvp = val.get("cost", 1), val.get("vp", 1)
+            have = gs.troops_in_conflict.get(pid, 0)
+            v += (2.4 if have >= cost else 1.0) * cvp
+        elif k == "may_recall_spies_for_vp":
+            cnt, cvp = int(val.get("count", 2)), val.get("vp", 1)
+            have = sum(p_conv.spies_on_board.values())
+            v += (2.4 if have >= cnt else 0.7) * cvp
     # a controlled-location Conflict the player already holds is worth defending
     if cc.location and gs.controlled_by.get(cc.location) == pid:
         v += 1.0
@@ -708,6 +729,85 @@ class HeuristicAgent(Agent):
         return _softmax_pick(valid_actions, scores, self.temperature, self.rng)
 
 
+# --- crucial-combat detection + exploiter agent ---------------------------
+
+_BULLY_TROOP_SPACES = {"Heighliner", "Sardaukar", "Gather Support",
+                       "Research Station", "Deliver Supplies",
+                       "Desert Tactics", "Fremkit"}
+
+
+def _is_crucial_combat(gs: GameState, pid: int) -> bool:
+    """A Conflict whose outcome swings the game: a Level III (round 7-10)
+    battle, one that scores a VP outright, one that would complete this
+    player's battle-icon match (a guaranteed VP), or one a rival already
+    has a sandworm in (winning denies their doubled reward)."""
+    cc = gs.current_conflict
+    if cc is None:
+        return False
+    r = cc.first_place_reward
+    if cc.conflict_level == 3 or r.get("vp", 0) or "control" in r:
+        return True
+    icon = getattr(cc.battle_icon, "value", None)
+    if icon and icon != "wild" and icon in gs.players[pid].battle_icons:
+        return True
+    return any(gs.sandworms_in_conflict.get(q, 0) > 0
+               for q in range(gs.num_players) if q != pid)
+
+
+class CombatBullyAgent(HeuristicAgent):
+    """Plays like the HeuristicAgent EXCEPT it goes all-in to win any *crucial*
+    Conflict (`_is_crucial_combat`): floods troops via Heighliner / recruit
+    spaces, dumps sword & deploy Intrigues, and deploys its whole garrison
+    with no overcommit penalty and a large bonus for out-massing the field.
+    A training sparring partner: value agents that under-deploy to maximize
+    economy get their crucial combats stolen and lose, so self-play learns
+    that maxing strength on the combats that decide games pays off."""
+
+    name = "bully"
+
+    def score(self, gs: GameState, pid: int, a: GameAction) -> float:
+        s = super().score(gs, pid, a)
+        if not _is_crucial_combat(gs, pid):
+            return s
+        p = gs.players[pid]
+        urg = _game_urgency(gs, pid)
+        at = a.action_type
+        if at == ActionType.RESOLVE_DEPLOY:
+            n = a.deploy_count
+            my = gs.troops_in_conflict.get(pid, 0) + n
+            opp = max((gs.troops_in_conflict.get(q, 0)
+                       for q in range(gs.num_players) if q != pid), default=0)
+            # pure "win this decisively" — no holding value, no overcommit cost
+            s = n * (0.4 + 1.1 * urg)
+            if my > opp:
+                s += 3.0
+            if my > opp + 3:
+                s += 2.0
+            if p.troops_garrison - n < 1 and n > 0:
+                s += 1.0                              # emptying the garrison is fine here
+        elif at == ActionType.AGENT_TURN:
+            if a.space_name in _BULLY_TROOP_SPACES:
+                s += 3.0 * urg
+            for eff in gs.get_space_effects_preview(a.space_name, a.space_option):
+                if isinstance(eff, dict) and any(
+                        k in eff for k in ("troops", "deploy", "grant_deploy")):
+                    s += 1.5 * urg
+        elif at == ActionType.PLAY_INTRIGUE:
+            ic = next((c for c in p.intrigue_cards
+                       if c.name == a.intrigue_card_name), None)
+            if ic:
+                bonus = 0.0
+                for e in ic.effects:
+                    fe = _flatten(e)
+                    for k in ("swords", "deploy", "grant_deploy"):
+                        val = fe.get(k, 0)
+                        bonus += val if isinstance(val, (int, float)) else 1
+                s += 1.6 * bonus
+        elif at == ActionType.COMBAT_PASS:
+            s -= 4.0
+        return s
+
+
 class GreedyValueAgent(Agent):
     name = "value"
 
@@ -785,6 +885,7 @@ def make_agent(spec: str, seed: Optional[int] = None,
                opening_book: Optional[OpeningBook] = None) -> Agent:
     """
     spec: 'random' | 'heuristic' | 'heuristic:T<temp>' |
+          'bully' | 'bully:T<temp>' (crucial-combat exploiter sparring partner) |
           'value' | 'value:<model.npz>' | 'value:<model.npz>:T<temp>' |
           'value:<model.npz>:T<temp>:HW<heuristic_weight>'
 
@@ -805,6 +906,12 @@ def make_agent(spec: str, seed: Optional[int] = None,
             if p.startswith("T"):
                 temp = float(p[1:])
         return HeuristicAgent(seed=seed, opening_book=opening_book, temperature=temp)
+    if kind == "bully":
+        temp = 0.0
+        for p in parts[1:]:
+            if p.startswith("T"):
+                temp = float(p[1:])
+        return CombatBullyAgent(seed=seed, opening_book=opening_book, temperature=temp)
     if kind == "value":
         model, temp, hw = None, 0.0, 0.35
         for p in parts[1:]:

@@ -42,6 +42,13 @@ def main() -> None:
                     help="promote if a_vs_fair exceeds this (0 -> beat fair share)")
     ap.add_argument("--arena-games", type=int, default=160)
     ap.add_argument("--no-book", action="store_true")
+    ap.add_argument("--rogue-spec", type=str, default=None,
+                    help="seat a sparring-partner agent in each self-play game "
+                         "(e.g. 'bully:T0.4' — the crucial-combat exploiter). "
+                         "Its own decision points are excluded from training "
+                         "data; it only shapes how the value seats are scored.")
+    ap.add_argument("--rogue-seats", type=int, default=1,
+                    help="how many seats the rogue occupies (rotated per game)")
     ap.add_argument("--heuristic-weight", type=float, default=0.35,
                     help="GreedyValueAgent's pull back toward the flat heuristic "
                          "prior (default 0.35) -- lower it to let the trained "
@@ -75,6 +82,7 @@ def main() -> None:
             n_games=args.games_per_iter, agent_spec=best_spec,
             num_players=args.players, workers=args.workers, out_dir=DATA_DIR,
             base_seed=it * 100_000, use_book=use_book, shard_tag=f"it{it:02d}",
+            rogue_spec=args.rogue_spec, rogue_seats=args.rogue_seats,
         )
         print(f"  generated {man['n_samples']} samples "
               f"({man['truncated_games']} truncated) in {man['seconds']}s "

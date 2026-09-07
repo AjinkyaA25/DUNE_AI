@@ -2002,23 +2002,25 @@ class GameState:
 
     def _scale_reward(self, reward: Dict, with_sandworm: bool) -> Dict:
         """A sandworm in the Conflict doubles EVERY reward — flat resources and
-        VP, and also the 'spend X -> gain a VP' conversion (both cost and VP
-        double, e.g. Spice Freighters: pay 3 spice for 1 VP -> pay 6 for 2).
+        VP.  A 'spend X -> gain a VP' conversion doubles by letting the winner
+        take it TWICE (`times`), each application still at the printed cost /
+        spy count — so a winner who can only afford ONE application still
+        banks that one VP (Battle for Imperial Basin with 5 spice: pay 4 -> 1
+        VP; the doubled 2nd application needs 4 more they don't have).  Battle
+        for Arrakeen's recall-2-Spies conversion therefore caps at one VP even
+        with a worm, since a 2nd application would need a 4th Spy.
         Only `control` (and the internal `battle_icon` marker) can't scale."""
         if not with_sandworm:
             return reward
         _nodouble = ("control", "battle_icon")
         _vp_convert = ("may_pay_spice_for_vp", "may_pay_solari_for_vp",
-                       "may_pay_troops_for_vp")
+                       "may_pay_troops_for_vp", "may_recall_spies_for_vp")
         scaled = {}
         for k, v in reward.items():
             if k in _nodouble:
                 scaled[k] = v
             elif k in _vp_convert and isinstance(v, dict):
-                scaled[k] = {"cost": v.get("cost", 0) * 2, "vp": v.get("vp", 1) * 2}
-            elif k == "may_recall_spies_for_vp" and isinstance(v, dict):
-                # Spy count can't scale past your 3 Spies — only the VP doubles.
-                scaled[k] = {"count": v.get("count", 2), "vp": v.get("vp", 1) * 2}
+                scaled[k] = {**v, "times": 2 * int(v.get("times", 1))}
             elif isinstance(v, (int, float)):
                 scaled[k] = v * 2
             else:
@@ -2050,30 +2052,44 @@ class GameState:
                     player.trash_card(tgt, from_location="any")
             elif key in ("may_pay_spice_for_vp", "may_pay_solari_for_vp",
                          "may_pay_troops_for_vp"):
-                # Optional "spend X to gain a VP" — auto-take when affordable
-                # (a VP is always worth these amounts by the time it appears).
-                cost, vp = value.get("cost", 0), value.get("vp", 1)
-                res = {"may_pay_spice_for_vp": ("spice", player.spice),
-                       "may_pay_solari_for_vp": ("solari", player.solari),
-                       "may_pay_troops_for_vp": ("troops_in_conflict",
-                                                 self.troops_in_conflict.get(player_id, 0))
-                       }[key]
-                have = res[1]
-                if have >= cost:
+                # Optional "spend X to gain a VP" — auto-take, once per available
+                # application (a sandworm in the Conflict grants a 2nd: `times`).
+                # Each application is independent, so a winner who can only
+                # afford one still banks that VP.
+                cost, vp = value.get("cost", 0), int(value.get("vp", 1))
+                attr = {"may_pay_spice_for_vp": "spice",
+                        "may_pay_solari_for_vp": "solari",
+                        "may_pay_troops_for_vp": None}[key]
+                for _ in range(int(value.get("times", 1))):
                     if key == "may_pay_troops_for_vp":
-                        self.troops_in_conflict[player_id] -= cost
+                        have = self.troops_in_conflict.get(player_id, 0)
+                        if have < cost:
+                            break
+                        self.troops_in_conflict[player_id] = have - cost
                         player.troops_supply += cost
                     else:
-                        setattr(player, res[0], have - cost)
+                        have = getattr(player, attr)
+                        if have < cost:
+                            break
+                        setattr(player, attr, have - cost)
                     player.gain_vp(vp)
             elif key == "may_recall_spies_for_vp":
                 # Battle for Arrakeen: recall N of your Spies from the board to
-                # gain a VP.  Auto-taken when you have enough Spies out.
+                # gain a VP.  Auto-taken when you have enough Spies out; a
+                # sandworm grants a 2nd application (`times`) but you can never
+                # recall more than the 3 Spies you own.
                 count, vp = int(value.get("count", 2)), int(value.get("vp", 1))
-                if sum(player.spies_on_board.values()) >= count:
-                    for post in list(player.spies_on_board)[:count]:
-                        player.recall_spy(post)
-                    player.gain_vp(vp)
+                for _ in range(int(value.get("times", 1))):
+                    if sum(player.spies_on_board.values()) < count:
+                        break
+                    recalled = 0
+                    for post in list(player.spies_on_board):
+                        while (recalled < count
+                               and player.spies_on_board.get(post, 0) > 0):
+                            player.recall_spy(post)
+                            recalled += 1
+                    if recalled >= count:
+                        player.gain_vp(vp)
             else:
                 EffectResolver.resolve_single_effect({key: value}, player, self)
 

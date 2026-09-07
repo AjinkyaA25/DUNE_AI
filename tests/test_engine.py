@@ -818,9 +818,34 @@ def test_battle_for_arrakeen_recall_spies():
     assert p.victory_points == vp0 + 1
     assert sum(p.spies_on_board.values()) == 1        # 2 recalled
 
-    # Worm doubles the VP but not the spy count.
+    # A worm makes the conversion available TWICE (times=2), but a 2nd
+    # application needs a 4th Spy — with only 3, Arrakeen still caps at +1 VP.
     assert gs._scale_reward({"may_recall_spies_for_vp": {"count": 2, "vp": 1}}, True) == {
-        "may_recall_spies_for_vp": {"count": 2, "vp": 2}}
+        "may_recall_spies_for_vp": {"count": 2, "vp": 1, "times": 2}}
+    gs2 = GameState(num_players=4, seed=2)
+    q = gs2.players[0]
+    q.place_spy("Emperor Post"); q.place_spy("Fremen Post"); q.place_spy("Green Post")
+    vpq = q.victory_points
+    gs2._apply_combat_reward(
+        0, {"may_recall_spies_for_vp": {"count": 2, "vp": 1, "times": 2}}, bfa)
+    assert q.victory_points == vpq + 1               # only one application affordable
+    assert sum(q.spies_on_board.values()) == 1
+
+    # pay-spice conversion: a worm grants a 2nd application, each at the printed
+    # cost — a winner who can afford only one still banks that VP.
+    bib = next(c for c in conflict_level_3_pool() if c.name == "Battle for Imperial Basin")
+    gs3 = GameState(num_players=4, seed=3)
+    r = gs3.players[0]
+    r.spice = 5
+    vpr = r.victory_points
+    gs3._apply_combat_reward(0, {"may_pay_spice_for_vp": {"cost": 4, "vp": 1, "times": 2}}, bib)
+    assert r.victory_points == vpr + 1 and r.spice == 1
+    gs4 = GameState(num_players=4, seed=4)
+    s = gs4.players[0]
+    s.spice = 8
+    vps = s.victory_points
+    gs4._apply_combat_reward(0, {"may_pay_spice_for_vp": {"cost": 4, "vp": 1, "times": 2}}, bib)
+    assert s.victory_points == vps + 2 and s.spice == 0
 
 
 def test_conflict_rewards_2026_09_03():
@@ -850,12 +875,13 @@ def test_conflict_rewards_2026_09_03():
     assert l2["Trade Dispute"].first_place_reward == {
         "contract": 1, "trash": 1, "water": 1}
 
-    # A sandworm doubles the VP-conversion cost AND payout.
+    # A sandworm makes the VP-conversion available twice (`times`), each still
+    # at the printed cost, so partial affordability still banks one VP.
     from src.game.gameState import GameState
     gs = GameState(num_players=4, seed=1)
     scaled = gs._scale_reward(dict(sf.first_place_reward), True)
     assert scaled == {"influence_any": 2,
-                      "may_pay_spice_for_vp": {"cost": 6, "vp": 2}}
+                      "may_pay_spice_for_vp": {"cost": 3, "vp": 1, "times": 2}}
     assert gs._scale_reward({"control": True, "vp": 1}, True) == {"control": True, "vp": 2}
 
 
