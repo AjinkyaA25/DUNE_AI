@@ -28,6 +28,42 @@ SUB = "-" * 78
 FAC = {"emperor": "Emperor", "spacing_guild": "Spacing Guild",
        "bene_gesserit": "Bene Gesserit", "fremen": "Fremen"}
 
+# key prefix -> (gain phrase, lose phrase) for --prose mode
+_PROSE_WORDS = {
+    "VP":    ("scored {n} VP", "lost {n} VP"),
+    "sol":   ("gained {n} solari", "spent {n} solari"),
+    "spice": ("gained {n} spice", "spent {n} spice"),
+    "wat":   ("gained {n} water", "spent {n} water"),
+    "trp":   ("recruited {n} troop(s)", "lost {n} troop(s)"),
+    "cards": ("gained {n} card(s)", "lost {n} card(s)"),
+    "intr":  ("drew {n} intrigue card(s)", "spent {n} intrigue card(s)"),
+    "pers":  ("generated {n} persuasion", "spent {n} persuasion"),
+    "cnf":   ("committed {n} unit(s) to the Conflict", "removed {n} unit(s) from the Conflict"),
+    "ctr":   ("took {n} contract(s)", "spent {n} contract(s)"),
+    "done":  ("completed {n} contract(s)", "un-completed {n} contract(s)"),
+    "spy":   ("placed {n} Spy", "recalled {n} Spy"),
+}
+for _fac in FAC.values():
+    _PROSE_WORDS[f"{_fac[:3]}inf"] = (f"gained {{n}} {_fac} influence",
+                                       f"lost {{n}} {_fac} influence")
+
+
+def prose_delta(delta_tokens):
+    """Turn ['sol+2', 'Freinf+1', ...] into 'gained 2 solari, gained 1 Fremen influence'."""
+    phrases = []
+    for tok in delta_tokens:
+        # split "<key><sign><digits>" -> key, sign, n
+        i = len(tok) - 1
+        while i >= 0 and (tok[i].isdigit()):
+            i -= 1
+        key_sign, n_str = tok[:i + 1], tok[i + 1:]
+        sign = key_sign[-1]
+        key = key_sign[:-1]
+        n = abs(int(n_str)) if n_str else 1
+        gain_phr, lose_phr = _PROSE_WORDS.get(key, (f"+{{n}} {key}", f"-{{n}} {key}"))
+        phrases.append((gain_phr if sign == "+" else lose_phr).format(n=n))
+    return phrases
+
 
 def _res(p):
     return f"sol {p.solari}  spice {p.spice}  water {p.water}"
@@ -164,7 +200,7 @@ def _print_combat_and_round_end(gs, res, strengths, vp_pre, rnd):
     print_standings(gs, f"END OF ROUND {rnd} - STANDINGS")
 
 
-def run(num_players, seed, agent_specs, neutral_leaders=True):
+def run(num_players, seed, agent_specs, neutral_leaders=True, prose=False):
     gs = setup_game(num_players=num_players, seed=seed,
                     neutral_leaders=neutral_leaders)
     agents = {i: make_agent((agent_specs[i] if agent_specs and i < len(agent_specs)
@@ -231,10 +267,14 @@ def run(num_players, seed, agent_specs, neutral_leaders=True):
             for f in FAC:
                 if p.influence[f] != binf[f]:
                     delta.append(f"{FAC[f][:3]}inf{p.influence[f]-binf[f]:+d}")
-            dstr = (f"   [{' '.join(delta)}]"
-                    if delta and a.action_type != ActionType.COMBAT_PASS else "")
             tag = f"COMBAT P{pid}" if prev_phase == Phase.COMBAT else f"P{pid}"
-            print(f"     {tag}: {desc}{dstr}")
+            if prose:
+                clause = ("; " + ", ".join(prose_delta(delta)))
+                print(f"     {tag} {desc}{clause if delta and a.action_type != ActionType.COMBAT_PASS else ''}.")
+            else:
+                dstr = (f"   [{' '.join(delta)}]"
+                        if delta and a.action_type != ActionType.COMBAT_PASS else "")
+                print(f"     {tag}: {desc}{dstr}")
 
         # A combat just resolved (new CombatResult object)?
         res = gs._last_combat_result
@@ -270,11 +310,14 @@ def main():
     ap.add_argument("--real-leaders", action="store_true",
                     help="use real (unverified) Leader abilities instead of "
                          "the default no-op Leaders")
+    ap.add_argument("--prose", action="store_true",
+                    help="narrate each action as a plain-English sentence "
+                         "instead of the compact '[key+N ...]' delta notation")
     args = ap.parse_args()
     import random
     seed = args.seed if args.seed is not None else random.randint(0, 99999)
     specs = args.agents.split(",") if args.agents else None
-    run(args.players, seed, specs, neutral_leaders=not args.real_leaders)
+    run(args.players, seed, specs, neutral_leaders=not args.real_leaders, prose=args.prose)
 
 
 if __name__ == "__main__":

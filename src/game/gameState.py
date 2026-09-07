@@ -2557,21 +2557,36 @@ class GameState:
                 legal.append(space)
         return legal
 
-    def get_space_effects_preview(self, space_name: str) -> List[Dict]:
-        """Approximate effect dicts a space yields — for heuristic scoring only."""
+    def get_space_effects_preview(self, space_name: str,
+                                  space_option: Optional[str] = None) -> List[Dict]:
+        """Approximate effect dicts a space yields — for heuristic scoring only.
+
+        `space_option` matters for the special spaces that branch: without it
+        the preview always describes the "default" branch, which made the
+        heuristic score a Hagga Basin / Deep Desert *sandworm* pick as if it
+        were the spice pick, and a Sietch Tabr wall-break as if it were hooks.
+        """
         if space_name not in UPRISING_BOARD:
             return []
         sp = UPRISING_BOARD[space_name]
         if not sp.special:
             return list(BOARD_SPACE_EFFECTS.get(space_name, []))
+        if space_name == "Sietch Tabr":
+            return ([{"water": 1, "destroy_shield_wall": 1}]
+                    if space_option == "shield_wall"
+                    else [{"maker_hooks": 1, "troops": 1, "water": 1}])
+        if space_name in MAKER_SPACE_OPTIONS:
+            base_spice, worms = MAKER_SPACE_OPTIONS[space_name]
+            if space_option == "sandworm":
+                return [{"sandworm": worms}]
+            return [{"spice": base_spice}]
+        if space_name == "Spice Refinery":
+            return [{"solari": 4, "spice": -1}] if space_option == "pay_spice" \
+                else [{"solari": 2}]
         return {
             "Swordmaster":   [{"agents": 1}],
             "High Council":  [{"persuasion": 2}],
             "Gather Support": [{"troops": 2}],
-            "Spice Refinery": [{"solari": 2}],
-            "Sietch Tabr":   [{"maker_hooks": 1, "troops": 1, "water": 1}],
-            "Hagga Basin":   [{"spice": 2}],
-            "Deep Desert":   [{"spice": 4}],
         }.get(space_name, [])
 
     def clone(self) -> "GameState":

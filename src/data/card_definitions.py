@@ -206,9 +206,11 @@ def create_imperium_cards() -> List[Card]:
                 "when 2+ Spies are on the board."),
         m("Interstellar Trade", 7, I, access=["landsraad", "city", "desert"],
           tags=["spacing_guild"], acquire={"contract": 1},
+          agent={"influence_any": 1},
           reveal={"persuasion_per_contract": 1},
-          notes="Acquire: take a contract. Reveal: 1 persuasion per completed "
-                "contract (no other reveal effect)."),
+          notes="Acquire: take a contract. Agent: gain 1 Influence with a "
+                "Faction of your choice (? influence icon). Reveal: 1 persuasion "
+                "per completed contract (no other reveal effect)."),
         m("Junction Headquarters", 6, I,
           access=["landsraad", "city", "desert"], tags=["spacing_guild"],
           agent={"if_alliance_spacing_guild":

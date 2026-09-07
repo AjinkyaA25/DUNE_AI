@@ -13,7 +13,7 @@ from typing import List
 import numpy as np
 
 MAX_PLAYERS = 4
-_PLAYER_FEATS = 30
+_PLAYER_FEATS = 31
 _GLOBAL_FEATS = 24
 FEATURE_DIM = MAX_PLAYERS * _PLAYER_FEATS + _GLOBAL_FEATS
 
@@ -66,6 +66,7 @@ def _player_block(gs, pid: int) -> List[float]:
         1.0 if pid in gs.players_revealed else 0.0,
         len(p.contracts_active) / 4.0,
         _LEADER_IDX.get(getattr(p.leader, "name", None), 0) / 9.0,
+        gs.persuasion_pool.get(pid, 0) / 15.0,
     ]
 
 
@@ -90,12 +91,21 @@ def _global_block(gs, pid: int) -> List[float]:
     ]
     row = gs.imperium_row
     avg_cost = (sum(c.cost for c in row) / len(row)) if row else 0.0
+    # "is there a strong, contestable card sitting in the row right now" signal —
+    # the value net can't see individual card identity, but it can see how much
+    # raw power (persuasion/swords/access) is up for grabs, which is exactly the
+    # thing an opponent could snipe before this player's next turn.
+    max_pers = max((c.persuasion for c in row), default=0.0)
+    max_swords = max((c.swords for c in row), default=0.0)
+    n_faction_access = sum(1 for c in row if getattr(c, "access_symbols", ()))
     feats += [
         len(row) / 5.0,
         avg_cost / 8.0,
         len(gs.imperium_deck) / 20.0,
         len(gs.reserve_spice_must_flow) / 5.0,
-        gs.persuasion_pool.get(pid, 0) / 15.0,
+        max_pers / 8.0,
+        max_swords / 6.0,
+        n_faction_access / 5.0,
         1.0 if gs.first_player == pid else 0.0,
         len(gs.conflict_deck) / 10.0,
         len(gs.contracts_on_board) / 2.0,

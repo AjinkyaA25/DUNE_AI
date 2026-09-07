@@ -32,10 +32,13 @@ def test_clone_is_independent():
 
 
 def test_value_model_learns_xor_ish():
+    # Fixed synthetic dim (independent of FEATURE_DIM) — this test only checks
+    # the optimizer can fit a mildly nonlinear function, not our real features.
+    dim = 20
     rng = np.random.default_rng(0)
-    X = rng.normal(size=(2000, FEATURE_DIM)).astype(np.float32)
+    X = rng.normal(size=(2000, dim)).astype(np.float32)
     y = (X[:, 0] + X[:, 1] * X[:, 2] > 0).astype(np.float32)
-    m = ValueModel(hidden=32, seed=0)
+    m = ValueModel(dim=dim, hidden=32, seed=0)
     hist = m.fit(X, y, epochs=30, lr=5e-3)
     assert hist["val_logloss"][-1] < hist["val_logloss"][0]
     assert hist["val_logloss"][-1] < 0.55

@@ -26,10 +26,12 @@ class GameResult:
     num_moves: int
     num_players: int
     truncated: bool = False
+    rounds_played: int = 0
     leaders: List[str] = field(default_factory=list)
-    # trajectory: (perspective_pid, feature_vector) captured at each decision
+    # trajectory: (perspective_pid, feature_vector, round) captured at each decision
     feats: List[np.ndarray] = field(default_factory=list)
     feat_pids: List[int] = field(default_factory=list)
+    feat_rounds: List[int] = field(default_factory=list)
 
 
 def play_game(agents, num_players: int = 4, seed: Optional[int] = None,
@@ -45,6 +47,7 @@ def play_game(agents, num_players: int = 4, seed: Optional[int] = None,
                     neutral_leaders=neutral_leaders and leaders is None)
     feats: List[np.ndarray] = []
     feat_pids: List[int] = []
+    feat_rounds: List[int] = []
 
     moves = 0
     truncated = False
@@ -60,6 +63,7 @@ def play_game(agents, num_players: int = 4, seed: Optional[int] = None,
         if record and non_noop:
             feats.append(encode_state(gs, pid))
             feat_pids.append(pid)
+            feat_rounds.append(gs.round)
         action = agents[pid].select_action(gs, pid, valid)
         gs.step(action)
         moves += 1
@@ -78,7 +82,9 @@ def play_game(agents, num_players: int = 4, seed: Optional[int] = None,
         num_moves=moves,
         num_players=num_players,
         truncated=truncated,
+        rounds_played=gs.round,
         leaders=[getattr(p.leader, "name", "?") for p in gs.players],
         feats=feats,
         feat_pids=feat_pids,
+        feat_rounds=feat_rounds,
     )

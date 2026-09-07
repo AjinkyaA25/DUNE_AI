@@ -42,6 +42,13 @@ def main() -> None:
                     help="promote if a_vs_fair exceeds this (0 -> beat fair share)")
     ap.add_argument("--arena-games", type=int, default=160)
     ap.add_argument("--no-book", action="store_true")
+    ap.add_argument("--heuristic-weight", type=float, default=0.35,
+                    help="GreedyValueAgent's pull back toward the flat heuristic "
+                         "prior (default 0.35) -- lower it to let the trained "
+                         "value net's own predictions drive action selection "
+                         "more directly, e.g. when the net was trained on a "
+                         "signal (like a discounted/speed-aware target) the "
+                         "heuristic itself has no notion of")
     args = ap.parse_args()
 
     os.makedirs(MODELS_DIR, exist_ok=True)
@@ -85,7 +92,8 @@ def main() -> None:
 
         def make_cand():
             return GreedyValueAgent(model=cand_model, temperature=0.0,
-                                    opening_book=book)
+                                    opening_book=book,
+                                    heuristic_weight=args.heuristic_weight)
 
         if best_model_path is None:
             def make_prev():
@@ -95,7 +103,8 @@ def main() -> None:
 
             def make_prev():
                 return GreedyValueAgent(model=prev_model, temperature=0.0,
-                                        opening_book=book)
+                                        opening_book=book,
+                                        heuristic_weight=args.heuristic_weight)
 
         res = head_to_head(make_cand, make_prev, n_games=args.arena_games,
                            num_players=args.players)
@@ -107,7 +116,7 @@ def main() -> None:
 
         if promote:
             best_model_path = mpath
-            best_spec = f"value:{mpath}:T{args.temperature}"
+            best_spec = f"value:{mpath}:T{args.temperature}:HW{args.heuristic_weight}"
             model.save(os.path.join(MODELS_DIR, "value_best.npz"))
 
         mw.writerow([it, best_spec, man["n_samples"], f"{val_ll:.4f}",

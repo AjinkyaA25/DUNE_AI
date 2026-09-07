@@ -556,7 +556,9 @@ def test_game_log_and_gauntlet():
     log = record_game(ag, num_players=4, seed=5)
     assert log["summary"]["winner"] in range(4)
     assert log["events"] and all("deltas" in e and "round" in e for e in log["events"])
-    assert log["summary"]["rounds_played"] >= 8
+    # sanity floor only -- not a target: games ending faster than this old
+    # assumption is exactly the intended effect of later heuristic tuning
+    assert log["summary"]["rounds_played"] >= 5
     # every deploy event's delta matches its deploy_count
     for e in log["events"]:
         if e["action"] == "resolve_deploy" and e["deploy_count"] > 0:

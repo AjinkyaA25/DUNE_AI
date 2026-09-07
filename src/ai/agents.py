@@ -17,18 +17,22 @@ from typing import List, Optional
 
 import numpy as np
 
-from src.game.gameState import GameState, GameAction, ActionType
+from src.game.gameState import GameState, GameAction, ActionType, MAX_ROUNDS
 from src.ai.features import encode_state
 from src.ai.value_model import ValueModel
 from src.ai.opening_book import OpeningBook
 
 # rough marginal value of one unit of each resource (VP-equivalent * 10)
+# Faction influence is S-tier: at high-level play every alliance eventually
+# gets claimed and 1-2 are actively fought over (a player overtaking another
+# at the 4-tier is a 2-VP swing, not a 1-VP gain) — priced well above a plain
+# resource accordingly, see `_influence_gain_value`.
 _RES_VALUE = {
     "vp": 10.0, "solari": 0.55, "spice": 0.65, "water": 0.55,
     "troops": 0.8, "draw": 1.1, "intrigue": 1.3, "persuasion": 0.8,
     "maker_hooks": 1.5, "uplift": 3.0, "spy": 1.2, "spy_special": 1.4,
-    "influence_emperor": 1.6, "influence_spacing_guild": 1.6,
-    "influence_bene_gesserit": 1.6, "influence_fremen": 1.6,
+    "influence_emperor": 2.2, "influence_spacing_guild": 2.2,
+    "influence_bene_gesserit": 2.2, "influence_fremen": 2.2,
     "sandworm": 3.0, "sandworm_maker_space": 3.0, "contract": 1.5,
 }
 _INF_KEYS = ("influence_emperor", "influence_spacing_guild",
@@ -37,24 +41,129 @@ _FACTION_OF = {
     "influence_emperor": "emperor", "influence_spacing_guild": "spacing_guild",
     "influence_bene_gesserit": "bene_gesserit", "influence_fremen": "fremen",
 }
+_FACTIONS = ("emperor", "spacing_guild", "bene_gesserit", "fremen")
+
+# Board spaces gated behind 2+ influence with a specific faction — reaching
+# friendship with these unlocks real, durable board access (Sietch Tabr for
+# combat + hooks + water, Shipping for solari, Imperial Privilege to cycle
+# cards), which is exactly why friendships are worth chasing EARLY, not just
+# as a step toward an eventual alliance.
+_FRIENDSHIP_GATE_BONUS = {"fremen": 2.5, "spacing_guild": 2.0, "emperor": 2.0}
+
+
+def _faction_access_strength(gs: GameState, pid: int, fac: str) -> float:
+    """
+    How much of this player's own deck (deck/discard/hand/in_play) actually
+    grants access to `fac` — i.e. how cheaply/repeatably they can keep
+    sending an Agent there. A player holding Stilgar the Devoted, Chani, and
+    Ecological Testing Station can visit Fremen spaces almost every round,
+    which makes committing to the Fremen alliance far more realistic than
+    for a player with no Fremen-access cards at all — this should drive
+    which alliance gets pursued, rather than treating all four uniformly.
+    """
+    p = gs.players[pid]
+    all_cards = list(p.deck) + list(p.discard) + list(p.hand) + list(p.in_play)
+    if not all_cards:
+        return 0.0
+    n = 0
+    for c in all_cards:
+        for sym in getattr(c, "access_symbols", ()):
+            if getattr(sym, "value", sym) == fac:
+                n += 1
+                break
+    return n / max(1, len(all_cards))
+
+
+def _game_urgency(gs: GameState, pid: int) -> float:
+    """
+    Scales VP-chasing behavior up as the game nears its likely end. Winning
+    is a race: whoever crosses 10 VP first ends the game outright (checked
+    right after Makers + Recall each round) and denies everyone else the
+    chance to also cross it that round. High-level play treats round 6+ as
+    that race, chasing friendships/alliances/combat wins hard through
+    whichever avenue the player's build supports — the game should not
+    routinely run to round 9-10 for someone who started at 1 VP to reach 10.
+
+    Returns 1.0 in the early game, rising toward ~3.5 by round 9-10 or as
+    soon as ANY player (not just this one — a rival closing in matters too,
+    since it compresses everyone's remaining window) is closing in on 10 VP.
+    """
+    round_component = max(0.0, gs.round - 4) / 6.0            # 0 @R4 -> 1.0 @R10
+    best_vp = max((q.victory_points for q in gs.players), default=0)
+    vp_component = max(0.0, best_vp - 5) / 5.0                 # 0 @<=5 -> 1.0 @10
+    return 1.0 + 2.5 * max(round_component, vp_component)
+
+
+def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> float:
+    """
+    Value of adding `amt` influence to one faction track — or, if fac == "any"
+    (Dangerous Rhetoric etc.), the best of the four choices, since the player
+    picks whichever faction the gain helps most.
+
+    Crossing to friendship (2) or alliance (4) is priced as securing a real VP;
+    overtaking a RIVAL who already holds the alliance is priced even higher —
+    it's a 2-VP swing (they lose it, you gain it), which is the exact
+    "1-2 alliances get fought over" dynamic at high-level play. The
+    VP-securing bonuses scale with `_game_urgency` — a friendship/alliance
+    that finishes the game this round is worth far more than the same gain
+    on round 2 — EXCEPT crossing to friendship also carries a flat,
+    urgency-independent bonus on gated factions (Fremen/Spacing Guild/
+    Emperor) for the board access it unlocks (Sietch Tabr / Shipping /
+    Imperial Privilege), which is valuable throughout the game and
+    especially early, since there are more rounds left to use it.
+
+    Alliance pursuit is additionally scaled by `_faction_access_strength` —
+    committing to a faction whose spaces the player's own deck lets them
+    visit repeatedly is a far more realistic path to 4+ influence than one
+    they have no access-card support for, so that archetype should emerge
+    from what the player has actually bought, not be priced identically
+    across all four factions.
+    """
+    if fac == "any":
+        return max(_influence_gain_value(gs, pid, f, amt) for f in _FACTIONS)
+    p = gs.players[pid]
+    cur = p.influence.get(fac, 0)
+    urgency = _game_urgency(gs, pid)
+    access = _faction_access_strength(gs, pid, fac)
+    v = amt * _RES_VALUE.get(f"influence_{fac}", 2.2)
+    if cur < 2 <= cur + amt:
+        v += 7.0 * urgency                            # friendship secured = 1 VP
+        v += _FRIENDSHIP_GATE_BONUS.get(fac, 0.0)     # durable board access unlocked
+    if cur < 4 <= cur + amt:
+        alliance_mult = 1.0 + 1.5 * access
+        holder = gs.alliance_holder.get(fac)
+        if holder is not None and holder != pid:
+            v += 10.0 * urgency * alliance_mult       # overtake a rival's alliance: ~2 VP swing
+        else:
+            v += 7.5 * urgency * alliance_mult        # first to claim the alliance = 1 VP
+    elif cur >= 4 and gs.alliance_holder.get(fac) == pid:
+        # already hold it: pushing further defends against a close rival
+        if any(q.influence.get(fac, 0) >= cur - 1 for q in gs.players if q.id != pid):
+            v += 1.5 * amt * urgency
+    return v
 
 
 # ---------------------------------------------------------------------------
 
+_WALL_BREAK_KEYS = ("break_shield_wall", "destroy_shield_wall", "may_break_shield_wall")
+_SANDWORM_KEYS = ("sandworm", "sandworm_maker_space")
+
+
 def _effect_value(gs: GameState, pid: int, eff: dict) -> float:
-    p = gs.players[pid]
     v = 0.0
     for k, amt in eff.items():
         if not isinstance(amt, (int, float)):
             continue
-        base = _RES_VALUE.get(k, 0.3)
-        v += base * amt
-        if k in _FACTION_OF:                         # threshold bonuses
-            cur = p.influence[_FACTION_OF[k]]
-            if cur < 2 <= cur + amt:
-                v += 6.0                             # friendship = 1 VP
-            if cur < 4 <= cur + amt:
-                v += 5.0                             # alliance push
+        if k in _FACTION_OF:
+            v += _influence_gain_value(gs, pid, _FACTION_OF[k], amt)
+        elif k == "influence_any":
+            v += _influence_gain_value(gs, pid, "any", amt)
+        elif k in _WALL_BREAK_KEYS:
+            v += _wall_break_value(gs, pid) * amt
+        elif k in _SANDWORM_KEYS:
+            v += _sandworm_value(gs, pid) * amt
+        else:
+            v += _RES_VALUE.get(k, 0.3) * amt
     return v
 
 
@@ -150,13 +259,16 @@ def _card_effect_value(gs: GameState, pid: int, eff: dict, w: float = 1.0) -> fl
             has_intrigue = bool(gs.players[pid].intrigue_cards)
             v += _card_effect_value(gs, pid, sub, w * (0.7 if has_intrigue else 0.25))
         elif isinstance(sub, (int, float)):
-            v += w * _RES_VALUE.get(k, 0.3) * sub
             if k in _FACTION_OF:
-                cur = gs.players[pid].influence[_FACTION_OF[k]]
-                if cur < 2 <= cur + sub:
-                    v += w * 6.0
-                if cur < 4 <= cur + sub:
-                    v += w * 5.0
+                v += w * _influence_gain_value(gs, pid, _FACTION_OF[k], sub)
+            elif k == "influence_any":
+                v += w * _influence_gain_value(gs, pid, "any", sub)
+            elif k in _WALL_BREAK_KEYS:
+                v += w * _wall_break_value(gs, pid) * sub
+            elif k in _SANDWORM_KEYS:
+                v += w * _sandworm_value(gs, pid) * sub
+            else:
+                v += w * _RES_VALUE.get(k, 0.3) * sub
         # other nested dicts (unrecognized structure) contribute nothing,
         # same as before — but recognized ones are no longer invisible.
     return v
@@ -230,7 +342,21 @@ def _intrigue_value(gs: GameState, pid: int, ic) -> float:
 
 
 def _conflict_worth(gs: GameState, pid: int) -> float:
-    """How valuable is winning the current Conflict for this player (~0..4)."""
+    """
+    How valuable is winning the current Conflict for this player. Scaled by
+    `_game_urgency` — the same reward is worth much more to chase once the
+    game is in its round 6+ scoring race, which is what should make combat
+    (worm stomps especially) escalate into the 20+-strength contests seen in
+    high-level round 7-10 play instead of staying flat all game.
+
+    Two situational bumps on top of the raw reward:
+    - A rival who already has a sandworm in this Conflict would DOUBLE their
+      reward by winning it — contesting them (with troops, swords, or your
+      own worm) denies that double, so it's worth more than the face reward.
+    - Winning would complete a battle-icon match you're already holding half
+      of (an immediate, guaranteed 1 VP) — that's worth chasing even when
+      the printed reward itself is modest.
+    """
     cc = gs.current_conflict
     if cc is None:
         return 0.0
@@ -246,7 +372,113 @@ def _conflict_worth(gs: GameState, pid: int) -> float:
     # a controlled-location Conflict the player already holds is worth defending
     if cc.location and gs.controlled_by.get(cc.location) == pid:
         v += 1.0
-    return v
+    if any(gs.sandworms_in_conflict.get(q, 0) > 0
+           for q in range(gs.num_players) if q != pid):
+        v *= 1.5                                  # deny a rival's worm-doubled reward
+    icon = getattr(cc.battle_icon, "value", None)
+    if icon and icon != "wild" and icon in gs.players[pid].battle_icons:
+        v += 4.0                                  # winning completes a guaranteed 1 VP match
+    return v * _game_urgency(gs, pid)
+
+
+def _wall_break_value(gs: GameState, pid: int) -> float:
+    """
+    Breaking the Shield Wall is only good for YOU if it unlocks a sandworm on
+    a Conflict worth winning that you can actually reach with Maker Hooks —
+    otherwise it just as often hands the same worm access to a rival, and
+    the more rivals who already have hooks of their own, the worse an
+    unprepared wall-break is (you've simply opened the door for them).
+    Scaled by `_game_urgency`: a wall-break that opens a worm stomp in round
+    7-9 (the deck's shield-wall-detonating Intrigues exist for exactly this)
+    is one of the highest-leverage plays in the game and should be taken
+    eagerly rather than treated as a minor incidental bonus.
+    """
+    from src.game.board.board import SHIELD_WALL_PROTECTED
+    p = gs.players[pid]
+    cc = gs.current_conflict
+    if not gs.shield_wall_intact:
+        return 0.0
+    if (p.has_maker_hooks and cc is not None
+            and cc.location in SHIELD_WALL_PROTECTED
+            and _conflict_worth(gs, pid) > 1.5):
+        return 2.5 * _game_urgency(gs, pid)
+    rival_hooks = sum(1 for q in gs.players if q.id != pid and q.has_maker_hooks)
+    return -0.5 - 0.4 * rival_hooks
+
+
+def _sandworm_value(gs: GameState, pid: int) -> float:
+    """
+    A sandworm in the Conflict doubles the winner's reward (except control /
+    battle-icon), so summoning one is only worth what winning THIS Conflict
+    is actually worth — not a flat resource value. A worm grabbed when the
+    prize is trivial (or there's no live Conflict at all) is a wasted
+    maker-space visit better spent taking the spice instead; the same worm
+    when the prize is large, or when a rival already has one in there and
+    beating them denies their double, is one of the best plays available
+    (`_conflict_worth` already prices both of those situations in).
+    """
+    worth = _conflict_worth(gs, pid)
+    if worth <= 0.5:
+        return 0.6                                # bank hooks/board-state for later
+    return 0.5 * worth
+
+
+def _spy_post_value(gs: GameState, pid: int, post: Optional[str]) -> float:
+    """
+    Values placing a Spy at a specific observation post by what it actually
+    unlocks — sending an Agent there later via the Spy icon without
+    recalling, or eventually Infiltrating (bypass an occupied space) /
+    Gathering Intelligence (draw a card) from it. Prefers posts bordering a
+    live Conflict's combat space, a faction space for a faction worth
+    pursuing, or a space this player is otherwise gated out of — a spy on
+    the Landsraad Post (High Council/Swordmaster/Imperial Privilege) is not
+    the same asset as one on a post bordering a single minor space.
+    """
+    if not post:
+        return 0.5
+    from src.game.board.board import UPRISING_BOARD, OBSERVATION_POST_CONNECTIONS
+    spaces = OBSERVATION_POST_CONNECTIONS.get(post, ())
+    if not spaces:
+        return 0.5
+    best = 0.0
+    for sp_name in spaces:
+        sp = UPRISING_BOARD.get(sp_name)
+        if sp is None:
+            continue
+        v = sum(_effect_value(gs, pid, eff)
+                for eff in gs.get_space_effects_preview(sp_name))
+        if sp.is_combat_space and gs.current_conflict is not None:
+            v += 0.6 * _conflict_worth(gs, pid)
+        fac = gs._faction_for_space(sp_name)
+        if fac:
+            v += 0.5 * _influence_gain_value(gs, pid, fac, 1)
+        best = max(best, v)
+    # a spy is a durable, reusable asset (repeated Spy-icon sends, or a
+    # later Infiltrate/Gather Intelligence) — a floor plus the best thing
+    # it currently reaches.
+    return 1.0 + 0.5 * best
+
+
+def _combat_build_strength(gs: GameState, pid: int) -> float:
+    """
+    Rough measure of how combat-oriented this player's deck actually is —
+    sword icons on reveal and troop-granting card effects across everything
+    they own (deck/discard/hand/in-play) — so a player who has bought into
+    Strike Fleet / Stilgar the Devoted / sword-heavy reveals leans harder
+    into contesting Conflicts than one whose garrison just happens to be
+    similarly sized this instant.
+    """
+    p = gs.players[pid]
+    all_cards = list(p.deck) + list(p.discard) + list(p.hand) + list(p.in_play)
+    if not all_cards:
+        return 0.0
+    swords = sum(getattr(c, "swords", 0) for c in all_cards)
+    troop_cards = sum(
+        1 for c in all_cards
+        for e in (getattr(c, "agent_effects", []) + getattr(c, "reveal_effects", []))
+        if isinstance(e, dict) and "troops" in e
+    )
+    return (swords + 1.5 * troop_cards) / max(1, len(all_cards))
 
 
 def heuristic_state_value(gs: GameState, pid: int) -> float:
@@ -309,20 +541,35 @@ class HeuristicAgent(Agent):
         if at == ActionType.AGENT_TURN:
             from src.game.board.board import UPRISING_BOARD, SPACE_MANDATORY_COSTS
             sp = UPRISING_BOARD[a.space_name]
-            for eff in gs.get_space_effects_preview(a.space_name):
+            for eff in gs.get_space_effects_preview(a.space_name, a.space_option):
                 s += _effect_value(gs, pid, eff)
+                if "destroy_shield_wall" in eff:
+                    s += _wall_break_value(gs, pid)
             fac = gs._faction_for_space(a.space_name)
             if fac:
-                cur = p.influence[fac]
-                s += 1.4 + (6.0 if cur == 1 else 0.0) + (4.0 if cur == 3 else 0.0)
+                s += _influence_gain_value(gs, pid, fac, 1)
             cost = SPACE_MANDATORY_COSTS.get(a.space_name, {})
             s -= sum(_RES_VALUE.get(k, 0.4) * v for k, v in cost.items())
+            # High Council (+2 persuasion every future Reveal turn) and
+            # Swordmaster (a 3rd Agent every future round) are durable,
+            # compounding structural investments, not one-off payoffs — a
+            # flat bonus badly underprices them once other actions (combat,
+            # friendships) got urgency-scaled up: measured self-play showed
+            # Swordmaster legally available and unclaimed ~4x per player-
+            # game on average, but taken only ~10% of those times, because
+            # a static +7.0 routinely loses to an inflated late-game combat
+            # or friendship score even though grabbing the 3rd Agent by
+            # round 3 is worth far more than either. Price by how many
+            # rounds remain to actually benefit from it — huge early,
+            # negligible in the last round or two.
+            remaining_rounds = max(1, MAX_ROUNDS - gs.round)
             if a.space_name == "High Council" and not p.has_councilor:
-                s += 5.0
-            if a.space_name == "Swordmaster":
-                s += 7.0
+                s += min(15.0, 1.5 * remaining_rounds)
+            if a.space_name == "Swordmaster" and not p.has_swordmaster:
+                s += min(22.0, 2.5 * remaining_rounds)
             if sp.is_combat_space and gs.current_conflict is not None:
-                s += _conflict_worth(gs, pid) * (1.0 + 0.3 * min(p.troops_garrison, 4))
+                s += _conflict_worth(gs, pid) * (1.0 + 0.3 * min(p.troops_garrison, 4)
+                                                  + 0.5 * _combat_build_strength(gs, pid))
             if a.space_option == "pay_spice" and p.spice < 3:
                 s -= 1.0
             if a.use_gather_intelligence:
@@ -361,23 +608,38 @@ class HeuristicAgent(Agent):
             s = 0.0
 
         elif at == ActionType.RESOLVE_DEPLOY:
-            worth = _conflict_worth(gs, pid)          # 0..~4
+            worth = _conflict_worth(gs, pid)           # already urgency-scaled
+            urgency = _game_urgency(gs, pid)
             n = a.deploy_count
             my = gs.troops_in_conflict.get(pid, 0) + n
-            opp = max((gs.troops_in_conflict.get(q, 0)
-                       for q in range(gs.num_players) if q != pid), default=0)
+            opp_visible = max((gs.troops_in_conflict.get(q, 0)
+                               for q in range(gs.num_players) if q != pid), default=0)
+            # Hidden information: opponents still in this Conflict may hold
+            # Combat Intrigues (extra swords) we can't see. Pad the assumed
+            # opposing strength so the AI doesn't cut margins razor-thin
+            # against a field that can swing after we've committed.
+            hidden_swords = sum(min(len(q.intrigue_cards), 3)
+                                 for q in gs.players if q.id != pid)
+            opp = opp_visible + 0.6 * hidden_swords
             # value each committed troop by the reward at stake; bonus for
-            # actually pulling ahead of / catching the leader, penalty for
-            # over-committing when already far ahead or hopelessly behind
+            # actually pulling ahead of / catching the leader
             s = n * (0.15 + 0.7 * worth)
             if worth > 0.5:
                 if my > opp:
                     s += 1.2
                 if 0 < opp - my <= 2:
                     s += 0.8 * worth
-                if my - opp > 3:
-                    s -= 0.5 * (my - opp - 3)
-            s -= 0.35 * n                              # troops have holding value
+                # Extra strength beyond the visible leader is insurance
+                # against hidden intrigues and a hedge against being sniped,
+                # not waste — the slack before it's penalized grows with how
+                # urgent (late-game / high-stakes) the race is, and further
+                # with the reward itself: overcommitting is fine, even good,
+                # for a Conflict that scores multiple VP outright.
+                slack = 3 + 2 * (urgency - 1.0) + 0.5 * worth
+                if my - opp > slack:
+                    s -= 0.5 * (my - opp - slack) / urgency
+            s -= 0.35 * n / urgency                     # troops have holding value early,
+                                                         # ~nothing once the game's a scoring race
             s -= 0.20 * n * max(0, 3 - gs.round)       # early troops are precious
             if p.troops_garrison - n < 1 and worth < 2.0:
                 s -= 1.5                                # don't empty the garrison cheaply
@@ -385,16 +647,25 @@ class HeuristicAgent(Agent):
         elif at == ActionType.RESOLVE_TRASH:
             # thin the weak starter cards; keep bought cards
             if a.trash_card_name in ("Reconnaissance", "Diplomacy",
-                                     "Dune, the Desert Planet", "Dagger"):
+                                     "Dune, the Desert Planet"):
                 s = 2.0
+            elif a.trash_card_name == "Dagger":
+                # Dagger + Signet Ring are the ONLY 2 Landsraad-access cards
+                # in the whole 10-card starter deck. Trashing both copies of
+                # Dagger (as if it were dead-weight like Reconnaissance)
+                # starves the player's own access to Swordmaster/High
+                # Council for many rounds — measured self-play showed the
+                # average first chance at Swordmaster didn't arrive until
+                # round ~6 specifically because of this. Keep at least one
+                # around until the structural payoffs it unlocks are secured.
+                s = 2.0 if (p.has_swordmaster and p.has_councilor) else -2.0
             elif a.trash_card_name is None:
                 s = 0.5
             else:
                 s = -1.0
 
         elif at == ActionType.RESOLVE_INFLUENCE:
-            cur = p.influence[a.influence_faction]
-            s = 1.0 + (5.0 if cur == 1 else 0.0) + (3.0 if cur == 3 else 0.0)
+            s = _influence_gain_value(gs, pid, a.influence_faction, 1)
 
         elif at == ActionType.RESOLVE_CONTRACT:
             ct = (gs.contracts_on_board[a.contract_index]
@@ -408,7 +679,7 @@ class HeuristicAgent(Agent):
                     s += 1.5
 
         elif at == ActionType.RESOLVE_SPY:
-            s = 0.5
+            s = _spy_post_value(gs, pid, a.spy_post_name)
         elif at == ActionType.RESOLVE_UPLIFT:
             s = 2.0
         elif at == ActionType.RESOLVE_INTRIGUE_TRASH:
@@ -514,7 +785,15 @@ def make_agent(spec: str, seed: Optional[int] = None,
                opening_book: Optional[OpeningBook] = None) -> Agent:
     """
     spec: 'random' | 'heuristic' | 'heuristic:T<temp>' |
-          'value' | 'value:<model.npz>' | 'value:<model.npz>:T<temp>'
+          'value' | 'value:<model.npz>' | 'value:<model.npz>:T<temp>' |
+          'value:<model.npz>:T<temp>:HW<heuristic_weight>'
+
+    `HW<x>` overrides GreedyValueAgent's heuristic_weight (default 0.35) —
+    how much the 1-ply lookahead's own trained value prediction gets pulled
+    back toward the flat heuristic's prior. At the default, the heuristic
+    (which has no notion of a discounted/speed-aware target) can swamp a
+    value net trained specifically to prefer faster wins; lower it to let
+    the net's own signal actually drive action selection.
     """
     parts = spec.split(":")
     kind = parts[0]
@@ -527,12 +806,14 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 temp = float(p[1:])
         return HeuristicAgent(seed=seed, opening_book=opening_book, temperature=temp)
     if kind == "value":
-        model, temp = None, 0.0
+        model, temp, hw = None, 0.0, 0.35
         for p in parts[1:]:
             if p.startswith("T"):
                 temp = float(p[1:])
+            elif p.startswith("HW"):
+                hw = float(p[2:])
             elif p:
                 model = ValueModel.load(p)
         return GreedyValueAgent(model=model, temperature=temp, seed=seed,
-                                opening_book=opening_book)
+                                opening_book=opening_book, heuristic_weight=hw)
     raise ValueError(f"Unknown agent spec: {spec!r}")

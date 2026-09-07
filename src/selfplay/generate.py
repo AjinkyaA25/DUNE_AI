@@ -39,10 +39,29 @@ def _play_one(game_idx: int):
     if not res.feats:
         return None
     X = np.stack(res.feats).astype(np.float32)
-    y = np.array([1.0 if pid == res.winner else 0.0
-                  for pid in res.feat_pids], dtype=np.float32)
-    w = np.full(len(y), 0.4 if res.truncated else 1.0, dtype=np.float32)
-    return X, y, w, res.winner, res.final_vp, res.truncated
+    # A flat 1.0/0.0 win label carries no notion of WHEN the win happens —
+    # a 1-ply value-maximizer has no reason to prefer a state that wins
+    # soon over one that wins eventually, since both regress to the same
+    # target. Discount the winner's own samples by how many rounds still
+    # separate them from the actual win (GAMMA=0.90): a state one round
+    # from winning scores ~0.90, five rounds out ~0.59, nine rounds out
+    # (an R1 state that wins at R10) ~0.39. This makes "close to a fast
+    # win" and "close to a slow win" genuinely different targets, so the
+    # learned value directly rewards ending the game sooner, not just
+    # eventually. Losing samples are unaffected (label stays 0).
+    GAMMA = 0.90
+    y = np.array([
+        GAMMA ** max(0, res.rounds_played - rnd) if pid == res.winner else 0.0
+        for pid, rnd in zip(res.feat_pids, res.feat_rounds)
+    ], dtype=np.float32)
+    base_w = 0.4 if res.truncated else 1.0
+    # On top of the discounted target itself, still up-weight a fast (R7/8)
+    # game's samples overall — it has far fewer decision points than a
+    # 9-10 round grind, so without this it's diluted in the replay buffer
+    # purely by sample count even though it's the trajectory worth learning.
+    speed_w = 1.0 + max(0, 8 - res.rounds_played) * 0.3
+    w = np.full(len(y), base_w * speed_w, dtype=np.float32)
+    return X, y, w, res.winner, res.final_vp, res.truncated, res.rounds_played
 
 
 def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
@@ -67,14 +86,15 @@ def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
             results = pool.map(_play_one, range(n_games))
 
     Xs, ys, ws = [], [], []
-    winners, truncs = [], 0
+    winners, truncs, rounds_played = [], 0, []
     for r in results:
         if r is None:
             continue
-        X, y, w, win, vp, trunc = r
+        X, y, w, win, vp, trunc, rp = r
         Xs.append(X); ys.append(y); ws.append(w)
         winners.append(win)
         truncs += int(trunc)
+        rounds_played.append(rp)
 
     X = np.concatenate(Xs); y = np.concatenate(ys); w = np.concatenate(ws)
     shard = os.path.join(out_dir, f"{shard_tag}_{base_seed}_{n_games}.npz")
@@ -86,6 +106,8 @@ def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
         "agent_spec": agent_spec, "num_players": num_players,
         "use_book": use_book, "truncated_games": truncs,
         "positive_rate": float(y.mean()),
+        "avg_rounds_played": round(sum(rounds_played) / max(1, len(rounds_played)), 2),
+        "fast_games_r7_r8": sum(1 for rp in rounds_played if rp in (7, 8)),
         "seconds": round(time.time() - t0, 1),
     }
     with open(shard + ".json", "w", encoding="utf-8") as f:
