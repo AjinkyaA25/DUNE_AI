@@ -43,6 +43,26 @@ _FACTION_OF = {
 }
 _FACTIONS = ("emperor", "spacing_guild", "bene_gesserit", "fremen")
 
+# Set per-call at the top of HeuristicAgent.score() from `self.faction_focus`
+# (single-threaded, no reentrancy — the module-level helpers below read it
+# within that same score() call). `heuristic:ff0` turns it off for A/B.
+_FACTION_FOCUS = True
+_INFLUENCE_BASE = 4.5      # per-point value of influence when _FACTION_FOCUS
+                          # (~0.5 VP: every point is a down payment on the next
+                          #  friendship/alliance threshold, not dead weight)
+
+# Consules community tier list -> a buy-score anchor. `_acquire_card_value`
+# blends this with the situational (effect-driven) score so the AI's purchasing
+# starts from expert pick-priority and the trained value net then learns where
+# to deviate. Cards with tier=None are scored on situational value alone (the
+# user wants the AI to self-assess those).
+from src.data.card_definitions import TIER_ANCHOR as _TIER_ANCHOR
+_TIER_BLEND = 0.70          # weight on the tier anchor vs the situational score
+                            # (situational still moves a card ~+-2 within its band;
+                            #  kept high while the conditional-effect scorer under-
+                            #  rates pay_then / worm_or_persuasion cards like
+                            #  Desert Power — the trained net learns the rest)
+
 # Board spaces gated behind 2+ influence with a specific faction — reaching
 # friendship with these unlocks real, durable board access (Sietch Tabr for
 # combat + hooks + water, Shipping for solari, Imperial Privilege to cycle
@@ -87,6 +107,12 @@ def _game_urgency(gs: GameState, pid: int) -> float:
     Returns 1.0 in the early game, rising toward ~3.5 by round 9-10 or as
     soon as ANY player (not just this one — a rival closing in matters too,
     since it compresses everyone's remaining window) is closing in on 10 VP.
+
+    NOTE (2026-09-10): raising the early floor here (tested up to ~3.0, i.e.
+    near-max urgency all game) does NOT move the winner's VP-velocity curve —
+    the early game is throughput-limited, not valuation-limited, and the R7
+    jump is the conflict deck (level-2 rounds 2-6 award no direct VP; level-3
+    from R7 awards 2). See training_status memory.
     """
     round_component = max(0.0, gs.round - 4) / 6.0            # 0 @R4 -> 1.0 @R10
     best_vp = max((q.victory_points for q in gs.players), default=0)
@@ -123,23 +149,58 @@ def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> floa
         return max(_influence_gain_value(gs, pid, f, amt) for f in _FACTIONS)
     p = gs.players[pid]
     cur = p.influence.get(fac, 0)
+    amt = int(round(amt))
+    new = min(6, cur + amt)
     urgency = _game_urgency(gs, pid)
     access = _faction_access_strength(gs, pid, fac)
-    v = amt * _RES_VALUE.get(f"influence_{fac}", 2.2)
-    if cur < 2 <= cur + amt:
-        v += 7.0 * urgency                            # friendship secured = 1 VP
-        v += _FRIENDSHIP_GATE_BONUS.get(fac, 0.0)     # durable board access unlocked
-    if cur < 4 <= cur + amt:
+
+    if not _FACTION_FOCUS:
+        v = amt * _RES_VALUE.get(f"influence_{fac}", 2.2)
+        if cur < 2 <= new:
+            v += 7.0 * urgency
+            v += _FRIENDSHIP_GATE_BONUS.get(fac, 0.0)
+        if cur < 4 <= new:
+            alliance_mult = 1.0 + 1.5 * access
+            holder = gs.alliance_holder.get(fac)
+            v += (10.0 if (holder is not None and holder != pid) else 7.5) * urgency * alliance_mult
+        elif cur >= 4 and gs.alliance_holder.get(fac) == pid \
+                and any(q.influence.get(fac, 0) >= cur - 1 for q in gs.players if q.id != pid):
+            v += 1.5 * amt * urgency
+        return v
+
+    # faction_focus: value each influence point by how it moves you toward the
+    # NEXT unreached threshold, so the AI spreads to four friendships (4 clean
+    # VP) instead of hoarding one track to 5-6 (measured: winner's influence
+    # sits ~[4.8, 2.9, 1.8, 0.9] — tracks 3 & 4 stranded below friendship = ~2
+    # wasted VP). A point that overshoots a threshold with nothing to finish is
+    # nearly dead; a point one step from a threshold you can realistically
+    # reach is a ~0.5-VP down payment.
+    rounds_left = max(1, MAX_ROUNDS - gs.round)
+    reach = min(1.0, (0.45 + 2.2 * access) * rounds_left / 3.0)   # can I finish this track?
+    v = 0.0
+    if cur < 2 <= new:                                # friendship crossed = clean 1 VP
+        v += 5.5 * urgency + _FRIENDSHIP_GATE_BONUS.get(fac, 0.0)
+    if cur < 4 <= new:                                # alliance crossed
         alliance_mult = 1.0 + 1.5 * access
         holder = gs.alliance_holder.get(fac)
-        if holder is not None and holder != pid:
-            v += 10.0 * urgency * alliance_mult       # overtake a rival's alliance: ~2 VP swing
+        v += (10.0 if (holder is not None and holder != pid) else 7.5) * urgency * alliance_mult
+    # per-point "down payment" on points that DON'T cross a threshold this gain
+    for pos in range(cur + 1, new + 1):
+        if pos == 2 or pos == 4:
+            continue                                  # the crossing point itself, already scored
+        if pos < 2:
+            v += 4.0 * reach                          # 0->1: heading to friendship
+        elif pos < 4:
+            # 2->3: only worth it if committed to the alliance (access + a rival
+            # not already parked ahead of you) — otherwise it's the classic
+            # stranded overshoot
+            committed = reach * (0.7 if gs.alliance_holder.get(fac) in (None, pid) else 1.1)
+            v += 3.0 * min(1.0, committed)
         else:
-            v += 7.5 * urgency * alliance_mult        # first to claim the alliance = 1 VP
-    elif cur >= 4 and gs.alliance_holder.get(fac) == pid:
-        # already hold it: pushing further defends against a close rival
-        if any(q.influence.get(fac, 0) >= cur - 1 for q in gs.players if q.id != pid):
-            v += 1.5 * amt * urgency
+            v += 0.4                                  # 5,6: essentially dead
+    if cur >= 4 and gs.alliance_holder.get(fac) == pid \
+            and any(q.influence.get(fac, 0) >= cur - 1 for q in gs.players if q.id != pid):
+        v += 1.5 * amt * urgency                      # defend a contested alliance
     return v
 
 
@@ -274,7 +335,44 @@ def _card_effect_value(gs: GameState, pid: int, eff: dict, w: float = 1.0) -> fl
     return v
 
 
-def _acquire_card_value(gs: GameState, pid: int, card) -> float:
+def _deck_total(p) -> int:
+    """Every card the player owns, across all zones — their working deck size."""
+    return len(p.deck) + len(p.discard) + len(p.hand) + len(p.in_play)
+
+
+# A lean deck (you cycle it faster, so your good cards come up more often) is
+# worth defending. Past this many cards, marginal filler should stop looking
+# like a buy while genuine upgrades still clear the bar. The starting deck is
+# 10; the intent is ~4-6 good acquisitions offset by trashing weak starters,
+# landing around a 12-14 card deck rather than the ~18 the flat scorer built.
+_DECK_TARGET = 12
+
+
+def _dilution_penalty(gs: GameState, p) -> float:
+    """Score to subtract from a prospective buy for bloating the deck past the
+    lean target. Ramps hard per card over the target, held near full strength
+    through the deck-cycling part of the game and fading only in the last
+    couple of rounds (where a late VP grab like TSMF shouldn't be suppressed)."""
+    over = _deck_total(p) - _DECK_TARGET
+    if over <= 0:
+        return 0.0
+    fade = max(0.0, min(1.0, (MAX_ROUNDS - 1 - gs.round) / 3.0))
+    return 0.9 * fade * over
+
+
+def _faction_cards_owned(p, fac: str) -> int:
+    """How many cards this player already owns that grant access to `fac`."""
+    n = 0
+    for zone in (p.deck, p.discard, p.hand, p.in_play):
+        for c in zone:
+            for sym in getattr(c, "access_symbols", ()):
+                if getattr(sym, "value", sym) == fac:
+                    n += 1
+                    break
+    return n
+
+
+def _acquire_card_value(gs: GameState, pid: int, card, lean: bool = False) -> float:
     """
     Shared valuation for buying a card, whether from the Imperium Row
     (ACQUIRE_CARD) or a reserve stack (ACQUIRE_RESERVE — The Spice Must Flow /
@@ -289,16 +387,36 @@ def _acquire_card_value(gs: GameState, pid: int, card) -> float:
               getattr(card, "reveal_effects", []) +
               getattr(card, "acquire_effects", [])):
         s += 0.8 * _card_effect_value(gs, pid, e)
-    # Faction-access is a DURABLE asset — but only cheaply usable with a 3rd
-    # Agent (Swordmaster): with only 2 Agents, spending one on a faction space
-    # is a much bigger opportunity cost against board-space value, so the
-    # access is worth much less until you have Swordmaster.
+    # Faction-access cards are the early-game VP engine. Every turn you play one
+    # on a faction space is +1 influence ~= 0.5 VP (friendship progress), and a
+    # deck with several access cards for one faction is what actually lets you
+    # push a track to friendship/alliance and keep showing up in that faction's
+    # conflicts (battle-icon pairs). Price the access as a recurring asset, with
+    # diminishing returns once you already hold a few for that faction and a
+    # softer (not 0.35) discount before Swordmaster.
     p = gs.players[pid]
-    fac_mult = 1.0 if p.has_swordmaster else 0.35
+    seen_fac = set()
     for sym in getattr(card, "access_symbols", ()):
         fac = getattr(sym, "value", sym)
-        if fac in _FACTION_OF.values():
-            cur = p.influence.get(fac, 0)
+        if fac not in _FACTION_OF.values() or fac in seen_fac:
+            continue
+        seen_fac.add(fac)
+        cur = p.influence.get(fac, 0)
+        if cur >= 4:
+            continue                              # track maxed — access adds little
+        if _FACTION_FOCUS:
+            base = 3.5                            # ~0.5 VP x ~1.5 future influence gains, discounted
+            if cur == 1:
+                base += 2.5                       # a play here crosses to friendship
+            elif cur == 3:
+                base += 3.0                       # a play here crosses to alliance
+            owned = _faction_cards_owned(p, fac)
+            base *= max(0.4, 1.0 - 0.28 * owned)  # 3rd+ copy for one faction is filler
+            if not p.has_swordmaster:
+                base *= 0.75
+            s += base
+        else:
+            fac_mult = 1.0 if p.has_swordmaster else 0.35
             s += fac_mult * (1.2 + (2.0 if cur == 1 else 0.0)
                              + (1.5 if cur == 3 else 0.0))
     # NOTE: no flat "expensive = good" bonus — a costly card whose payoff sits
@@ -310,7 +428,61 @@ def _acquire_card_value(gs: GameState, pid: int, card) -> float:
     # competes normally (i.e. only wins out when the Row has nothing better).
     if card.name == "The Spice Must Flow" and gs.round < 4:
         s *= 0.15
+
+    # Blend in the Consules tier list as a soft pick-priority prior. The
+    # situational score `s` still moves the card within/around its tier band
+    # (a card whose condition is live, an alliance you now hold, influence at
+    # 1->2, ...), but the anchor stops filler from scoring the same as an
+    # S-tier card just because the net is card-blind. tier=None -> unchanged.
+    anchor = _TIER_ANCHOR.get(getattr(card, "tier", None))
+    if anchor is not None:
+        s = _TIER_BLEND * anchor + (1.0 - _TIER_BLEND) * s
+
+    # Prepare the Way is a cheap tempo/ramp card, not a payload: the 2nd copy is
+    # worth far less than the first (same conditional solari, same Landsraad/BG
+    # access you already have) and a 3rd/4th is dead weight that only dilutes
+    # the deck. The flat scorer was draining the whole 8-card reserve stack
+    # every game (buyer win-rate well below fair). Tax each copy past the first,
+    # after the tier blend so the B anchor can't paper over it — always on,
+    # since PTW-spam is a losing pattern regardless of deck-size philosophy.
+    if card.name == "Prepare the Way":
+        owned = sum(1 for z in (p.deck, p.discard, p.hand, p.in_play)
+                    for c in z if c.name == "Prepare the Way")
+        if owned >= 1:
+            s -= 4.0 + 2.0 * (owned - 1)
+
+    # Deck-dilution pressure. Applied AFTER the tier blend so it bites every
+    # card equally: once the deck is bloated, a C-tier filler (blended ~3) goes
+    # negative and gets skipped, while an S/A upgrade (blended ~7-8) still
+    # clears the bar. This is what turns "buy something every reveal" into
+    # "buy only when it's an actual upgrade, otherwise bank the turn".
+    if lean:
+        s -= _dilution_penalty(gs, p)
     return s
+
+
+def _own_combat_intrigue_swords(gs: GameState, pid: int) -> float:
+    """Swords this player could still add to the CURRENT combat from Combat
+    Intrigues sitting in their hand (playable only with >=1 unit in the
+    Conflict). Lets the deploy scorer see 'an opponent under-deployed and I'm
+    holding Find Weakness — commit the troops and take this' instead of pricing
+    the deploy off raw troops alone."""
+    from src.game.intrigue.intrigue import IntrigueTiming
+    total = 0.0
+    for ic in gs.players[pid].intrigue_cards:
+        ts = ic.timing if isinstance(ic.timing, (set, tuple, list, frozenset)) else (ic.timing,)
+        if IntrigueTiming.COMBAT not in ts:
+            continue
+        sw = 0.0
+        for e in ic.effects:
+            fe = _flatten(e)
+            v = fe.get("swords", 0)
+            sw += v if isinstance(v, (int, float)) else 2.0
+            for sub in fe.values():                     # e.g. retreat_for -> {swords: N}
+                if isinstance(sub, dict) and isinstance(sub.get("swords"), (int, float)):
+                    sw += sub["swords"]
+        total += sw if sw else 2.0                      # deploy / pull-troop combat cards ~= 2
+    return min(total, 8.0)
 
 
 def _intrigue_value(gs: GameState, pid: int, ic) -> float:
@@ -396,9 +568,20 @@ def _conflict_worth(gs: GameState, pid: int) -> float:
     if any(gs.sandworms_in_conflict.get(q, 0) > 0
            for q in range(gs.num_players) if q != pid):
         v *= 1.5                                  # deny a rival's worm-doubled reward
+    # Battle icons. The conflict's icon is known at round start, so the AI can
+    # aim its combat at the conflicts that build toward icon-pair VP, not just
+    # the ones that print a VP.
     icon = getattr(cc.battle_icon, "value", None)
-    if icon and icon != "wild" and icon in gs.players[pid].battle_icons:
-        v += 4.0                                  # winning completes a guaranteed 1 VP match
+    held = gs.players[pid].battle_icons
+    if icon == "wild":
+        v += 1.8                                  # pairs with anything at Endgame
+    elif icon and icon in held:
+        v += 4.0                                  # completes a guaranteed 1 VP now
+    elif icon:
+        # first icon of this type — a half-pair. ~0.5 VP in expectation once you
+        # win another of the same; worth more to a player who already wins
+        # combat regularly (more icons in hand = more chances the next win pairs).
+        v += 1.6 + 0.8 * min(2, sum(1 for x in held if x != "wild"))
     return v * _game_urgency(gs, pid)
 
 
@@ -547,14 +730,37 @@ class HeuristicAgent(Agent):
 
     def __init__(self, seed: Optional[int] = None,
                  opening_book: Optional[OpeningBook] = None,
-                 temperature: float = 0.0):
+                 temperature: float = 0.0, lean_deck: bool = False,
+                 sm_boost: bool = True, faction_focus: bool = True):
         self.rng = random.Random(seed)
         self.book = opening_book if opening_book is not None else OpeningBook.default()
         self.temperature = temperature
+        # sm_boost (2026-09-10, default ON): price Swordmaster + the solari that
+        # buys it aggressively so the AI actually secures the 3rd agent in the
+        # opening. `heuristic:sm0` reverts to the old min(22, 2.5r) pricing.
+        self.sm_boost = sm_boost
+        # faction_focus (2026-09-10, default ON): value faction-access cards as a
+        # recurring +1-influence (~0.5 VP) engine when buying, so the AI builds a
+        # deck that can actually push a track to friendship/alliance and keep
+        # showing up in that faction's icon conflicts. `heuristic:ff0` disables.
+        self.faction_focus = faction_focus
+        # lean_deck (2026-09-09, EXPERIMENTAL, default OFF): adds a deck-dilution
+        # penalty + a "bank the turn" option so the AI stops buying filler every
+        # reveal and targets a ~13-15 card deck. Arena-tested against the flat
+        # scorer: a lone lean player in a field of greedy buyers goes ~0.81x
+        # fair when tuned aggressively and ~1.0x when gentle — the current
+        # heuristic can't exploit a lean deck (Uprising has almost no on-demand
+        # trashing, and unspent persuasion is wasted, so "buy less" just means
+        # "weaker board"). Kept as a lever for the value-net retrain path, where
+        # deck-quality features could let the net actually use it. Enable with
+        # the `heuristic:lean` spec. The PTW-spam tax is separate and always on.
+        self.lean_deck = lean_deck
 
     # -- per-action score ----------------------------------------------
 
     def score(self, gs: GameState, pid: int, a: GameAction) -> float:
+        global _FACTION_FOCUS
+        _FACTION_FOCUS = self.faction_focus
         p = gs.players[pid]
         at = a.action_type
         s = 0.0
@@ -573,21 +779,41 @@ class HeuristicAgent(Agent):
             s -= sum(_RES_VALUE.get(k, 0.4) * v for k, v in cost.items())
             # High Council (+2 persuasion every future Reveal turn) and
             # Swordmaster (a 3rd Agent every future round) are durable,
-            # compounding structural investments, not one-off payoffs — a
-            # flat bonus badly underprices them once other actions (combat,
-            # friendships) got urgency-scaled up: measured self-play showed
-            # Swordmaster legally available and unclaimed ~4x per player-
-            # game on average, but taken only ~10% of those times, because
-            # a static +7.0 routinely loses to an inflated late-game combat
-            # or friendship score even though grabbing the 3rd Agent by
-            # round 3 is worth far more than either. Price by how many
-            # rounds remain to actually benefit from it — huge early,
-            # negligible in the last round or two.
+            # compounding structural investments, not one-off payoffs. The
+            # value is roughly (worth of one extra agent-play) x (rounds left)
+            # — a 3rd agent from round 3 is 7 extra plays, one of the biggest
+            # swings in the game and the backbone of contesting combat every
+            # round. Measured at the old min(22, 2.5r): the Swordmaster action
+            # was legal + affordable + reachable 591 times and DECLINED 523 of
+            # them (88%) because a single round's urgency-inflated combat or
+            # friendship out-scored it — even though it pays that back every
+            # subsequent round. Priced now to win the agent-slot in the
+            # opening/midgame and taper as fewer rounds remain to benefit.
             remaining_rounds = max(1, MAX_ROUNDS - gs.round)
+            _sm = self.sm_boost
             if a.space_name == "High Council" and not p.has_councilor:
-                s += min(15.0, 1.5 * remaining_rounds)
+                s += min(20.0, 2.5 * remaining_rounds) if _sm else min(15.0, 1.5 * remaining_rounds)
             if a.space_name == "Swordmaster" and not p.has_swordmaster:
-                s += min(22.0, 2.5 * remaining_rounds)
+                s += (min(30.0, 4.0 * remaining_rounds) + 2.0) if _sm \
+                    else min(22.0, 2.5 * remaining_rounds)
+            # Building toward the 3rd agent: while Swordmaster is still unbought,
+            # solari that closes the gap to its cost is worth well above face
+            # value — this is what makes Spice Refinery (and other solari
+            # spaces) a real opening priority instead of a ~1-point play.
+            if _sm and not p.has_swordmaster and remaining_rounds >= 4:
+                from src.game.board.board import (SWORDMASTER_COST_FIRST,
+                                                  SWORDMASTER_COST_AFTER)
+                sm_cost = (SWORDMASTER_COST_AFTER
+                           if any(q.has_swordmaster for q in gs.players)
+                           else SWORDMASTER_COST_FIRST)
+                gap = sm_cost - p.solari
+                if gap > 0:
+                    solari_here = sum(
+                        e["solari"] for e in
+                        gs.get_space_effects_preview(a.space_name, a.space_option)
+                        if isinstance(e.get("solari"), (int, float)) and e["solari"] > 0)
+                    if solari_here:
+                        s += 2.0 * min(solari_here, gap)
             if sp.is_combat_space and gs.current_conflict is not None:
                 s += _conflict_worth(gs, pid) * (1.0 + 0.3 * min(p.troops_garrison, 4)
                                                   + 0.5 * _combat_build_strength(gs, pid))
@@ -606,7 +832,7 @@ class HeuristicAgent(Agent):
         elif at == ActionType.ACQUIRE_CARD:
             card = next((c for c in gs.imperium_row if c.name == a.acquire_card_name), None)
             if card:
-                s += _acquire_card_value(gs, pid, card)
+                s += _acquire_card_value(gs, pid, card, self.lean_deck)
                 s += 5.0 * self.book.bonus(gs, pid, a)
 
         elif at == ActionType.ACQUIRE_RESERVE:
@@ -614,7 +840,7 @@ class HeuristicAgent(Agent):
                      else gs.reserve_prepare_the_way)
             card = stack[-1] if stack else None
             if card:
-                s += _acquire_card_value(gs, pid, card)
+                s += _acquire_card_value(gs, pid, card, self.lean_deck)
 
         elif at == ActionType.PLAY_INTRIGUE:
             ic = next((c for c in p.intrigue_cards
@@ -623,7 +849,23 @@ class HeuristicAgent(Agent):
                 s += _intrigue_value(gs, pid, ic)
 
         elif at == ActionType.END_REVEAL:
-            s = -0.5 + (2.0 if gs.persuasion_pool.get(pid, 0) < 2 else -1.0)
+            pool = gs.persuasion_pool.get(pid, 0)
+            s = -0.5 + (2.0 if pool < 2 else -1.0)
+            # Banking a lean turn is a legitimate choice. If the deck is already
+            # a healthy size and nothing affordable in the Row or reserves is an
+            # actual upgrade (its dilution-adjusted value is weak), stopping now
+            # beats spending persuasion just to bloat the deck with filler.
+            if self.lean_deck and _deck_total(p) >= 14:
+                best = 0.0
+                cands = list(gs.imperium_row)
+                for stack in (gs.reserve_prepare_the_way, gs.reserve_spice_must_flow):
+                    if stack:
+                        cands.append(stack[-1])
+                for c in cands:
+                    if c.cost <= pool:
+                        best = max(best, _acquire_card_value(gs, pid, c, self.lean_deck))
+                if best < 4.5:
+                    s += 3.0
 
         elif at == ActionType.COMBAT_PASS:
             s = 0.0
@@ -642,6 +884,11 @@ class HeuristicAgent(Agent):
             hidden_swords = sum(min(len(q.intrigue_cards), 3)
                                  for q in gs.players if q.id != pid)
             opp = opp_visible + 0.6 * hidden_swords
+            # OUR OWN Combat Intrigues are known swords we can add once we have
+            # a unit in the fight — count them toward our reachable strength so
+            # we actually commit to a Conflict we're holding the tools to win.
+            own_ci = _own_combat_intrigue_swords(gs, pid)
+            my_reachable = my + own_ci
             # value each committed troop by the reward at stake; bonus for
             # actually pulling ahead of / catching the leader
             s = n * (0.15 + 0.7 * worth)
@@ -650,6 +897,18 @@ class HeuristicAgent(Agent):
                     s += 1.2
                 if 0 < opp - my <= 2:
                     s += 0.8 * worth
+                # An under-deployed field + Combat Intrigues in hand = a
+                # crucial Conflict we can steal. Reward committing enough
+                # troops to (a) make the intrigues playable and (b) get
+                # my_reachable over the top.
+                already_in = gs.troops_in_conflict.get(pid, 0)
+                if own_ci > 0 and _is_crucial_combat(gs, pid):
+                    if already_in == 0 and n > 0:
+                        s += 1.5 * worth               # get a foot in the door so CIs fire
+                    if my < opp and my_reachable >= opp:
+                        s += 1.8 * worth * urgency     # this deploy makes it winnable
+                    elif my_reachable < opp and n > 0:
+                        s += 0.5 * worth               # still building toward it
                 # Extra strength beyond the visible leader is insurance
                 # against hidden intrigues and a hedge against being sniped,
                 # not waste — the slack before it's penalized grows with how
@@ -816,12 +1075,20 @@ class GreedyValueAgent(Agent):
                  branch_cap: int = 14, temperature: float = 0.0,
                  seed: Optional[int] = None,
                  opening_book: Optional[OpeningBook] = None,
-                 heuristic_weight: float = 0.35):
+                 heuristic_weight: float = 0.35,
+                 policy=None, policy_weight: float = 0.25):
         self.model = model
         self.rollout = rollout or HeuristicAgent(seed=seed, opening_book=opening_book)
         self.branch_cap = branch_cap
         self.temperature = temperature
         self.heuristic_weight = heuristic_weight   # anchor lookahead to the heuristic prior
+        # policy head (AWR-trained P(action|state)): a prior that can favour a
+        # compounding move (Swordmaster, an alliance push) that 1-ply value
+        # lookahead can't see, because it learned the move->win correlation
+        # across whole games. Added to each candidate's score as
+        # policy_weight * log pi(a|s).
+        self.policy = policy
+        self.policy_weight = policy_weight
         self.rng = random.Random(seed)
         self.book = self.rollout.book
 
@@ -849,17 +1116,30 @@ class GreedyValueAgent(Agent):
             hs = [hs[i] for i in keep]
         lo, hi = min(hs), max(hs)
         span = (hi - lo) or 1.0
+        h_norms = [(h - lo) / span for h in hs]
+
+        pol_logp = [0.0] * len(acts)
+        if self.policy is not None:
+            try:
+                from src.ai.action_features import encode_action
+                af = np.stack([encode_action(gs, pid, a, hn)
+                               for a, hn in zip(acts, h_norms)])
+                pol = self.policy.policy(encode_state(gs, pid), af)
+                pol_logp = list(np.log(np.clip(pol, 1e-6, 1.0)))
+            except Exception:
+                pol_logp = [0.0] * len(acts)
+
         vals = []
-        for a, h in zip(acts, hs):
+        for a, h_norm, plp in zip(acts, h_norms, pol_logp):
             g2 = gs.clone()
             try:
                 g2.step(a)
                 leaf = self._leaf(g2, pid)
             except Exception:
                 leaf = -1.0
-            h_norm = (h - lo) / span                     # 0..1
             vals.append(leaf
                         + self.heuristic_weight * h_norm
+                        + self.policy_weight * plp
                         + 0.03 * self.book.bonus(gs, pid, a))
         if self.temperature <= 0:
             return acts[max(range(len(acts)), key=lambda i: vals[i])]
@@ -884,7 +1164,7 @@ def _softmax_pick(actions, scores, temp, rng):
 def make_agent(spec: str, seed: Optional[int] = None,
                opening_book: Optional[OpeningBook] = None) -> Agent:
     """
-    spec: 'random' | 'heuristic' | 'heuristic:T<temp>' |
+    spec: 'random' | 'heuristic' | 'heuristic:T<temp>' | 'heuristic:lean' |
           'bully' | 'bully:T<temp>' (crucial-combat exploiter sparring partner) |
           'value' | 'value:<model.npz>' | 'value:<model.npz>:T<temp>' |
           'value:<model.npz>:T<temp>:HW<heuristic_weight>'
@@ -897,15 +1177,38 @@ def make_agent(spec: str, seed: Optional[int] = None,
     the net's own signal actually drive action selection.
     """
     parts = spec.split(":")
+    # Re-join a Windows drive-letter split, e.g. "value:C:/models/v.npz" splits
+    # to ["value", "C", "/models/v.npz"] — "C" + "/models/v.npz" -> "C:/models/v.npz".
+    merged, i = [], 0
+    while i < len(parts):
+        if (len(parts[i]) == 1 and parts[i].isalpha() and i + 1 < len(parts)
+                and parts[i + 1][:1] in ("/", "\\")):
+            merged.append(parts[i] + ":" + parts[i + 1])
+            i += 2
+        else:
+            merged.append(parts[i])
+            i += 1
+    parts = merged
     kind = parts[0]
     if kind == "random":
         return RandomAgent(seed=seed)
     if kind == "heuristic":
         temp = 0.0
+        lean = False
+        sm_boost = True
+        faction_focus = True
         for p in parts[1:]:
             if p.startswith("T"):
                 temp = float(p[1:])
-        return HeuristicAgent(seed=seed, opening_book=opening_book, temperature=temp)
+            elif p in ("lean", "L1"):
+                lean = True
+            elif p == "sm0":
+                sm_boost = False
+            elif p == "ff0":
+                faction_focus = False
+        return HeuristicAgent(seed=seed, opening_book=opening_book,
+                              temperature=temp, lean_deck=lean, sm_boost=sm_boost,
+                              faction_focus=faction_focus)
     if kind == "bully":
         temp = 0.0
         for p in parts[1:]:
@@ -913,14 +1216,25 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 temp = float(p[1:])
         return CombatBullyAgent(seed=seed, opening_book=opening_book, temperature=temp)
     if kind == "value":
-        model, temp, hw = None, 0.0, 0.35
+        # value:<value.npz>[:<policy.npz>][:T<temp>][:HW<hw>][:PW<policy_weight>]
+        # the 2nd .npz-ending part (or any part starting 'PP') is the policy head.
+        model, policy, temp, hw, pw = None, None, 0.0, 0.35, 0.25
         for p in parts[1:]:
             if p.startswith("T"):
                 temp = float(p[1:])
             elif p.startswith("HW"):
                 hw = float(p[2:])
+            elif p.startswith("PW"):
+                pw = float(p[2:])
+            elif p.startswith("PP"):
+                from src.ai.policy_model import PolicyModel
+                policy = PolicyModel.load(p[2:])
+            elif p.endswith(".npz") and model is not None:
+                from src.ai.policy_model import PolicyModel
+                policy = PolicyModel.load(p)
             elif p:
                 model = ValueModel.load(p)
         return GreedyValueAgent(model=model, temperature=temp, seed=seed,
-                                opening_book=opening_book, heuristic_weight=hw)
+                                opening_book=opening_book, heuristic_weight=hw,
+                                policy=policy, policy_weight=pw)
     raise ValueError(f"Unknown agent spec: {spec!r}")

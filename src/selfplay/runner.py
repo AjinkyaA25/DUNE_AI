@@ -17,6 +17,7 @@ from src.game.gameState import ActionType
 from src.ai.features import encode_state
 
 MOVE_CAP = 1500
+POLICY_KMAX = 20            # candidates kept per decision for the policy head
 
 
 @dataclass
@@ -32,10 +33,26 @@ class GameResult:
     feats: List[np.ndarray] = field(default_factory=list)
     feat_pids: List[int] = field(default_factory=list)
     feat_rounds: List[int] = field(default_factory=list)
+    # policy-head trajectory, aligned 1:1 with feats[] when record_policy=True:
+    #   pol_actA[i]  (K_i, ACTION_FEATURE_DIM)  candidate-action features
+    #   pol_ci[i]    int                        index of the action actually taken
+    pol_actA: List[np.ndarray] = field(default_factory=list)
+    pol_ci: List[int] = field(default_factory=list)
+
+
+_POL_SCORER = None
+
+
+def _pol_scorer():
+    global _POL_SCORER
+    if _POL_SCORER is None:
+        from src.ai.agents import HeuristicAgent
+        _POL_SCORER = HeuristicAgent(seed=0)
+    return _POL_SCORER
 
 
 def play_game(agents, num_players: int = 4, seed: Optional[int] = None,
-              leaders=None, record: bool = True,
+              leaders=None, record: bool = True, record_policy: bool = False,
               use_choam: bool = True, neutral_leaders: bool = True) -> GameResult:
     """
     `neutral_leaders` defaults to True: Leader ability text is unverified, so
@@ -48,6 +65,10 @@ def play_game(agents, num_players: int = 4, seed: Optional[int] = None,
     feats: List[np.ndarray] = []
     feat_pids: List[int] = []
     feat_rounds: List[int] = []
+    pol_actA: List[np.ndarray] = []
+    pol_ci: List[int] = []
+    if record_policy:
+        from src.ai.action_features import encode_action
 
     moves = 0
     truncated = False
@@ -60,11 +81,28 @@ def play_game(agents, num_players: int = 4, seed: Optional[int] = None,
             pid = gs.get_current_player_id()
         valid = gs.get_valid_actions(pid)
         non_noop = [a for a in valid if a.action_type != ActionType.NO_OP]
-        if record and non_noop:
+        do_rec = record and bool(non_noop)
+        if do_rec:
             feats.append(encode_state(gs, pid))
             feat_pids.append(pid)
             feat_rounds.append(gs.round)
         action = agents[pid].select_action(gs, pid, valid)
+        if do_rec and record_policy:
+            sc = _pol_scorer()
+            hs = [sc.score(gs, pid, a) for a in non_noop]
+            keep = sorted(range(len(non_noop)), key=lambda k: hs[k],
+                          reverse=True)[:POLICY_KMAX]
+            ai = next((k for k, a in enumerate(non_noop) if a is action), 0)
+            if ai not in keep:                   # always keep the action taken
+                keep = keep[:POLICY_KMAX - 1] + [ai]
+            cand = [non_noop[k] for k in keep]
+            chs = [hs[k] for k in keep]
+            lo, hi = min(chs), max(chs)
+            span = (hi - lo) or 1.0
+            pol_actA.append(np.stack([
+                encode_action(gs, pid, a, (h - lo) / span)
+                for a, h in zip(cand, chs)]))
+            pol_ci.append(cand.index(non_noop[ai]))
         gs.step(action)
         moves += 1
 
@@ -87,4 +125,6 @@ def play_game(agents, num_players: int = 4, seed: Optional[int] = None,
         feats=feats,
         feat_pids=feat_pids,
         feat_rounds=feat_rounds,
+        pol_actA=pol_actA,
+        pol_ci=pol_ci,
     )

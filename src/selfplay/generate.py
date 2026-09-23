@@ -47,8 +47,9 @@ def _play_one(game_idx: int):
             rogue_pids.add(rp)
             agents[rp] = make_agent(rogue_spec, seed=seed * 4 + rp + 991,
                                     opening_book=book)
+    rec_pol = cfg.get("record_policy", False)
     res = play_game(agents, num_players=n, seed=seed, record=True,
-                    use_choam=cfg["use_choam"])
+                    record_policy=rec_pol, use_choam=cfg["use_choam"])
     if not res.feats:
         return None
     if rogue_pids:
@@ -56,6 +57,9 @@ def _play_one(game_idx: int):
         res.feats = [res.feats[i] for i in keep]
         res.feat_pids = [res.feat_pids[i] for i in keep]
         res.feat_rounds = [res.feat_rounds[i] for i in keep]
+        if rec_pol and res.pol_actA:
+            res.pol_actA = [res.pol_actA[i] for i in keep]
+            res.pol_ci = [res.pol_ci[i] for i in keep]
         if not res.feats:
             return None
     X = np.stack(res.feats).astype(np.float32)
@@ -81,7 +85,21 @@ def _play_one(game_idx: int):
     # purely by sample count even though it's the trajectory worth learning.
     speed_w = 1.0 + max(0, 8 - res.rounds_played) * 0.3
     w = np.full(len(y), base_w * speed_w, dtype=np.float32)
-    return X, y, w, res.winner, res.final_vp, res.truncated, res.rounds_played
+
+    PA = PM = PCI = None
+    if rec_pol and res.pol_actA and len(res.pol_actA) == len(res.feats):
+        from src.ai.action_features import ACTION_FEATURE_DIM
+        from src.selfplay.runner import POLICY_KMAX
+        n = len(res.pol_actA)
+        PA = np.zeros((n, POLICY_KMAX, ACTION_FEATURE_DIM), dtype=np.float32)
+        PM = np.zeros((n, POLICY_KMAX), dtype=np.float32)
+        PCI = np.asarray(res.pol_ci, dtype=np.int32)
+        for i, af in enumerate(res.pol_actA):
+            k = min(len(af), POLICY_KMAX)
+            PA[i, :k] = af[:k]
+            PM[i, :k] = 1.0
+    return (X, y, w, res.winner, res.final_vp, res.truncated,
+            res.rounds_played, PA, PM, PCI)
 
 
 def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
@@ -89,11 +107,12 @@ def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
                       out_dir: str = "data/selfplay", base_seed: int = 0,
                       use_book: bool = True, use_choam: bool = True,
                       shard_tag: str = "s", rogue_spec: str = None,
-                      rogue_seats: int = 1) -> dict:
+                      rogue_seats: int = 1, record_policy: bool = False) -> dict:
     os.makedirs(out_dir, exist_ok=True)
     cfg = dict(num_players=num_players, agent_spec=agent_spec,
                base_seed=base_seed, use_book=use_book, use_choam=use_choam,
-               rogue_spec=rogue_spec, rogue_seats=rogue_seats)
+               rogue_spec=rogue_spec, rogue_seats=rogue_seats,
+               record_policy=record_policy)
     t0 = time.time()
 
     results = []
@@ -108,19 +127,26 @@ def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
             results = pool.map(_play_one, range(n_games))
 
     Xs, ys, ws = [], [], []
+    PAs, PMs, PCIs = [], [], []
     winners, truncs, rounds_played = [], 0, []
     for r in results:
         if r is None:
             continue
-        X, y, w, win, vp, trunc, rp = r
+        X, y, w, win, vp, trunc, rp, PA, PM, PCI = r
         Xs.append(X); ys.append(y); ws.append(w)
+        if PA is not None:
+            PAs.append(PA); PMs.append(PM); PCIs.append(PCI)
         winners.append(win)
         truncs += int(trunc)
         rounds_played.append(rp)
 
     X = np.concatenate(Xs); y = np.concatenate(ys); w = np.concatenate(ws)
     shard = os.path.join(out_dir, f"{shard_tag}_{base_seed}_{n_games}.npz")
-    np.savez_compressed(shard, X=X, y=y, w=w)
+    extra = {}
+    if PAs and sum(len(p) for p in PAs) == len(y):
+        extra = dict(PA=np.concatenate(PAs), PM=np.concatenate(PMs),
+                     PCI=np.concatenate(PCIs))
+    np.savez_compressed(shard, X=X, y=y, w=w, **extra)
 
     manifest = {
         "shard": os.path.basename(shard),
@@ -149,3 +175,23 @@ def load_shards(out_dir: str, last_k: int = 0):
     if not Xs:
         raise FileNotFoundError(f"no shards in {out_dir}")
     return (np.concatenate(Xs), np.concatenate(ys), np.concatenate(ws))
+
+
+def load_policy_shards(out_dir: str, last_k: int = 0):
+    """Concatenate the policy-head arrays (state X, return y, weight w, padded
+    candidate feats PA, mask PM, chosen index PCI) from shards that carry them.
+    Raises if no shard has policy data."""
+    shards = sorted(p for p in os.listdir(out_dir) if p.endswith(".npz"))
+    if last_k > 0:
+        shards = shards[-last_k:]
+    Xs, ys, ws, PAs, PMs, PCIs = [], [], [], [], [], []
+    for s in shards:
+        z = np.load(os.path.join(out_dir, s))
+        if "PA" not in z.files:
+            continue
+        Xs.append(z["X"]); ys.append(z["y"]); ws.append(z["w"])
+        PAs.append(z["PA"]); PMs.append(z["PM"]); PCIs.append(z["PCI"])
+    if not PAs:
+        raise FileNotFoundError(f"no policy shards (PA arrays) in {out_dir}")
+    return (np.concatenate(Xs), np.concatenate(ys), np.concatenate(ws),
+            np.concatenate(PAs), np.concatenate(PMs), np.concatenate(PCIs))

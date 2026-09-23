@@ -39,8 +39,10 @@ _TAG = {
 
 
 def _make(name, cost, ctype, access=(), tags=(), agent=None, reveal=None,
-          persuasion=0, swords=0, acquire=None, trash=None, notes="") -> Card:
+          persuasion=0, swords=0, acquire=None, trash=None, notes="",
+          tier=None) -> Card:
     c = _c(name, ctype, cost)
+    c.tier = tier
     for a in access:
         c.add_access_symbol(_ACCESS[a])
     for t in tags:
@@ -103,9 +105,41 @@ I = CardType.IMPERIUM
 R = CardType.RESERVE
 
 
+# S/A/B/C/D/F -> a numeric pick-priority anchor, shared by the heuristic buy
+# scorer (agents._acquire_card_value) and the value-net "deck quality" feature.
+TIER_ANCHOR = {"S": 9.0, "A": 6.8, "B": 4.6, "C": 3.0, "D": 1.6, "F": 0.4}
+
+# Consules community tier list (youtu.be/aDNenYScyhI), transcribed 2026-09-09.
+# See config/consules_tierlist_DRAFT.md. Cards NOT listed here keep tier=None ->
+# agents._acquire_card_value scores them purely on situational merit (the user
+# wants the AI to self-assess those, guided by what the rest of the list values).
+_IMPERIUM_TIERS = {
+    # high confidence — creator states the tier verbatim
+    "Guild Spy": "S", "Undercover Asset": "S", "Calculus of Power": "S",
+    "Desert Power": "S",
+    "Space-Time Folding": "A", "Spy Network": "A", "Imperial Spymaster": "A",
+    "Reliable Informant": "A", "Wheels Within Wheels": "A", "Double Agent": "A",
+    "Chani, Clever Tactician": "A", "Dangerous Rhetoric": "A",
+    "Captured Mentat": "A", "Corrinth City": "A",
+    "Sardaukar Soldier": "B", "Weirding Woman": "B", "Maker Keeper": "B",
+    "Guild Envoy": "B", "Covert Operation": "B",
+    "Unswerving Loyalty": "C", "Fedaykin Stilltent": "C", "Cargo Runner": "C",
+    "Delivery Agreement": "C", "Branching Path": "C",
+    "Smuggler's Harvester": "D", "Hidden Missive": "D", "Desert Survival": "D",
+    # medium confidence — keyword parse + video comments
+    "Overthrow": "S", "Public Spectacle": "S", "Strike Fleet": "S",
+    "Interstellar Trade": "S",
+    "Steersman": "A", "Sardaukar Coordination": "A", "Spacing Guild's Favor": "A",
+    "Truthtrance": "A", "Price is No Object": "A", "Ecological Testing Station": "A",
+    "Treacherous Maneuver": "A",
+    "In High Places": "B", "Long Live the Fighters": "B", "Leadership": "B",
+    "Bene Gesserit Operative": "B",
+}
+
+
 def create_imperium_cards() -> List[Card]:
     m = _make
-    return [
+    cards = [
         m("Arrakis Revolt", 6, I, access=["city"], tags=["fremen"],
           agent={"if_hooks": {"pay_spice_spawn_sandworm": 2}}, persuasion=1, swords=3,
           notes="Agent: if you have Maker Hooks, you MAY spend 2 spice to summon a "
@@ -383,6 +417,10 @@ def create_imperium_cards() -> List[Card]:
                  "if_influence_spacing_guild_2": {"spice": 1}},
           persuasion=1, reveal={"spy": 1}),
     ]  # 57 imperium cards (Prepare the Way moved to a reserve stack)
+    for c in cards:
+        if c.name in _IMPERIUM_TIERS:
+            c.tier = _IMPERIUM_TIERS[c.name]
+    return cards
 
 
 # ---------------------------------------------------------------------------
@@ -395,7 +433,7 @@ def create_reserve_prepare_the_way(count: int = 8) -> List[Card]:
     return [_make("Prepare the Way", 2, CardType.RESERVE,
                   access=["landsraad", "city"], tags=["bene_gesserit"],
                   agent={"if_influence_bene_gesserit_2": {"solari": 1}},
-                  persuasion=2) for _ in range(count)]
+                  persuasion=2, tier="B") for _ in range(count)]
 
 
 def create_reserve_spice_must_flow(count: int = 10) -> List[Card]:
