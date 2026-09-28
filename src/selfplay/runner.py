@@ -53,14 +53,15 @@ def _pol_scorer():
 
 def play_game(agents, num_players: int = 4, seed: Optional[int] = None,
               leaders=None, record: bool = True, record_policy: bool = False,
-              use_choam: bool = True, neutral_leaders: bool = True) -> GameResult:
+              use_choam: bool = True, neutral_leaders: bool = True,
+              use_bloodlines: bool = False) -> GameResult:
     """
     `neutral_leaders` defaults to True: Leader ability text is unverified, so
     self-play / eval / training runs ignore Leaders unless `leaders` names
     specific ones (which always takes priority over this flag).
     """
     gs = setup_game(num_players=num_players, seed=seed, use_choam=use_choam,
-                    leaders=leaders,
+                    leaders=leaders, use_bloodlines=use_bloodlines,
                     neutral_leaders=neutral_leaders and leaders is None)
     feats: List[np.ndarray] = []
     feat_pids: List[int] = []

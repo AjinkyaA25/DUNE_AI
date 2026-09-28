@@ -160,6 +160,7 @@ class Player:
         self.spice += amount
         if amount > 0:
             self.gained_spice_this_turn = True   # Leverage precondition
+            self.spice_gained_this_turn = getattr(self, "spice_gained_this_turn", 0) + amount
 
     def gain_water(self, amount: int):
         """Gain water"""
@@ -231,18 +232,21 @@ class Player:
             if self.deck:
                 self.hand.append(self.deck.pop())
 
-    def play_card_as_agent(self, card: 'Card'):
+    def play_card_as_agent(self, card: 'Card', icons_checked: bool = False):
         """
         Move card from hand to in-play area
         Does NOT resolve effects - that's handled by GameState/EffectResolver
 
         Args:
             card: Card to play
+            icons_checked: the caller already verified the card may go to its
+                space (icons granted by other effects, e.g. Bloodlines'
+                Delivery Logistics, aren't printed on the card)
         """
         if card not in self.hand:
             raise ValueError(f"Card {card.name} not in player's hand")
 
-        if not card.can_play_as_agent():
+        if not icons_checked and not card.can_play_as_agent():
             raise ValueError(f"Card {card.name} has no access symbols")
 
         self.hand.remove(card)

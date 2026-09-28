@@ -696,6 +696,7 @@ def setup_game(
     use_choam: bool = True,
     leaders=None,
     neutral_leaders: bool = False,
+    use_bloodlines: bool = False,
 ) -> GameState:
     """
     Return a fully initialized GameState with round 1 started and hands dealt.
@@ -711,15 +712,22 @@ def setup_game(
     if not (2 <= num_players <= 4):
         raise ValueError("num_players must be 2–4")
 
-    gs = GameState(num_players=num_players, seed=seed, use_choam=use_choam)
+    gs = GameState(num_players=num_players, seed=seed, use_choam=use_choam,
+                   use_bloodlines=use_bloodlines)
 
+    imperium, intrigues = create_imperium_cards(), create_intrigue_deck()
+    if use_bloodlines:
+        from src.game.bloodlines.cards import (create_bloodlines_imperium_cards,
+                                               create_bloodlines_intrigues)
+        imperium += create_bloodlines_imperium_cards()
+        intrigues += create_bloodlines_intrigues()
     gs.setup_conflict_deck(create_conflict_deck(gs.rng))
     gs.setup_imperium_deck(
-        create_imperium_cards(),
+        imperium,
         create_reserve_prepare_the_way(),
         create_reserve_spice_must_flow(),
     )
-    gs.setup_intrigue_deck(create_intrigue_deck())
+    gs.setup_intrigue_deck(intrigues)
     if use_choam:
         from src.game.contract.contract_definitions import create_uprising_contracts
         gs.setup_choam_contracts(create_uprising_contracts())

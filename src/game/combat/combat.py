@@ -80,6 +80,10 @@ class Combat:
         for tech in player.techs:
             if tech.has_passive_reveal_bonus():
                 bonus += tech.passive_reveal_bonus.get("swords", 0)
+        # Bloodlines sword skills (Canny / Fierce / Loyal): live, not locked in
+        # at reveal - they need a commander in the Conflict at combat time.
+        if getattr(game_state, "bl", None) is not None:
+            bonus += game_state.bl.strength_bonus(player.id)
         return bonus
 
     @staticmethod

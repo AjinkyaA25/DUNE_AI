@@ -56,6 +56,15 @@ class EffectResolver:
                       + len(getattr(c, "agent_effects", [])))
         player.hand.remove(tgt)
         player.discard.append(tgt)
+        EffectResolver._note_discard(player, tgt)
+
+    @staticmethod
+    def _note_discard(player, card) -> None:
+        """Remember a card discarded by an effect (Bloodlines 'when this card
+        is discarded' triggers resolve after the action)."""
+        pending = getattr(player, "bl_discarded", None)
+        if pending is not None:
+            pending.append(card)
 
     @staticmethod
     def _resolve_self_referential(effect: Dict, card, player, game_state) -> None:
@@ -143,7 +152,12 @@ class EffectResolver:
           may_convert, may_trash                     — optional; surfaced as actions, NOT executed
           persuasion                                 — add to per-turn persuasion pool
           swords                                     — add to per-turn swords pool (reveal only)
+          bl_*, if_bl_*, command                     — Bloodlines (bloodlines/rules.py)
         """
+        _bl = getattr(game_state, "bl", None)
+        if _bl is not None and any(k.startswith(("bl_", "if_bl_")) or k == "command"
+                                   for k in effect):
+            _bl.resolve_effect(effect, player)
         # ===== SELF-REFERENTIAL requests (drained later with the card ref) =====
         # Recorded here so they fire even when nested in a conditional that
         # only resolved because its precondition was true.
@@ -476,6 +490,8 @@ class EffectResolver:
                 player.water -= spec.get("cost", 2)
                 gs.spawn_sandworms(spec.get("sandworm", 1), source="card_effect")
                 d = min(spec.get("deploy", 0), player.troops_garrison)
+                if getattr(gs, "bl", None) is not None:
+                    gs.bl.deploy_commanders(player.id, d)
                 player.troops_garrison -= d
                 gs.troops_in_conflict[player.id] = gs.troops_in_conflict.get(player.id, 0) + d
 
@@ -669,8 +685,12 @@ class EffectResolver:
                 k = min(n, in_conf)
                 gs.troops_in_conflict[player.id] -= k
                 player.troops_garrison += k
+                if getattr(gs, "bl", None) is not None:
+                    gs.bl.retreat_to_garrison(player.id, k)
             elif player.troops_garrison > 0:
                 k = min(n, player.troops_garrison)
+                if getattr(gs, "bl", None) is not None:
+                    gs.bl.deploy_commanders(player.id, k)
                 player.troops_garrison -= k
                 gs.troops_in_conflict[player.id] = in_conf + k
 
@@ -867,6 +887,8 @@ class EffectResolver:
         if "deploy" in effect and game_state.current_conflict is not None:
             n = min(effect["deploy"], player.troops_garrison)
             if n > 0:
+                if getattr(game_state, "bl", None) is not None:
+                    game_state.bl.deploy_commanders(player.id, n)
                 player.troops_garrison -= n
                 game_state.troops_in_conflict[player.id] = (
                     game_state.troops_in_conflict.get(player.id, 0) + n)
@@ -874,7 +896,9 @@ class EffectResolver:
         # ===== SECRETS: steal a random Intrigue from every opponent 4+ =====
         if "secrets_steal" in effect:
             for opp in game_state.players:
-                if opp.id != player.id and len(opp.intrigue_cards) >= 4:
+                if opp.id != player.id and len(opp.intrigue_cards) >= 4 and not (
+                        getattr(game_state, "bl", None) is not None
+                        and game_state.bl.steal_protected(opp.id)):  # Gene-Locked Vault
                     idx = int(game_state.rng.integers(len(opp.intrigue_cards)))
                     stolen = opp.intrigue_cards.pop(idx)
                     player.intrigue_cards.append(stolen)
@@ -885,6 +909,7 @@ class EffectResolver:
                 if opp.id != player.id and opp.hand:
                     idx = int(game_state.rng.integers(len(opp.hand)))
                     opp.discard.append(opp.hand.pop(idx))
+                    EffectResolver._note_discard(opp, opp.discard[-1])
 
         # ===== BREAK THE SHIELD WALL (optional) =====
         # Approximated: break it if the current Conflict is at a protected
@@ -925,6 +950,7 @@ class EffectResolver:
                           + len(getattr(c, "agent_effects", [])))
                 player.hand.remove(tgt)
                 player.discard.append(tgt)
+                EffectResolver._note_discard(player, tgt)
                 EffectResolver.resolve_single_effect(
                     effect["discard_then_if_sg"], player, game_state)
             else:

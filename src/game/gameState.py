@@ -109,6 +109,9 @@ class ActionType(Enum):
     PLAY_INTRIGUE        = "play_intrigue"
     COMBAT_PASS          = "combat_pass"
     NO_OP                = "no_op"
+    # Bloodlines
+    RESOLVE_BL_CHOICE    = "resolve_bl_choice"  # tech buy / commander / skill choices
+    ACTIVATE_TECH        = "activate_tech"      # flip a once-per-round tech tile
 
 
 @dataclass
@@ -143,6 +146,8 @@ class GameAction:
     # Heighliner (legacy)
     spice_cost: int                   = 0
     troop_count: int                  = 0
+    # Bloodlines: RESOLVE_BL_CHOICE option string / ACTIVATE_TECH tile name
+    choice: Optional[str]             = None
 
     def __repr__(self) -> str:
         extra = ""
@@ -152,6 +157,8 @@ class GameAction:
             extra += f", n={self.deploy_count}"
         if self.intrigue_card_name:
             extra += f", intrigue={self.intrigue_card_name}"
+        if self.choice:
+            extra += f", choice={self.choice}"
         return (f"GameAction({self.action_type.value}, p={self.player_id}, "
                 f"card={self.card_name}, space={self.space_name}{extra})")
 
@@ -278,6 +285,7 @@ class GameState:
         num_players: int = 4,
         seed: Optional[int] = None,
         use_choam: bool = True,
+        use_bloodlines: bool = False,
     ):
         if not (2 <= num_players <= 4):
             raise ValueError("GameState supports 2–4 players.")
@@ -397,6 +405,13 @@ class GameState:
         self._self_ref_pending: List[str] = []
         self._combat_intrigue_players: Set[int] = set()   # who played a Combat Intrigue this Conflict
         self._prev_vp: Dict[int, int] = {i: 1 for i in range(num_players)}
+
+        # ===== BLOODLINES (techs, Sardaukar Commanders, Command) =====
+        self.use_bloodlines = use_bloodlines
+        self.bl = None
+        if use_bloodlines:
+            from src.game.bloodlines.rules import Bloodlines
+            self.bl = Bloodlines(self)
 
     # -----------------------------------------------------------------------
     # Setup helpers
@@ -560,6 +575,10 @@ class GameState:
                     actions.append(GameAction(ActionType.ACQUIRE_RESERVE,
                                               player_id,
                                               reserve_type="spice_must_flow"))
+            if self.bl:
+                for name in self.bl.activatable(player_id, agent_turn=False):
+                    actions.append(GameAction(ActionType.ACTIVATE_TECH, player_id,
+                                              choice=name))
             actions.append(GameAction(ActionType.END_REVEAL, player_id))
             return actions
 
@@ -610,6 +629,13 @@ class GameState:
                         actions.append(GameAction(ActionType.PLAY_INTRIGUE, player_id,
                                                   intrigue_card_name=ic.name))
 
+            # Bloodlines: flip a once-per-round tech before this turn's action
+            if self.bl and not_revealed and not self.is_in_atomic_block():
+                for name in self.bl.activatable(
+                        player_id, agent_turn=p.agents_available > 0):
+                    actions.append(GameAction(ActionType.ACTIVATE_TECH, player_id,
+                                              choice=name))
+
             # Reveal turn is always available if not yet revealed
             if not_revealed:
                 actions.append(GameAction(ActionType.REVEAL_TURN, player_id))
@@ -646,10 +672,13 @@ class GameState:
         old_vp = self.players[pid].victory_points
         info: Dict = {"action": repr(action), "error": None}
 
+        bl_before = self.bl.snapshot() if self.bl else None
         try:
             self._dispatch_action(action)
         except (MandatoryEffectSkipped, AtomicBlockViolation, ValueError) as exc:
             info["error"] = str(exc)
+        if self.bl:
+            self.bl.sync(bl_before)
 
         # Deferred conditional reveal effects fire once the revealing player has
         # cleared their pending choices (so e.g. a Spy placed on the Reveal turn
@@ -749,6 +778,10 @@ class GameState:
             self._step_play_intrigue(action)
         elif at == ActionType.COMBAT_PASS:
             self._step_combat_pass(action)
+        elif at == ActionType.RESOLVE_BL_CHOICE and self.bl:
+            self.bl.resolve_choice(pid, action.choice)
+        elif at == ActionType.ACTIVATE_TECH and self.bl:
+            self.bl.activate(pid, action.choice)
         # NO_OP: do nothing
 
     def _step_agent_turn(self, action: GameAction) -> None:
@@ -786,6 +819,8 @@ class GameState:
         self.player_in_reveal_buy = pid
         self.players_revealed.add(pid)
         self.current_turn_type = TurnType.REVEAL
+        if self.bl:
+            self.bl.open_command_window(pid)
 
     def _step_end_reveal(self, action: GameAction) -> None:
         pid = action.player_id
@@ -803,6 +838,8 @@ class GameState:
         # Recall in-play cards and reset swords (mark_reveal_complete does both)
         self.mark_reveal_complete(pid)
         self.persuasion_pool[pid]  = 0
+        if self.bl:
+            self.bl.close_command_window(pid)
         self.player_in_reveal_buy  = None
         # Advance to next player or combat
         self.advance_to_next_player_turn()
@@ -821,7 +858,7 @@ class GameState:
             self.persuasion_pool[pid] -= cost
             p.reserved_card = None
             p.reserved_discount = 0
-            p.discard.append(card)
+            self._to_acquired_pile(pid, card)
             p.cards_acquired_this_turn += 1
             self._trigger_acquire_effects(pid, card)
             if self.use_choam:
@@ -998,6 +1035,7 @@ class GameState:
                     tgt = min(tagged, key=lambda c: c.persuasion + c.swords)
                     p.hand.remove(tgt)
                     p.discard.append(tgt)
+                    EffectResolver._note_discard(p, tgt)
                     discarded_tag = True
                     continue
             EffectResolver._discard_worst(p)
@@ -1137,7 +1175,8 @@ class GameState:
             any(p.player_id == player_id for p in self.pending_trashes) or
             any(p.player_id == player_id for p in self.pending_influence_choices) or
             any(p.player_id == player_id for p in self.pending_contract_choices) or
-            any(p.player_id == player_id for p in self.pending_optional_payments)
+            any(p.player_id == player_id for p in self.pending_optional_payments) or
+            (self.bl is not None and self.bl.has_pending(player_id))
         )
 
     def _can_pay_optional(self, player_id: int, op: "PendingOptionalPayment") -> bool:
@@ -1221,6 +1260,11 @@ class GameState:
                 actions.append(GameAction(ActionType.RESOLVE_CONTRACT,
                                           player_id, contract_index=i))
 
+        if self.bl:
+            for opt in self.bl.pending_options(player_id):
+                actions.append(GameAction(ActionType.RESOLVE_BL_CHOICE, player_id,
+                                          choice=opt))
+
         return actions or [GameAction(ActionType.NO_OP, player_id)]
 
     # -----------------------------------------------------------------------
@@ -1266,6 +1310,8 @@ class GameState:
 
     def gain_persuasion(self, player_id: int, amount: int) -> None:
         self.persuasion_pool[player_id] = self.persuasion_pool.get(player_id, 0) + amount
+        if self.bl:
+            self.bl.on_persuasion(player_id, amount)
 
     def spend_persuasion(self, player_id: int, amount: int) -> bool:
         if self.persuasion_pool.get(player_id, 0) < amount:
@@ -1311,6 +1357,8 @@ class GameState:
 
         for i in range(self.num_players):
             self.draw_cards_for_player(i, 5)
+        if self.bl:
+            self.bl.on_round_start()
 
         self.phase                = Phase.PLAYER_TURNS
         self.current_turn_idx     = 0
@@ -1400,6 +1448,8 @@ class GameState:
 
         required_icon = BOARD_SPACE_ICONS[space_name]
         card_icons    = {s.value for s in card.access_symbols}
+        if self.bl:
+            card_icons |= self.bl.extra_icons(player_id, card)
 
         has_matching_icon = required_icon in card_icons
         if (not has_matching_icon and required_icon == "emperor"
@@ -1414,7 +1464,9 @@ class GameState:
         if not has_matching_icon and not has_spy_icon:
             return False, f"Card has no icon matching '{required_icon}' (or no Spy connected)"
 
-        if self.agent_on_space.get(space_name) is not None:
+        if self.agent_on_space.get(space_name) is not None and not (
+                self.bl and "ignore_blocking" in player.bl_flags   # Invasion Ships
+                and self.agent_on_space.get(space_name) != player_id):
             if not self.can_infiltrate(player_id, space_name):
                 return False, f"{space_name} is occupied and player cannot Infiltrate"
 
@@ -1430,7 +1482,7 @@ class GameState:
                 )
 
         if space_name in BOARD_SPACE_MANDATORY_COSTS:
-            cost = BOARD_SPACE_MANDATORY_COSTS[space_name]
+            cost = self._space_cost(player_id, space_name)
             if not player.can_afford(cost):
                 return False, f"Cannot afford {cost} to visit {space_name}"
 
@@ -1493,6 +1545,7 @@ class GameState:
         player.troops_recruited_this_turn = 0
         player.recalled_spy_this_turn = False
         player.gained_spice_this_turn = False
+        player.spice_gained_this_turn = 0
         player.deploy_budget_this_turn = 0
         player.deployed_this_turn = 0
         player.maker_bonus_this_turn = 0
@@ -1504,7 +1557,7 @@ class GameState:
             player.leader.trigger("on_agent_turn_start", player, self)
         try:
             # 1. Play card
-            player.play_card_as_agent(card)
+            player.play_card_as_agent(card, icons_checked=True)
             if player.leader is not None:
                 player.leader.trigger("on_card_played", player, self, card)
                 if card.name == "Signet Ring" and player.leader.signet is not None:
@@ -1512,7 +1565,7 @@ class GameState:
 
             # 2. Pay mandatory cost + place agent
             if space_name in BOARD_SPACE_MANDATORY_COSTS:
-                player.pay_cost(BOARD_SPACE_MANDATORY_COSTS[space_name])
+                player.pay_cost(self._space_cost(player_id, space_name))
             self.agent_on_space[space_name] = player_id
             player.agents_available -= 1
 
@@ -1551,10 +1604,15 @@ class GameState:
             if player.leader is not None:
                 player.leader.trigger("on_agent_placed", player, self, space_name)
 
+            # 8c. Bloodlines: tech purchase (green space) / commander recruit
+            if self.bl:
+                self.bl.on_agent_placed(player_id, space_name, card)
+
             # 9. Combat deployment — a Combat space is a deploy icon: it opens a
             #    per-turn budget of 2 (once) + every troop recruited this turn.
             space = UPRISING_BOARD[space_name]
-            if space.is_combat_space and self.current_conflict is not None:
+            dropships = self.bl is not None and "dropships" in player.bl_flags
+            if (space.is_combat_space or dropships) and self.current_conflict is not None:
                 player.deploy_budget_this_turn = max(
                     player.deploy_budget_this_turn,
                     2 + player.troops_recruited_this_turn)
@@ -1568,6 +1626,13 @@ class GameState:
             # One-shot access relaxers are consumed by this Agent turn.
             player.ignore_influence_gates_this_turn = False
             player.grant_emperor_access_this_turn = False
+            if self.bl:
+                self.bl.end_agent_turn(player_id)
+
+    def _space_cost(self, player_id: int, space_name: str) -> Dict:
+        """Mandatory cost to visit a space (Navigation Chamber: 1 less)."""
+        cost = BOARD_SPACE_MANDATORY_COSTS.get(space_name, {})
+        return self.bl.space_cost(player_id, cost) if self.bl else cost
 
     def _apply_board_space_effects(
         self, player_id: int, space_name: str, space_option: Optional[str] = None
@@ -1699,6 +1764,8 @@ class GameState:
         """Move `n` troops from garrison straight into the current Conflict."""
         p = self.players[player_id]
         n = max(0, min(n, p.troops_garrison))
+        if self.bl:
+            self.bl.deploy_commanders(player_id, n)
         p.troops_garrison -= n
         p.deployed_this_turn = getattr(p, "deployed_this_turn", 0) + n
         self.troops_in_conflict[player_id] = self.troops_in_conflict.get(player_id, 0) + n
@@ -1792,6 +1859,8 @@ class GameState:
 
         for card in cards_to_reveal:
             EffectResolver.resolve_reveal_effects(card, player, self)
+        if self.bl:
+            self.bl.on_reveal(player_id, cards_to_reveal)
 
         troops    = self.troops_in_conflict.get(player_id, 0)
         sandworms = self.sandworms_in_conflict.get(player_id, 0)
@@ -1818,7 +1887,7 @@ class GameState:
         if card not in self.imperium_row:
             return False
         self.imperium_row.remove(card)
-        self.players[player_id].discard.append(card)
+        self._to_acquired_pile(player_id, card)
         self.players[player_id].cards_acquired_this_turn += 1
         # Refill row FIRST, then trigger acquire effects (FAQ requirement)
         self.refill_imperium_row()
@@ -1826,6 +1895,15 @@ class GameState:
         if self.use_choam:
             self.check_acquire_contracts(player_id, card.name)
         return True
+
+    def _to_acquired_pile(self, player_id: int, card: Card) -> None:
+        """Acquired cards go to the discard pile - or on top of the deck with
+        Spaceport (always taken: a fresh card is drawn sooner)."""
+        p = self.players[player_id]
+        if self.bl and self.bl.has(player_id, "Spaceport"):
+            p.deck.append(card)             # deck.pop() draws from the end
+        else:
+            p.discard.append(card)
 
     def acquire_reserve_card(self, player_id: int, card_type: str) -> bool:
         if card_type == "prepare_the_way":
@@ -1837,7 +1915,7 @@ class GameState:
         if not stack:
             return False
         card = stack.pop()
-        self.players[player_id].discard.append(card)
+        self._to_acquired_pile(player_id, card)
         self.players[player_id].cards_acquired_this_turn += 1
         self._trigger_acquire_effects(player_id, card)
         if self.use_choam:
@@ -1984,6 +2062,8 @@ class GameState:
             self.won_conflicts[conflict_card_goes_to].append(conflict)
             self._award_battle_icon(conflict_card_goes_to, conflict.battle_icon)
             winner_p = self.players[conflict_card_goes_to]
+            if self.bl:
+                self.bl.on_win_conflict(conflict_card_goes_to)
             if winner_p.leader is not None:
                 winner_p.leader.trigger("on_combat_win", winner_p, self, conflict)
 
@@ -2102,6 +2182,8 @@ class GameState:
         if icon is None:
             return False
         name = icon.value if hasattr(icon, "value") else str(icon)
+        if self.bl:
+            name = self.bl.battle_icon(player_id, name)     # Ornithopter Fleet
         p = self.players[player_id]
         if name != "wild" and name in p.battle_icons:
             p.battle_icons.remove(name)          # consume the matched pair
@@ -2113,6 +2195,8 @@ class GameState:
         return False
 
     def _cleanup_after_combat(self) -> None:
+        if self.bl:
+            self.bl.after_combat()        # commanders -> commander supply
         for pid in range(self.num_players):
             troop_count = self.troops_in_conflict.get(pid, 0)
             if troop_count > 0:
@@ -2139,6 +2223,8 @@ class GameState:
     # -----------------------------------------------------------------------
 
     def resolve_recall_phase(self) -> None:
+        if self.bl:
+            self.bl.reset_round()
         for player in self.players:
             player.reset_agents()
             player.ignore_influence_gates_this_turn = False
@@ -2332,6 +2418,12 @@ class GameState:
 
     def draw_intrigue_for_player(self, player_id: int, count: int) -> None:
         player = self.players[player_id]
+        before = len(player.intrigue_cards)
+        self._draw_intrigues(player, count)
+        if self.bl:
+            self.bl.on_intrigue_drawn(player_id, len(player.intrigue_cards) - before)
+
+    def _draw_intrigues(self, player, count: int) -> None:
         for _ in range(count):
             if not self.intrigue_deck:
                 if not self.intrigue_discard:
@@ -2379,6 +2471,8 @@ class GameState:
         player.complete_contract(contract)
         for key, value in contract.rewards.items():
             EffectResolver.resolve_single_effect({key: value}, player, self)
+        if self.bl:
+            self.bl.on_complete_contract(player_id)
 
     def check_board_space_contracts(self, player_id: int, space_name: str) -> None:
         player = self.players[player_id]
@@ -2507,6 +2601,8 @@ class GameState:
             self.game_over = True
             self.phase     = Phase.GAME_OVER
             _vp_before = {p.id: p.victory_points for p in self.players}
+            if self.bl:
+                self.bl.endgame()
             self._resolve_endgame_intrigues()
             self._resolve_endgame_battle_icons()
             self._endgame_vp_gained = {
@@ -2545,7 +2641,9 @@ class GameState:
 
     def _determine_winner(self) -> int:
         def sort_key(p: Player):
-            return (p.victory_points, p.spice, p.solari, p.water, p.troops_garrison)
+            chaumurky = bool(self.bl and self.bl.wins_ties(p.id))
+            return (p.victory_points, chaumurky, p.spice, p.solari, p.water,
+                    p.troops_garrison)
         return max(range(self.num_players), key=lambda i: sort_key(self.players[i]))
 
     def trigger_endgame_intrigues(self) -> None:
