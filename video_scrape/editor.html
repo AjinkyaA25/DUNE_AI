@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dune Game Editor</title>
+<style>
+  :root {
+    --bg: #15130f; --panel: #1e1b16; --line: #332e26; --text: #e9e2d4;
+    --muted: #9a9080; --accent: #d9a441; --me: #2c2616; --warn: #e0873a;
+    --bad: #d0554a; --ok: #6fae6a; --input: #262219;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 13px/1.4 system-ui, "Segoe UI", sans-serif; }
+  header { display: flex; gap: 12px; align-items: center; padding: 8px 14px;
+           border-bottom: 1px solid var(--line); background: var(--panel);
+           position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0 8px 0 0; color: var(--accent); }
+  select, input, button { font: inherit; color: var(--text); background: var(--input);
+           border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); color: #1a1408; border-color: var(--accent);
+                   font-weight: 600; }
+  button:disabled { opacity: .45; cursor: default; }
+  #status { color: var(--muted); margin-left: auto; }
+  #status.dirty { color: var(--warn); }
+  main { display: grid; grid-template-columns: minmax(360px, 44%) 1fr; height: calc(100vh - 49px); }
+  #left { padding: 12px; border-right: 1px solid var(--line); overflow: auto; }
+  #player { width: 100%; aspect-ratio: 16/9; background: #000; }
+  #meta { margin-top: 10px; }
+  #meta table { border-collapse: collapse; width: 100%; }
+  #meta td, #meta th { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+  .help { color: var(--muted); font-size: 12px; margin-top: 12px; }
+  .help kbd { background: var(--input); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
+  #right { overflow: auto; }
+  .filters { display: flex; gap: 8px; align-items: center; padding: 8px 12px;
+             border-bottom: 1px solid var(--line); position: sticky; top: 0;
+             background: var(--bg); z-index: 3; flex-wrap: wrap; }
+  .filters label { display: flex; gap: 4px; align-items: center; color: var(--muted); }
+  table.moves { border-collapse: collapse; width: 100%; }
+  table.moves td { padding: 3px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr.round td { background: var(--panel); color: var(--accent); font-weight: 600; padding: 6px 8px; }
+  tr.round .sub { color: var(--muted); font-weight: 400; margin-left: 10px; }
+  tr.mine td { background: var(--me); }
+  tr.current td { outline: 1px solid var(--accent); outline-offset: -1px; }
+  tr.flagged td:first-child { box-shadow: inset 3px 0 var(--warn); }
+  td.t button { width: 62px; font-variant-numeric: tabular-nums; }
+  td input { width: 100%; min-width: 60px; }
+  td select { max-width: 150px; }
+  .fields { display: flex; gap: 4px; }
+  .fields input { flex: 1; }
+  .flag { display: inline-flex; gap: 4px; align-items: center; background: #3a2616;
+          color: var(--warn); border-radius: 10px; padding: 0 8px; margin: 2px 2px 0 0; font-size: 11px; }
+  .flag b { cursor: pointer; }
+  .raw { color: var(--muted); font-size: 11px; white-space: pre-wrap; margin-top: 2px; }
+  .acts { white-space: nowrap; }
+  .acts button { padding: 1px 6px; }
+  .del { color: var(--bad); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; height: auto; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Dune Game Editor</h1>
+  <select id="gamePick"></select>
+  <button id="save" class="primary" disabled>Save</button>
+  <span id="status">loading…</span>
+</header>
+<main>
+  <section id="left">
+    <div id="player"></div>
+    <div id="meta"></div>
+    <div class="help">
+      Click a time to jump the video there. <kbd>Ctrl</kbd>+<kbd>S</kbd> saves.
+      “+ at video time” inserts a new move at the current video position.
+      Use <b>note</b> for your own review comments (“should have gone Heighliner”).
+      Flags are the parser's doubts — click <b>×</b> on a flag once you've checked it.
+      Every save keeps the old version in <code>games/.history/</code>.
+    </div>
+  </section>
+  <section id="right">
+    <div class="filters">
+      <label><input type="radio" name="who" value="me" checked> My moves</label>
+      <label><input type="radio" name="who" value="all"> Everyone</label>
+      <label><input type="checkbox" id="onlyFlagged"> Only flagged</label>
+      <label><input type="checkbox" id="showRaw"> Show OCR text</label>
+      <label><input type="checkbox" id="follow" checked> Follow video</label>
+      <button id="addAtTime">+ at video time</button>
+    </div>
+    <table class="moves"><tbody id="rows"></tbody></table>
+  </section>
+</main>
+
+<datalist id="dl-spaces"></datalist><datalist id="dl-cards"></datalist>
+<datalist id="dl-skills"></datalist><datalist id="dl-vp"></datalist>
+<datalist id="dl-contracts"></datalist><datalist id="dl-techs"></datalist>
+
+<script>
+const KINDS = {
+  agent:            [["space", "dl-spaces"], ["card", "dl-cards"]],
+  buy:              [["card", "dl-cards"]],
+  contract:         [["name", "dl-contracts"]],
+  fulfill_contract: [["name", "dl-contracts"]],
+  tech:             [["name", "dl-techs"], ["cost", null]],
+  sardaukar:        [["space", "dl-spaces"], ["skill", "dl-skills"]],
+  swordmaster:      [],
+  vp:               [["source", "dl-vp"]],
+  manual:           [["resource", null], ["amount", null], ["note", null]],
+  intrigue:         [["card", null]],
+  deploy:           [["troops", null], ["sardaukar", null]],
+  reveal:           [["cards", null]],
+  other:            [["note", null]],
+};
+const COLORS = {Red: "#d0554a", Blue: "#4a86d0", Green: "#5aa55a", Yellow: "#d9c441"};
+let game = null, dirty = false, yt = null, currentId = null;
+const $ = s => document.querySelector(s);
+
+function fmtT(t) { const m = Math.floor(t / 60), s = Math.floor(t % 60);
+  return `${m}:${String(s).padStart(2, "0")}`; }
+function fmtEffects(ef) { return (ef || []).map(e => `${e.res} ${e.n > 0 ? "+" : ""}${e.n}`).join(", "); }
+function parseEffects(s) {
+  return s.split(",").map(x => x.trim()).filter(Boolean).map(x => {
+    const m = x.match(/^(.*?)\s*([+-]?\d+)$/);
+    return m ? {res: m[1].trim(), n: parseInt(m[2], 10)} : {res: x, n: 0};
+  });
+}
+function setDirty(d) {
+  dirty = d; $("#save").disabled = !d;
+  $("#status").textContent = d ? "unsaved changes" : (game.edited ? "saved (edited)" : "saved (untouched parse)");
+  $("#status").className = d ? "dirty" : "";
+}
+
+async function loadGames() {
+  const [games, vocab] = await Promise.all([fetch("/api/games").then(r => r.json()),
+                                            fetch("/api/vocab").then(r => r.json())]);
+  for (const [k, id] of [["spaces","dl-spaces"],["cards","dl-cards"],["skills","dl-skills"],
+                         ["vp","dl-vp"],["contracts","dl-contracts"],["techs","dl-techs"]])
+    document.getElementById(id).innerHTML = vocab[k].map(v => `<option value="${esc(v)}">`).join("");
+  $("#gamePick").innerHTML = games.map(g =>
+    `<option value="${g.video_id}">${g.edited ? "✎ " : ""}${esc(g.title || g.video_id)} (${g.flags} flags)</option>`).join("");
+  const want = location.hash.slice(1);
+  if (want && games.some(g => g.video_id === want)) $("#gamePick").value = want;
+  if (games.length) openGame($("#gamePick").value);
+  else $("#status").textContent = "no games yet: run parse_log.py --all";
+}
+
+async function openGame(vid) {
+  if (dirty && !confirm("Discard unsaved changes?")) { $("#gamePick").value = game.video_id; return; }
+  game = await fetch(`/api/game/${vid}`).then(r => r.json());
+  location.hash = vid;
+  setDirty(false);
+  if (yt && yt.loadVideoById) yt.cueVideoById(vid); else makePlayer(vid);
+  renderMeta(); render();
+}
+
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function playerColor(name) { const p = game.players.find(p => p.name === name); return p ? COLORS[p.color] || "#888" : "#888"; }
+
+function renderMeta() {
+  const res = Object.fromEntries(game.result.map(r => [r.player, r]));
+  $("#meta").innerHTML = `<table><tr><th>Player</th><th>Leader</th><th>Seat</th><th>Result</th></tr>` +
+    game.players.map(p => { const r = res[p.name];
+      return `<tr><td><span class="dot" style="background:${COLORS[p.color]||'#888'}"></span>${esc(p.name)}${p.name===game.me?" (you)":""}</td>
+        <td>${esc(p.leader)}</td><td>${p.seat ?? ""}</td>
+        <td>${r ? `${r.place}${["","st","nd","rd","th"][r.place]} · ${r.elo_before}→${r.elo_after}` : ""}</td></tr>`; }).join("") +
+    `</table>`;
+}
+
+function visible(a) {
+  const who = document.querySelector("input[name=who]:checked").value;
+  if (who === "me" && a.player !== game.me) return false;
+  if ($("#onlyFlagged").checked && !a.flags.length) return false;
+  return true;
+}
+
+function render() {
+  const rows = [], showRaw = $("#showRaw").checked;
+  const players = game.players.map(p => p.name);
+  let lastRound = null;
+  game.actions.forEach((a, idx) => {
+    if (a.round !== lastRound) {
+      lastRound = a.round;
+      const r = game.rounds.find(r => r.round === a.round);
+      const combat = r && r.combat ? r.combat.map(c => `${c.place}${c.tie ? "=" : ""} ${c.player}`).join(", ") : "";
+      rows.push(`<tr class="round"><td colspan="7">${a.round ? "Round " + a.round : "Setup"}
+        <span class="sub">${r && r.conflict ? esc(r.conflict) : ""}${combat ? " · combat: " + esc(combat) : ""}</span></td></tr>`);
+    }
+    if (!visible(a)) return;
+    const fields = (KINDS[a.kind] || KINDS.other).map(([f, dl]) =>
+      `<input data-i="${idx}" data-f="${f}" placeholder="${f}" value="${esc(a[f])}" ${dl ? `list="${dl}"` : ""}>`).join("");
+    rows.push(`<tr class="${a.player === game.me ? "mine" : ""} ${a.flags.length ? "flagged" : ""}" id="row${idx}">
+      <td class="t"><button data-seek="${a.t}">${fmtT(a.t)}</button></td>
+      <td><input data-i="${idx}" data-f="round" type="number" min="0" max="12" value="${a.round}" style="width:46px"></td>
+      <td><span class="dot" style="background:${playerColor(a.player)}"></span><select data-i="${idx}" data-f="player">
+        ${players.map(p => `<option ${p === a.player ? "selected" : ""}>${esc(p)}</option>`).join("")}</select></td>
+      <td><select data-i="${idx}" data-f="kind">${Object.keys(KINDS).map(k =>
+        `<option ${k === a.kind ? "selected" : ""}>${k}</option>`).join("")}</select></td>
+      <td style="width:40%"><div class="fields">${fields}</div>
+        ${a.flags.map((f, j) => `<span class="flag">${esc(f)} <b data-unflag="${idx}:${j}" title="checked, remove flag">×</b></span>`).join("")}
+        ${showRaw ? `<div class="raw">${esc(a.raw.join("\n"))}</div>` : ""}</td>
+      <td style="width:22%"><input data-i="${idx}" data-f="effects" placeholder="effects e.g. spice +2, solari -5" value="${esc(fmtEffects(a.effects))}">
+        <input data-i="${idx}" data-f="review" placeholder="note" value="${esc(a.review)}" style="margin-top:3px"></td>
+      <td class="acts"><button data-ins="${idx}" title="insert a move below">+</button>
+        <button data-del="${idx}" class="del" title="delete this move">🗑</button></td></tr>`);
+  });
+  $("#rows").innerHTML = rows.join("");
+  highlight(currentId, false);
+}
+
+$("#rows").addEventListener("change", e => {
+  const el = e.target, i = el.dataset.i, f = el.dataset.f;
+  if (i === undefined) return;
+  const a = game.actions[+i];
+  if (f === "effects") a.effects = parseEffects(el.value);
+  else if (f === "round") a.round = parseInt(el.value, 10) || 0;
+  else if (f === "cost" || f === "amount") a[f] = el.value === "" ? null : parseInt(el.value, 10);
+  else a[f] = el.value;
+  setDirty(true);
+  if (["kind", "player", "round"].includes(f)) render();
+});
+$("#rows").addEventListener("click", e => {
+  const d = e.target.dataset;
+  if (d.seek) seek(+d.seek);
+  else if (d.del !== undefined) { game.actions.splice(+d.del, 1); setDirty(true); render(); }
+  else if (d.ins !== undefined) {
+    const a = game.actions[+d.ins];
+    game.actions.splice(+d.ins + 1, 0, blank(a.t, a.round, a.player)); setDirty(true); render();
+  } else if (d.unflag) {
+    const [i, j] = d.unflag.split(":").map(Number);
+    game.actions[i].flags.splice(j, 1); setDirty(true); render();
+  }
+});
+function blank(t, round, player) {
+  return {id: -1, t, round, player: player || game.me, kind: "agent", space: "", card: "",
+          effects: [], raw: ["(added by hand)"], flags: []};
+}
+$("#addAtTime").onclick = () => {
+  const t = yt && yt.getCurrentTime ? Math.round(yt.getCurrentTime() * 10) / 10 : 0;
+  let pos = game.actions.findIndex(a => a.t > t); if (pos < 0) pos = game.actions.length;
+  const prev = game.actions[pos - 1];
+  game.actions.splice(pos, 0, blank(t, prev ? prev.round : 0, game.me));
+  setDirty(true);
+  render();
+  document.getElementById("row" + pos)?.scrollIntoView({block: "center"});
+};
+for (const el of document.querySelectorAll("input[name=who], #onlyFlagged, #showRaw")) el.onchange = render;
+$("#gamePick").onchange = e => openGame(e.target.value);
+$("#save").onclick = save;
+document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (dirty) save(); } });
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+async function save() {
+  $("#status").textContent = "saving…";
+  const r = await fetch(`/api/game/${game.video_id}`, {method: "PUT",
+    headers: {"Content-Type": "application/json"}, body: JSON.stringify(game)});
+  const out = await r.json();
+  if (!r.ok) { $("#status").textContent = "save failed: " + out.error; $("#status").className = "dirty"; return; }
+  game.edited = true; game.actions.forEach((a, i) => a.id = i); setDirty(false);
+}
+
+// ---- YouTube player
+function makePlayer(vid) {
+  window.onYouTubeIframeAPIReady = () => {
+    yt = new YT.Player("player", {videoId: vid, playerVars: {rel: 0, modestbranding: 1}});
+  };
+  const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(s);
+}
+function seek(t) { if (yt && yt.seekTo) { yt.seekTo(Math.max(0, t - 3), true); yt.playVideo(); } }
+function highlight(id, scroll) {
+  document.querySelectorAll("tr.current").forEach(r => r.classList.remove("current"));
+  if (id === null) return;
+  const row = document.getElementById("row" + id);
+  if (row) { row.classList.add("current"); if (scroll) row.scrollIntoView({block: "center", behavior: "smooth"}); }
+}
+setInterval(() => {
+  if (!game || !yt || !yt.getCurrentTime || !$("#follow").checked) return;
+  if (yt.getPlayerState && yt.getPlayerState() !== 1) return;   // only while playing
+  const t = yt.getCurrentTime();
+  let best = null;
+  game.actions.forEach((a, i) => { if (a.t <= t + 1 && visible(a)) best = i; });
+  if (best !== currentId) { currentId = best; highlight(best, true); }
+}, 700);
+
+loadGames();
+</script>
+</body>
+</html>

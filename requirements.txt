@@ -5,6 +5,12 @@ typing-extensions>=4.5.0
 # Tests
 pytest>=7.3.0
 
+# Optional: extracting games from YouTube videos (video_scrape/)
+# yt-dlp
+# opencv-python
+# imageio-ffmpeg
+# rapidocr_onnxruntime
+
 # Optional: reading the rulebook PDF (leader/space verification only)
 # pypdf>=4.0.0
 
