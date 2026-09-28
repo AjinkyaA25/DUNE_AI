@@ -52,10 +52,10 @@ TECHS: List[TechDef] = [
                  "1 or more swords this turn."),
     TechDef("Chaumurky", 4, acquire=[{"intrigue": 2}],
             note="Endgame: you win tiebreakers."),
-    TechDef("CHOAM Transports", 6,
+    TechDef("CHOAM Transports", 6, acquire=[{"contract": 1}],
             on_complete_contract=[{"draw": 1}],
-            note="Endgame: worth 1 VP if you have completed 4+ contracts.",
-            unsure="acquire icon (small eye/spy-post box) not transcribed"),
+            note="Acquire: take one of the 2 face-up contracts. Endgame: "
+                 "worth 1 VP if you have completed 4+ contracts."),
     TechDef("Delivery Bay", 3, acquire=[{"draw": 1}],
             command=[{"solari": 2}]),
     TechDef("Disposal Facility", 3, acquire=[{"trash": 1}],
@@ -69,10 +69,11 @@ TECHS: List[TechDef] = [
     TechDef("Flagship", 8, acquire=[{"vp": 1}],
             activation={"cost": {"solari": 4}, "effects": [{"troops": 3}],
                         "turn": "any"}),
-    TechDef("Forbidden Weapons", 2, acquire=[{"troops": 1}],
-            note="Reveal Turn: you must choose: 3 swords and lose 1 influence "
-                 "with any faction, OR lose all your spice and trash this.",
-            unsure="red acquire icon (above the troop) not transcribed"),
+    TechDef("Forbidden Weapons", 2,
+            acquire=[{"troops": 1, "may_break_shield_wall": 1}],
+            note="Acquire: a troop and you may break the Shield Wall. Reveal "
+                 "Turn: you must choose: 3 swords and lose 1 influence with any "
+                 "faction, OR lose all your spice and trash this."),
     TechDef("Gene-Locked Vault", 2, acquire=[{"intrigue": 1}],
             note="Acquire: an Intrigue OR draw a card (engine takes the "
                  "Intrigue). Your Intrigue cards can't be stolen unless you "
