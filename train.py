@@ -42,6 +42,8 @@ def main() -> None:
                     help="promote if a_vs_fair exceeds this (0 -> beat fair share)")
     ap.add_argument("--arena-games", type=int, default=160)
     ap.add_argument("--no-book", action="store_true")
+    ap.add_argument("--bloodlines", action="store_true",
+                    help="self-play and arena games use the Bloodlines expansion")
     ap.add_argument("--rogue-spec", type=str, default=None,
                     help="seat a sparring-partner agent in each self-play game "
                          "(e.g. 'bully:T0.4' — the crucial-combat exploiter). "
@@ -115,6 +117,7 @@ def main() -> None:
             base_seed=it * 100_000, use_book=use_book, shard_tag=f"it{it:02d}",
             rogue_spec=args.rogue_spec, rogue_seats=args.rogue_seats,
             record_policy=not args.no_policy,
+            use_bloodlines=args.bloodlines,
         )
         print(f"  generated {man['n_samples']} samples "
               f"({man['truncated_games']} truncated) in {man['seconds']}s "
@@ -190,7 +193,8 @@ def main() -> None:
                                         policy_weight=args.policy_weight)
 
         res = head_to_head(make_cand, make_prev, n_games=args.arena_games,
-                           num_players=args.players)
+                           num_players=args.players,
+                           use_bloodlines=args.bloodlines)
         a_vs_fair = res["a_vs_fair"]
         promote = a_vs_fair > (args.promote_winrate or 1.05)
         print(f"  arena vs {'heuristic' if best_model_path is None else 'prev model'}"

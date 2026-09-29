@@ -42,6 +42,18 @@ class PolicyModel:
 
     # -- inference -------------------------------------------------------
 
+    def grow(self, state_dim: int) -> None:
+        """Accept `state_dim` state features (new ones appended to the state
+        block) with zero weights, so predictions are unchanged."""
+        extra = state_dim - self.state_dim
+        if extra <= 0:
+            return
+        z = np.zeros((extra, self.W1.shape[1]), self.W1.dtype)
+        self.W1 = np.vstack([self.W1[:self.state_dim], z, self.W1[self.state_dim:]])
+        self.state_dim = state_dim
+        self.dim = state_dim + self.action_dim
+        self._adam = {}
+
     def _logits_flat(self, XA: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """XA: (M, state_dim + action_dim) -> (logits (M,), hidden (M,H))."""
         h = np.tanh(XA @ self.W1 + self.b1)
@@ -52,6 +64,7 @@ class PolicyModel:
                       action_feats: np.ndarray) -> np.ndarray:
         """state_feats: (state_dim,)  action_feats: (K, action_dim) -> (K,) logits."""
         K = action_feats.shape[0]
+        state_feats = state_feats[:self.state_dim]   # older model: fewer feats
         xa = np.concatenate(
             [np.repeat(state_feats.reshape(1, -1), K, axis=0),
              action_feats], axis=1).astype(np.float64)
@@ -77,7 +90,10 @@ class PolicyModel:
         M: (N, Kmax)  {0,1}            legal mask
         ci: (N,) int                   index (into Kmax) of the action taken
         weight: (N,)                   AWR sample weight (>= 0)
+        (a model built for fewer state features grows to fit S)
         """
+        if S.shape[1] > self.state_dim:
+            self.grow(S.shape[1])
         S = np.ascontiguousarray(S, np.float32)
         A = np.ascontiguousarray(A, np.float32)
         M = np.ascontiguousarray(M, np.float32)

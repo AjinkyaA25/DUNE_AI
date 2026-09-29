@@ -12,6 +12,12 @@ Layout (2026-09-07 card-identity expansion):
       _DECK_FEATS         perspective player's own card-composition multi-hot
       _ROW_FEATS          which Imperium cards are buyable right now
       _OPP_DECK_FEATS     coarse deck-quality summary for each opponent
+      _BL_FEATS           Bloodlines (2026-09-28): techs, Sardaukar
+                          Commanders + skills, tech market, Bloodlines cards
+                          owned / in the Row. All zero in non-Bloodlines games.
+
+The Bloodlines block is appended LAST so models trained before it existed
+keep working: ValueModel / PolicyModel use only the first `dim` features.
 
 The deck / row blocks are what let the net finally prefer *specific* strong
 cards (Overthrow, TSMF, ...) over filler — everything before this was pure
@@ -87,7 +93,74 @@ _OPP_DECK_FEATS = _OPP_DECK_PER * (MAX_PLAYERS - 1)
 
 def _feature_dim() -> int:
     return (MAX_PLAYERS * _PLAYER_FEATS + _GLOBAL_FEATS
-            + _deck_feats_dim() + _row_feats_dim() + _OPP_DECK_FEATS)
+            + _deck_feats_dim() + _row_feats_dim() + _OPP_DECK_FEATS
+            + _bl_feats_dim())
+
+
+# --- Bloodlines block --------------------------------------------------------
+_BL_SKILLS = ("Canny", "Charismatic", "Desperate", "Driven", "Fierce", "Hardy",
+              "Loyal")
+_BL_PER_SEAT = 4 + len(_BL_SKILLS)
+_BL_TECHS: Tuple[str, ...] = ()
+_BL_CARDS: Tuple[str, ...] = ()
+
+
+def _ensure_bl_index() -> None:
+    global _BL_TECHS, _BL_CARDS
+    if _BL_TECHS:
+        return
+    from src.game.bloodlines.techs import TECHS
+    from src.game.bloodlines.cards import create_bloodlines_imperium_cards
+    _BL_TECHS = tuple(t.name for t in TECHS)
+    _BL_CARDS = tuple(c.name for c in create_bloodlines_imperium_cards())
+
+
+def _bl_feats_dim() -> int:
+    _ensure_bl_index()
+    return (1 + MAX_PLAYERS * _BL_PER_SEAT + 2 * len(_BL_TECHS) + 6
+            + 2 * len(_BL_CARDS))
+
+
+def _bl_block(gs, pid: int, order: List[int]) -> np.ndarray:
+    _ensure_bl_index()
+    v = np.zeros(_bl_feats_dim(), dtype=np.float32)
+    bl = getattr(gs, "bl", None)
+    if bl is None:
+        return v
+    from src.game.bloodlines.rules import COMMANDER_SPACES
+    i = 0
+    v[i] = 1.0
+    i += 1
+    for seat in range(MAX_PLAYERS):
+        if seat < len(order):
+            p = gs.players[order[seat]]
+            v[i:i + 4] = (len(p.techs) / 5.0, p.commanders_garrison / 2.0,
+                          bl.commanders_in_conflict.get(p.id, 0) / 2.0,
+                          p.commanders_supply / 2.0)
+            for k, sk in enumerate(_BL_SKILLS):
+                v[i + 4 + k] = 1.0 if sk in p.skills else 0.0
+        i += _BL_PER_SEAT
+    tix = {n: k for k, n in enumerate(_BL_TECHS)}
+    for t in gs.players[pid].techs:                   # my techs
+        if t.name in tix:
+            v[i + tix[t.name]] = 1.0
+    i += len(_BL_TECHS)
+    for stack in bl.tech_stacks:                      # buyable right now
+        if stack and stack[0].name in tix:
+            v[i + tix[stack[0].name]] = 1.0
+    i += len(_BL_TECHS)
+    for k, sp in enumerate(COMMANDER_SPACES):         # commanders still on board
+        v[i + k] = 1.0 if bl.commander_on_space.get(sp) else 0.0
+    i += 6
+    cix = {n: k for k, n in enumerate(_BL_CARDS)}
+    for name in _owned_card_names(gs.players[pid]):
+        if name in cix:
+            v[i + cix[name]] = min(3.0, v[i + cix[name]] + 0.5)
+    i += len(_BL_CARDS)
+    for c in gs.imperium_row:
+        if c.name in cix:
+            v[i + cix[c.name]] = 1.0
+    return v
 
 
 # public constant — resolved once at import
@@ -285,6 +358,7 @@ def encode_state(gs, perspective_pid: int) -> np.ndarray:
         _deck_block(gs, perspective_pid),
         _row_block(gs),
         np.asarray(_opp_deck_block(gs, order), dtype=np.float32),
+        _bl_block(gs, perspective_pid, order),
     ])
     assert arr.shape[0] == FEATURE_DIM, (arr.shape, FEATURE_DIM)
     return arr

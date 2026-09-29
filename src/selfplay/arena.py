@@ -23,7 +23,7 @@ def _wilson(wins: float, n: int) -> tuple:
 
 def head_to_head(make_a: Callable, make_b: Callable, n_games: int = 200,
                  num_players: int = 4, base_seed: int = 10_000,
-                 verbose: bool = False) -> dict:
+                 verbose: bool = False, use_bloodlines: bool = False) -> dict:
     """
     make_a / make_b: zero-arg factories returning an Agent (called once per game
     so stateful agents get a clean instance).
@@ -38,7 +38,7 @@ def head_to_head(make_a: Callable, make_b: Callable, n_games: int = 200,
         for s in range(num_players):
             agents[s] = make_a() if s == a_seat else make_b()
         res = play_game(agents, num_players=num_players, seed=base_seed + g,
-                        record=False)
+                        record=False, use_bloodlines=use_bloodlines)
         # split ties equally
         winners = [i for i, v in enumerate(res.final_vp)
                    if v == max(res.final_vp)]

@@ -636,7 +636,7 @@ class Bloodlines:
                 gs.update_combat_strength(p.id)
             elif k == "bl_discard_for":
                 gs.add_pending_optional_payment(
-                    p.id, {}, v["reward"], discard=1, label="bl_discard_for",
+                    p.id, {}, v["reward"], discard=v.get("n", 1), label="bl_discard_for",
                     discard_tag=v.get("tag"), tag_bonus=v.get("bonus"))
             elif k == "bl_complete_contract":
                 if p.contracts_active:
@@ -664,6 +664,10 @@ class Bloodlines:
                 p.bl_after_turn.append(v)
             elif k == "bl_conflict_bonus":
                 if gs.current_conflict is not None:
+                    # Conflict cards are shared between game copies (search):
+                    # change a private copy, never the shared card
+                    import copy
+                    gs.current_conflict = copy.copy(gs.current_conflict)
                     r = dict(gs.current_conflict.first_place_reward)
                     for rk, rv in v.items():
                         r[rk] = r.get(rk, 0) + rv

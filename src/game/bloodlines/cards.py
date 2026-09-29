@@ -201,4 +201,7 @@ def create_bloodlines_intrigues() -> List[IntrigueCard]:
             {"swords": 3}, {"bl_retreat": 1, "trash": 1}]}}]),
         IC("Withdrawal Agreement", _COMBAT, [{"bl_choose": {"options": [
             {}, {"bl_retreat": 3, "influence_any": 1}]}}]),
+        # In the user's tournament / ranked card pool alongside Bloodlines
+        # (user: "discard 2 cards to draw 2 cards").
+        IC("Ixian Probe", _PLOT, [{"bl_discard_for": {"reward": {"draw": 2}, "n": 2}}]),
     ]

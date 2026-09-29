@@ -49,7 +49,8 @@ def _play_one(game_idx: int):
                                     opening_book=book)
     rec_pol = cfg.get("record_policy", False)
     res = play_game(agents, num_players=n, seed=seed, record=True,
-                    record_policy=rec_pol, use_choam=cfg["use_choam"])
+                    record_policy=rec_pol, use_choam=cfg["use_choam"],
+                    use_bloodlines=cfg.get("use_bloodlines", False))
     if not res.feats:
         return None
     if rogue_pids:
@@ -107,12 +108,13 @@ def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
                       out_dir: str = "data/selfplay", base_seed: int = 0,
                       use_book: bool = True, use_choam: bool = True,
                       shard_tag: str = "s", rogue_spec: str = None,
-                      rogue_seats: int = 1, record_policy: bool = False) -> dict:
+                      rogue_seats: int = 1, record_policy: bool = False,
+                      use_bloodlines: bool = False) -> dict:
     os.makedirs(out_dir, exist_ok=True)
     cfg = dict(num_players=num_players, agent_spec=agent_spec,
                base_seed=base_seed, use_book=use_book, use_choam=use_choam,
                rogue_spec=rogue_spec, rogue_seats=rogue_seats,
-               record_policy=record_policy)
+               record_policy=record_policy, use_bloodlines=use_bloodlines)
     t0 = time.time()
 
     results = []
@@ -164,6 +166,16 @@ def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
     return manifest
 
 
+def _pad_features(X: np.ndarray) -> np.ndarray:
+    """Shards written before a feature block was appended (e.g. Bloodlines)
+    are zero-padded: all-zero is exactly how a game without that block
+    encodes now."""
+    from src.ai.features import FEATURE_DIM
+    if X.shape[1] < FEATURE_DIM:
+        X = np.pad(X, ((0, 0), (0, FEATURE_DIM - X.shape[1])))
+    return X
+
+
 def load_shards(out_dir: str, last_k: int = 0):
     shards = sorted(p for p in os.listdir(out_dir) if p.endswith(".npz"))
     if last_k > 0:
@@ -171,7 +183,7 @@ def load_shards(out_dir: str, last_k: int = 0):
     Xs, ys, ws = [], [], []
     for s in shards:
         z = np.load(os.path.join(out_dir, s))
-        Xs.append(z["X"]); ys.append(z["y"]); ws.append(z["w"])
+        Xs.append(_pad_features(z["X"])); ys.append(z["y"]); ws.append(z["w"])
     if not Xs:
         raise FileNotFoundError(f"no shards in {out_dir}")
     return (np.concatenate(Xs), np.concatenate(ys), np.concatenate(ws))
@@ -189,7 +201,7 @@ def load_policy_shards(out_dir: str, last_k: int = 0):
         z = np.load(os.path.join(out_dir, s))
         if "PA" not in z.files:
             continue
-        Xs.append(z["X"]); ys.append(z["y"]); ws.append(z["w"])
+        Xs.append(_pad_features(z["X"])); ys.append(z["y"]); ws.append(z["w"])
         PAs.append(z["PA"]); PMs.append(z["PM"]); PCIs.append(z["PCI"])
     if not PAs:
         raise FileNotFoundError(f"no policy shards (PA arrays) in {out_dir}")

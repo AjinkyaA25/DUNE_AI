@@ -5,6 +5,9 @@ Agents for Dune Imperium: Uprising.
   HeuristicAgent    - fast hand-crafted scoring of each legal action (no search)
   GreedyValueAgent  - 1-ply lookahead: clone, apply, evaluate with a ValueModel
                       (falls back to the heuristic state value if no model)
+  ISMCTSAgent       - multi-ply Information-Set MCTS: determinizes hidden info
+                      per simulation, searches only my own decision nodes,
+                      rolls opponents out with the heuristic (see determinize.py)
 
 All agents expose `select_action(gs, pid, valid_actions) -> GameAction`.
 `temperature > 0` turns the argmax into a softmax sample (for self-play).
@@ -21,6 +24,7 @@ from src.game.gameState import GameState, GameAction, ActionType, MAX_ROUNDS
 from src.ai.features import encode_state
 from src.ai.value_model import ValueModel
 from src.ai.opening_book import OpeningBook
+from src.ai.determinize import determinize
 
 # rough marginal value of one unit of each resource (VP-equivalent * 10)
 # Faction influence is S-tier: at high-level play every alliance eventually
@@ -231,6 +235,12 @@ def _effect_value(gs: GameState, pid: int, eff: dict) -> float:
 def _flatten(eff: dict) -> dict:
     """Best-effort flatten of nested conditional/choice sub-effects for scoring."""
     out = {}
+    if isinstance(eff.get("bl_choose"), dict):          # Bloodlines: best option
+        opts = [_flatten(o) for o in eff["bl_choose"].get("options", [])]
+        best = max(opts, key=lambda o: sum(v for v in o.values()
+                                           if isinstance(v, (int, float))), default={})
+        for kk, vv in best.items():
+            out[kk] = out.get(kk, 0) + vv
     for k, v in eff.items():
         if isinstance(v, dict) and (k.startswith("if_") or k in (
                 "pay_then", "recall_spy_then", "discard_then", "choose_by_combat")):
@@ -252,6 +262,9 @@ def _cond_weight(gs: GameState, pid: int, key: str) -> float:
     (e.g. Junction Headquarters without the Spacing Guild Alliance).
     """
     p = gs.players[pid]
+    if key.startswith("bl_"):
+        from src.ai.bloodlines_heuristic import cond_weight
+        return cond_weight(gs, pid, key[3:])
     if key.startswith("alliance_"):
         return 1.0 if p.alliances.get(key[9:]) else 0.10
     if key == "any_alliance":
@@ -316,6 +329,16 @@ def _card_effect_value(gs: GameState, pid: int, eff: dict, w: float = 1.0) -> fl
                   "recall_spy_then") and isinstance(sub, dict):
             inner = sub.get("base", sub)
             v += 0.7 * _card_effect_value(gs, pid, inner, w)
+        elif k == "command" and isinstance(sub, dict):
+            from src.ai.bloodlines_heuristic import P_COMMAND
+            v += _card_effect_value(gs, pid, sub, w * P_COMMAND)
+        elif k == "bl_choose" and isinstance(sub, dict):
+            opts = [_card_effect_value(gs, pid, o, w) for o in sub.get("options", [])]
+            v += (sum(opts) if sub.get("both_if") else 0.9 * max(opts, default=0.0))
+        elif k in ("bl_discard_for", "bl_trash_from_hand") and isinstance(sub, dict):
+            v += 0.6 * _card_effect_value(gs, pid, sub.get("reward") or sub.get("bonus", {}), w)
+        elif k in ("bl_after_turn", "bl_conflict_bonus") and isinstance(sub, dict):
+            v += 0.5 * _card_effect_value(gs, pid, sub, w)
         elif k == "trash_intrigue_for" and isinstance(sub, dict):
             has_intrigue = bool(gs.players[pid].intrigue_cards)
             v += _card_effect_value(gs, pid, sub, w * (0.7 if has_intrigue else 0.25))
@@ -329,7 +352,8 @@ def _card_effect_value(gs: GameState, pid: int, eff: dict, w: float = 1.0) -> fl
             elif k in _SANDWORM_KEYS:
                 v += w * _sandworm_value(gs, pid) * sub
             else:
-                v += w * _RES_VALUE.get(k, 0.3) * sub
+                from src.ai.bloodlines_heuristic import BL_RES_VALUE
+                v += w * _RES_VALUE.get(k, BL_RES_VALUE.get(k, 0.3)) * sub
         # other nested dicts (unrecognized structure) contribute nothing,
         # same as before — but recognized ones are no longer invisible.
     return v
@@ -698,6 +722,9 @@ def heuristic_state_value(gs: GameState, pid: int) -> float:
     score += 0.9 * sum(min(i, 4) for i in p.influence.values())
     score += 1.2 * p.agents_total + 1.5 * (1 if p.has_councilor else 0)
     score += 1.0 * len(p.intrigue_cards) + 3.0 * len(gs.won_conflicts.get(pid, []))
+    if getattr(gs, "bl", None) is not None:
+        from src.ai.bloodlines_heuristic import state_bonus
+        score += state_bonus(gs, pid)
     return 1.0 / (1.0 + math.exp(-0.06 * score))
 
 
@@ -731,8 +758,12 @@ class HeuristicAgent(Agent):
     def __init__(self, seed: Optional[int] = None,
                  opening_book: Optional[OpeningBook] = None,
                  temperature: float = 0.0, lean_deck: bool = False,
-                 sm_boost: bool = True, faction_focus: bool = True):
+                 sm_boost: bool = True, faction_focus: bool = True,
+                 bloodlines: bool = True):
         self.rng = random.Random(seed)
+        # bloodlines=False (`heuristic:nobl`): decline every tech / commander /
+        # activation - the baseline for checking the Bloodlines scoring pays off
+        self.bloodlines = bloodlines
         self.book = opening_book if opening_book is not None else OpeningBook.default()
         self.temperature = temperature
         # sm_boost (2026-09-10, default ON): price Swordmaster + the solari that
@@ -821,6 +852,9 @@ class HeuristicAgent(Agent):
                 s -= 1.0
             if a.use_gather_intelligence:
                 s += 0.8
+            if self.bloodlines and getattr(gs, "bl", None) is not None:  # tech / commander it opens
+                from src.ai.bloodlines_heuristic import agent_space_bonus
+                s += agent_space_bonus(gs, pid, a.space_name)
             s += 4.0 * self.book.bonus(gs, pid, a)
             # discourage wasting the last agent on a weak play
             s += 0.5
@@ -976,6 +1010,15 @@ class HeuristicAgent(Agent):
                 cost = sum(_RES_VALUE.get(k, 0.3) * v for k, v in op.cost.items())
                 cost += 1.1 * op.discard                  # a discarded card ~ 1 draw
                 s = gain - cost
+        elif at == ActionType.RESOLVE_BL_CHOICE:
+            from src.ai.bloodlines_heuristic import score_bl_choice
+            if self.bloodlines:
+                s = score_bl_choice(gs, pid, a.choice)
+            else:
+                s = 1.0 if a.choice == "decline" else 0.0
+        elif at == ActionType.ACTIVATE_TECH:
+            from src.ai.bloodlines_heuristic import score_activation
+            s = score_activation(gs, pid, a.choice) if self.bloodlines else -1.0
         elif at == ActionType.NO_OP:
             s = -5.0
         return s
@@ -1146,6 +1189,152 @@ class GreedyValueAgent(Agent):
         return _softmax_pick(acts, vals, self.temperature, self.rng)
 
 
+class _ISNode:
+    """One of *my* decision points in the search tree, keyed by action repr."""
+    __slots__ = ("children", "visits", "value_sum")
+
+    def __init__(self):
+        self.children: dict = {}
+        self.visits = 0
+        self.value_sum = 0.0
+
+    def q(self) -> float:
+        return self.value_sum / self.visits if self.visits else 0.0
+
+
+class ISMCTSAgent(Agent):
+    """
+    Single-observer Information-Set MCTS.
+
+    Dune Imperium is hidden-information (opponent hands, deck order) and
+    4-player-adversarial, so this isn't textbook single-agent MCTS:
+
+      - Each simulation starts by calling `determinize()` on the real state,
+        producing one consistent guess at the currently-hidden information.
+        This is what keeps the search honest -- it can't peek at opponents'
+        actual hands or the actual next card off any deck.
+      - The search tree only has nodes at *my* (`pid`'s) decision points.
+        Opponent turns are not searched (their hidden info differs across
+        determinizations, so a shared tree over their choices wouldn't mean
+        anything) -- they're played out directly by `rollout` (the same
+        heuristic used elsewhere as a fast default policy / opponent model).
+      - Each simulation runs to one of: the game actually ending (exact
+        1.0/0.0 backprop), a move cap (safety valve), or `max_my_decisions`
+        of *my own* choices deep (beyond which `_leaf` -- the value net or
+        heuristic state value -- estimates the outcome instead of continuing).
+      - Root action choice is the "robust child": most-visited action, which
+        is the standard, variance-robust choice (rather than highest raw Q).
+    """
+    name = "ismcts"
+
+    def __init__(self, model: Optional[ValueModel] = None,
+                 rollout: Optional[HeuristicAgent] = None,
+                 n_simulations: int = 48, c_uct: float = 1.4,
+                 max_my_decisions: int = 6, move_cap: int = 300,
+                 branch_cap: int = 14,
+                 seed: Optional[int] = None,
+                 opening_book: Optional[OpeningBook] = None):
+        self.model = model
+        self.rollout = rollout or HeuristicAgent(seed=seed, opening_book=opening_book)
+        self.n_simulations = n_simulations
+        self.c_uct = c_uct
+        self.max_my_decisions = max_my_decisions
+        self.move_cap = move_cap
+        # Cap each of *my* decision nodes to the top-`branch_cap` actions by the
+        # heuristic prior, same as GreedyValueAgent -- without this, a wide
+        # decision (>branch_cap legal actions) burns the whole simulation
+        # budget on one-rollout-each expansion and never reaches real UCB
+        # comparison between actions.
+        self.branch_cap = branch_cap
+        self.rng = np.random.default_rng(seed)
+        self.book = self.rollout.book
+
+    def _leaf(self, gs: GameState, pid: int) -> float:
+        if gs.game_over:
+            return 1.0 if gs.winner == pid else 0.0
+        if self.model is not None:
+            return self.model.predict(encode_state(gs, pid))
+        return heuristic_state_value(gs, pid)
+
+    def select_action(self, gs, pid, valid_actions):
+        acts = [a for a in valid_actions if a.action_type != ActionType.NO_OP] \
+            or valid_actions
+        if len(acts) == 1:
+            return acts[0]
+
+        root = _ISNode()
+        for _ in range(self.n_simulations):
+            gs_det = determinize(gs, pid, self.rng)
+            self._simulate(gs_det, pid, root, my_decisions=0, moves=0)
+
+        key_to_action = {repr(a): a for a in acts}
+        best_action, best_visits = acts[0], -1
+        for key, child in root.children.items():
+            if key in key_to_action and child.visits > best_visits:
+                best_visits = child.visits
+                best_action = key_to_action[key]
+        return best_action
+
+    def _simulate(self, gs: GameState, pid: int, node: _ISNode,
+                  my_decisions: int, moves: int) -> float:
+        if gs.game_over:
+            return 1.0 if gs.winner == pid else 0.0
+        if moves >= self.move_cap:
+            return self._leaf(gs, pid)
+
+        cur = gs.player_in_reveal_buy
+        if cur is None:
+            cur = gs.get_current_player_id()
+        valid = gs.get_valid_actions(cur)
+
+        if cur != pid:
+            action = self.rollout.select_action(gs, cur, valid)
+            gs.step(action)
+            return self._simulate(gs, pid, node, my_decisions, moves + 1)
+
+        acts = [a for a in valid if a.action_type != ActionType.NO_OP] or valid
+        if len(acts) == 1:
+            gs.step(acts[0])
+            return self._simulate(gs, pid, node, my_decisions, moves + 1)
+        if my_decisions >= self.max_my_decisions:
+            return self._leaf(gs, pid)
+
+        hs = [self.rollout.score(gs, pid, a) for a in acts]
+        if len(acts) > self.branch_cap:
+            keep = sorted(range(len(acts)), key=lambda i: hs[i],
+                          reverse=True)[: self.branch_cap]
+            acts = [acts[i] for i in keep]
+            hs = [hs[i] for i in keep]
+
+        keys = [repr(a) for a in acts]
+        untried = [k for k in keys if k not in node.children]
+        if untried:
+            untried_set = set(untried)
+            key, action, _ = max(
+                (t for t in zip(keys, acts, hs) if t[0] in untried_set),
+                key=lambda t: t[2])
+            node.children[key] = _ISNode()
+        else:
+            total = sum(node.children[k].visits for k in keys)
+            log_total = math.log(total + 1.0)
+
+            def ucb(k):
+                c = node.children[k]
+                if c.visits == 0:
+                    return float("inf")
+                return c.q() + self.c_uct * math.sqrt(log_total / c.visits)
+
+            key = max(keys, key=ucb)
+            action = next(a for a, kk in zip(acts, keys) if kk == key)
+
+        gs.step(action)
+        child = node.children[key]
+        value = self._simulate(gs, pid, child, my_decisions + 1, moves + 1)
+        child.visits += 1
+        child.value_sum += value
+        return value
+
+
 def _softmax_pick(actions, scores, temp, rng):
     m = max(scores)
     exps = [math.exp((s - m) / max(temp, 1e-6)) for s in scores]
@@ -1197,6 +1386,7 @@ def make_agent(spec: str, seed: Optional[int] = None,
         lean = False
         sm_boost = True
         faction_focus = True
+        bloodlines = True
         for p in parts[1:]:
             if p.startswith("T"):
                 temp = float(p[1:])
@@ -1206,9 +1396,24 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 sm_boost = False
             elif p == "ff0":
                 faction_focus = False
+            elif p == "nobl":
+                bloodlines = False
         return HeuristicAgent(seed=seed, opening_book=opening_book,
                               temperature=temp, lean_deck=lean, sm_boost=sm_boost,
-                              faction_focus=faction_focus)
+                              faction_focus=faction_focus, bloodlines=bloodlines)
+    if kind == "search":
+        from src.ai.search import RoundSearchAgent
+        kw = {"k": 5, "m": 24, "margin": 0.02, "horizon": "end"}
+        for p in parts[1:]:
+            if p.startswith("MG"):
+                kw["margin"] = float(p[2:])
+            elif p.startswith("K"):
+                kw["k"] = int(p[1:])
+            elif p.startswith("M"):
+                kw["m"] = int(p[1:])
+            elif p == "round":
+                kw["horizon"] = "round"
+        return RoundSearchAgent(seed=seed, opening_book=opening_book, **kw)
     if kind == "bully":
         temp = 0.0
         for p in parts[1:]:
@@ -1237,4 +1442,19 @@ def make_agent(spec: str, seed: Optional[int] = None,
         return GreedyValueAgent(model=model, temperature=temp, seed=seed,
                                 opening_book=opening_book, heuristic_weight=hw,
                                 policy=policy, policy_weight=pw)
+    if kind == "ismcts":
+        # ismcts[:<value.npz>][:N<n_simulations>][:D<max_my_decisions>][:C<c_uct>]
+        model, n_sims, max_dec, c_uct = None, 48, 6, 1.4
+        for p in parts[1:]:
+            if p.startswith("N"):
+                n_sims = int(p[1:])
+            elif p.startswith("D"):
+                max_dec = int(p[1:])
+            elif p.startswith("C"):
+                c_uct = float(p[1:])
+            elif p:
+                model = ValueModel.load(p)
+        return ISMCTSAgent(model=model, n_simulations=n_sims, c_uct=c_uct,
+                           max_my_decisions=max_dec, seed=seed,
+                           opening_book=opening_book)
     raise ValueError(f"Unknown agent spec: {spec!r}")

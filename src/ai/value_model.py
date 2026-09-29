@@ -39,6 +39,10 @@ class ValueModel:
     # -- inference --------------------------------------------------------
 
     def _forward(self, X: np.ndarray):
+        # models trained before later feature blocks (e.g. Bloodlines) were
+        # appended see only the features they were trained on
+        if X.shape[1] > self.dim:
+            X = X[:, :self.dim]
         if self.hidden > 0:
             h = np.tanh(X @ self.W1 + self.b1)
             logit = (h @ self.W2 + self.b2).ravel()
@@ -55,6 +59,16 @@ class ValueModel:
         logit, _ = self._forward(X.astype(np.float64))
         return _sigmoid(logit)
 
+    def grow(self, dim: int) -> None:
+        """Accept `dim` input features by adding zero-weight rows for the new
+        (appended) ones: predictions are unchanged until training uses them."""
+        extra = dim - self.dim
+        if extra <= 0:
+            return
+        self.W1 = np.vstack([self.W1, np.zeros((extra, self.W1.shape[1]))])
+        self.dim = dim
+        self._adam = {}
+
     # -- training --------------------------------------------------------
 
     def fit(self, X: np.ndarray, y: np.ndarray,
@@ -64,6 +78,8 @@ class ValueModel:
             verbose: bool = False) -> dict:
         X = X.astype(np.float64)
         y = y.astype(np.float64).ravel()
+        if X.shape[1] > self.dim:
+            self.grow(X.shape[1])
         w = (np.ones_like(y) if sample_weight is None
              else sample_weight.astype(np.float64).ravel())
         rng = np.random.default_rng(seed)
