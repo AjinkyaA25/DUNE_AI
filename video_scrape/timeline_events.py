@@ -41,6 +41,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 GAMES = os.path.join(HERE, "games")
 
 MIN_AGENT_PX = 60   # colour pixels an agent adds to its slot (~20x20 piece)
+AGENT_SETTLE = 10.0  # s after an agent card lands until its payouts are in
+BUY_MATCH = 20.0    # s: discard-pile buy vs card leaving the Row
+COUNT_HOLD = 8.0    # s an intrigue count must hold to count as a change
 REAPPEAR = 60.0     # s: an Intrigue that comes back this soon was only hidden
 GLITCH = 4.0        # s: a state shorter than this between two equal states is noise
 ROUND_GAP = 20.0    # s: rows clearing within this window = one round end
@@ -110,7 +113,8 @@ def placed_space(before: np.ndarray, after: np.ndarray, colour: str
 def sequences(tl: list[dict]) -> dict[tuple, list[tuple[float, list]]]:
     seqs: dict[tuple, list] = collections.defaultdict(list)
     for e in tl:
-        seqs[(e["seat"], e["region"])].append((e["t"], e["cards"]))
+        if "cards" in e:                 # card regions (numbers are separate)
+            seqs[(e["seat"], e["region"])].append((e["t"], e["cards"]))
     return seqs
 
 
@@ -240,8 +244,54 @@ def build(video: str, tl: list[dict], names: dict[str, str]) -> dict:
         if n >= 4:
             round_ends.append(t)
 
+    # the Conflict card is the better clock when it was scanned: a new card
+    # is flipped at the start of every round (reading kept only if it held
+    # for a while - a card being hovered/moved flickers)
+    conflicts: list[tuple[float, str]] = []      # (start time, card)
+    cseq = seqs.get(("G", "conflict"), [])
+    for i, (t, cards) in enumerate(cseq):
+        if not cards:
+            continue
+        nxt = cseq[i + 1][0] if i + 1 < len(cseq) else float("inf")
+        if nxt - t < ROUND_GAP:
+            continue
+        name = cards[0]["card"]
+        if not conflicts or conflicts[-1][1] != name:
+            conflicts.append((t, name))
+    if len(conflicts) >= 2:
+        round_ends = [t for t, _ in conflicts[1:]]
+
     def round_at(t: float) -> int:
         return 1 + sum(1 for r in round_ends if r <= t)
+
+    def conflict_of(r: int) -> str:
+        if len(conflicts) >= 2 and r - 1 < len(conflicts):
+            return disp(conflicts[r - 1][1])
+        return ""
+
+    # board numbers per seat (spice, solari, water, persuasion, strength)
+    nums: dict[str, list] = collections.defaultdict(list)
+    for e in tl:
+        if e["region"] == "numbers":
+            nums[e["seat"]].append((e["t"], e["values"]))
+
+    def numbers_at(seat: str, t: float) -> dict | None:
+        best = None
+        for tt, v in nums.get(seat, []):
+            if tt > t:
+                break
+            best = v
+        return best
+
+    def resource_effects(seat: str, t0: float, t1: float) -> list[dict]:
+        a, b = numbers_at(seat, t0), numbers_at(seat, t1)
+        if not a or not b:
+            return []
+        out = []
+        for res in ("spice", "solari", "water"):
+            if a.get(res) is not None and b.get(res) is not None                     and b[res] != a[res]:
+                out.append({"res": res, "n": b[res] - a[res]})
+        return out
 
     actions: list[dict] = []
 
@@ -285,8 +335,10 @@ def build(video: str, tl: list[dict], names: dict[str, str]) -> dict:
                               if c["card"] == card and c["rivals"]), None)
                 if rival:
                     flags.append("card may be " + " / ".join(rival))
-                act(t1, seat, "agent", flags, [f"Agent Turn row +{disp(card)}"],
-                    space=space, card=disp(card))
+                a = act(t1, seat, "agent", flags, [f"Agent Turn row +{disp(card)}"],
+                        space=space, card=disp(card))
+                # resources before the card went down vs once the turn settled
+                a["effects"] = resource_effects(seat, t1 - 6, t1 + AGENT_SETTLE)
         # reveals: one per round, with the fullest reading of the row
         best: dict[int, tuple[float, list]] = {}
         for t, cards in seqs.get((seat, "reveal"), []):
@@ -312,39 +364,82 @@ def build(video: str, tl: list[dict], names: dict[str, str]) -> dict:
                 act(t, seat, "buy", flags, [f"discard pile top: {disp(top)}"],
                     card=disp(top))
             prev_top = top
-        # intrigues entering / leaving the hand. Ignored: one-for-one swaps
-        # in a single reading (the same card re-identified as a lookalike)
-        # and a card that leaves and comes back within REAPPEAR seconds
-        # (hovered / covered, not played).
-        hand = seqs.get((seat, "hand"), [])
-        events = []                      # (t, "+"/"-", card)
-        for (t0, c0), (t1, c1) in zip(hand, hand[1:]):
-            if not c1 or not c0:
-                continue        # hand fully hidden/emptied: not informative
-            i0 = [disp(n) for n in names_of(c0) if kind_of.get(n) == "intrigue"]
-            i1 = [disp(n) for n in names_of(c1) if kind_of.get(n) == "intrigue"]
+        # intrigues: driven by the NUMBER of intrigues in the hand, which
+        # survives lookalike misreads (the names of a cut-off hand flicker
+        # between similar cards; the count doesn't). A count change counts
+        # once it has held for COUNT_HOLD seconds; the card's name is taken
+        # from what disappeared / appeared across that change.
+        hand = [(t, [disp(n) for n in names_of(c) if kind_of.get(n) == "intrigue"])
+                for t, c in seqs.get((seat, "hand"), []) if c]
+        stable_i: list[tuple[float, list]] = []
+        for k, (t, ints) in enumerate(hand):
+            nxt = hand[k + 1][0] if k + 1 < len(hand) else float("inf")
+            if nxt - t >= COUNT_HOLD or (stable_i and len(ints) == len(stable_i[-1][1])):
+                if not stable_i or len(ints) != len(stable_i[-1][1]):
+                    stable_i.append((t, ints))
+                else:
+                    stable_i[-1] = (stable_i[-1][0], ints)   # same count: newest names
+        # drop glitches: a count that comes back within REAPPEAR seconds
+        # (hand hidden / cut off for a moment), and big jumps (3+) that don't
+        # last (a whole hand misread as intrigues)
+        changed = True
+        while changed and len(stable_i) >= 2:
+            changed = False
+            for k in range(1, len(stable_i)):
+                t, ints = stable_i[k]
+                prev = stable_i[k - 1][1]
+                nxt = stable_i[k + 1] if k + 1 < len(stable_i) else None
+                lasts = (nxt[0] if nxt else float("inf")) - t
+                back = nxt is not None and len(nxt[1]) == len(prev) and lasts <= REAPPEAR
+                jump = abs(len(ints) - len(prev)) >= 3 and lasts <= REAPPEAR
+                if back or jump:
+                    del stable_i[k]
+                    # merge the neighbours if they now have the same count
+                    if k < len(stable_i) and len(stable_i[k][1]) == len(stable_i[k - 1][1]):
+                        del stable_i[k]
+                    changed = True
+                    break
+        for (t0, i0), (t1, i1) in zip(stable_i, stable_i[1:]):
             added, removed = multiset_diff(i0, i1)
-            if added and len(added) == len(removed):
-                continue
-            events += [(t1, "-", c) for c in removed] + [(t1, "+", c) for c in added]
-        dropped = set()
-        for i, (t, sign, card) in enumerate(events):
-            if sign != "-" or i in dropped:
-                continue
-            back = next((j for j in range(i + 1, len(events))
-                         if events[j][1] == "+" and events[j][2] == card
-                         and events[j][0] - t <= REAPPEAR and j not in dropped), None)
-            if back is not None:
-                dropped |= {i, back}
-        for i, (t, sign, card) in enumerate(events):
-            if i in dropped:
-                continue
-            if sign == "-":
-                act(t, seat, "intrigue", [], [f"Intrigue left hand: {card}"],
-                    card=card)
+            n = len(i1) - len(i0)
+            if n < 0:
+                which = removed[:-n] + ["?"] * max(0, -n - len(removed))
+                for card in which:
+                    act(t1, seat, "intrigue", [] if card != "?" else ["which Intrigue?"],
+                        [f"Intrigues in hand {len(i0)} -> {len(i1)}"], card=card)
             else:
-                act(t, seat, "gain_intrigue", [], [f"Intrigue joined hand: {card}"],
-                    card=card)
+                which = added[:n] + ["?"] * max(0, n - len(added))
+                for card in which:
+                    act(t1, seat, "gain_intrigue", [] if card != "?" else ["which Intrigue?"],
+                        [f"Intrigues in hand {len(i0)} -> {len(i1)}"], card=card)
+
+    # --- the Imperium Row (when scanned): a card leaving it is a purchase.
+    # Confirms the discard-pile buys and recovers ones the discard missed
+    # (covered pile, bought straight to hand, ...).
+    row = seqs.get(("G", "row"), [])
+    if row:
+        rev_times = {s_: [t for t, c in seqs.get((s_, "reveal"), []) if c]
+                     for s_ in SEATS}
+        buys = [a for a in actions if a["kind"] == "buy"]
+        for (t0, c0), (t1, c1) in zip(row, row[1:]):
+            if not c0 or not c1:
+                continue                   # row hidden / being refilled
+            _, left = multiset_diff([disp(n) for n in names_of(c0)],
+                                    [disp(n) for n in names_of(c1)])
+            for name in left:
+                hit = next((a for a in buys if a["card"] == name
+                            and abs(a["t"] - t1) <= BUY_MATCH), None)
+                if hit is not None:
+                    hit["raw"].append(f"left the Imperium Row at {t1:.0f}s")
+                    buys.remove(hit)
+                    continue
+                # buyer = whoever revealed most recently before this
+                seat = max(SEATS, key=lambda s_: max(
+                    (t for t in rev_times[s_] if t <= t1 + 2), default=-1e9))
+                act(t1, seat, "buy", ["buyer guessed from the last reveal"],
+                    [f"left the Imperium Row: {name}"], card=name)
+        for a in buys:
+            a["flags"].append("not seen leaving the Row (reserve card, or misread)")
 
     actions.sort(key=lambda a: a["t"])
     for i, a in enumerate(actions):
@@ -366,11 +461,38 @@ def build(video: str, tl: list[dict], names: dict[str, str]) -> dict:
                     for s in SEATS],
         "rounds": [{"round": i + 1,
                     "t": (round_ends[i - 1] if i else (min(e["t"] for e in tl) if tl else 0)),
-                    "conflict": ""} for i in range(len(round_ends) + 1)],
+                    "conflict": conflict_of(i + 1)}
+                   for i in range(len(round_ends) + 1)],
         "result": [],
+        "resources": {s_: [[t, v] for t, v in nums.get(s_, [])] for s_ in SEATS},
+        # shared board over time: influence per colour + faction, VP per colour
+        "board": [[e["t"], e["values"]] for e in tl if e["region"] == "board"],
         "actions": actions,
         "edited": False,
     }
+
+
+LEVEL1 = ("skirmishA", "skirmishB", "skirmishC", "bl_Skirmish")
+
+
+def split_games(tl: list[dict]) -> list[list[dict]]:
+    """Split a multi-game video (a stream) into games: a new game starts when
+    the Conflict card goes back to a level-I Skirmish after later conflicts
+    had been seen. Videos without Conflict readings stay one game."""
+    starts = [tl[0]["t"] if tl else 0.0]
+    seen_later = False
+    for e in tl:
+        if e["region"] != "conflict" or not e.get("cards"):
+            continue
+        c = e["cards"][0]["card"]
+        if c in LEVEL1:
+            if seen_later:
+                starts.append(e["t"] - 60)      # setup happens just before
+                seen_later = False
+        else:
+            seen_later = True
+    starts.append(float("inf"))
+    return [[e for e in tl if a <= e["t"] < b] for a, b in zip(starts, starts[1:])]
 
 
 def main() -> None:
@@ -388,21 +510,26 @@ def main() -> None:
     names = dict(kv.split("=", 1) for kv in args.names.split(",") if "=" in kv)
     if "me" in names:
         names["me"] = names.get(names["me"], names["me"])
-    game = build(args.video, tl, names)
-
-    vid = game["video_id"]
-    out = args.out or os.path.join(GAMES, f"{vid}.json")
-    if os.path.exists(out) and not args.out:
-        with open(out, encoding="utf-8") as f:
-            if json.load(f).get("edited"):
-                raise SystemExit(f"{out} has hand edits; pass --out to write elsewhere")
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    with open(out, "w", encoding="utf-8") as f:
-        json.dump(game, f, indent=1, ensure_ascii=False)
-    kinds = collections.Counter(a["kind"] for a in game["actions"])
-    flagged = sum(1 for a in game["actions"] if a["flags"])
-    print(f"{out}: {len(game['rounds'])} rounds, {len(game['actions'])} actions "
-          f"{dict(kinds)}, {flagged} flagged")
+    parts = [p for p in split_games(tl) if sum(1 for e in p if e.get("cards")) >= 50]
+    for gi, part in enumerate(parts or [tl]):
+        game = build(args.video, part, names)
+        vid = game["video_id"]
+        if len(parts) > 1:                       # stream: one file per game
+            game["video_id"] = f"{vid}_g{gi + 1}"
+            game["game_in_video"] = gi + 1
+        out = args.out or os.path.join(GAMES, f"{game['video_id']}.json")
+        if os.path.exists(out) and not args.out:
+            with open(out, encoding="utf-8") as f:
+                if json.load(f).get("edited"):
+                    print(f"{out} has hand edits; skipped (pass --out)")
+                    continue
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        with open(out, "w", encoding="utf-8") as f:
+            json.dump(game, f, indent=1, ensure_ascii=False)
+        kinds = collections.Counter(a["kind"] for a in game["actions"])
+        flagged = sum(1 for a in game["actions"] if a["flags"])
+        print(f"{out}: {len(game['rounds'])} rounds, {len(game['actions'])} actions "
+              f"{dict(kinds)}, {flagged} flagged")
 
 
 if __name__ == "__main__":

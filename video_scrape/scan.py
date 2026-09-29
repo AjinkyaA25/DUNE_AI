@@ -30,6 +30,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vision as V  # noqa: E402
+import board_numbers as BN  # noqa: E402
+import board_state as BS  # noqa: E402
 
 CHANGE = 6.0   # mean abs grey diff (on a 1/4-scale region) that counts as change
 STILL = 3.0    # ...and below this between two samples counts as settled
@@ -70,13 +72,23 @@ def samples(video: str, start: float, end: float | None, step: float):
 
 
 def scan(video: str, start: float = 0, end: float | None = None,
-         step: float = 1.0, log=print) -> list[dict]:
+         step: float = 1.0, log=print, only: set | None = None) -> list[dict]:
+    """`only`: {(seat, region), ...} to scan just those regions."""
     lib = V.Library()
     aligner = V.Aligner()
     M, last_align = None, -1e9
     stable: dict[tuple, np.ndarray] = {}   # signature at last read
     pending: dict[tuple, np.ndarray] = {}  # changed, waiting to settle
     current: dict[tuple, list] = {}        # last card list per region
+    # board numbers (spice, solari, water, persuasion, strength) per seat:
+    # recorded when a seat's reading changes and holds for two samples
+    numbers = only is None or ("*", "numbers") in only
+    nreader = BN.Reader() if numbers else None
+    n_last: dict[str, dict] = {}
+    n_pending: dict[str, dict] = {}
+    # shared board (influence tracks, VP track), recorded the same way
+    board = only is None or ("*", "board") in only
+    b_last, b_pending = None, None
     out: list[dict] = []
     t0, reads = time.time(), 0
 
@@ -93,6 +105,8 @@ def scan(video: str, start: float = 0, end: float | None = None,
         for seat, regs in V.REGIONS.items():
             for rg, box in regs.items():
                 key = (seat, rg)
+                if only is not None and key not in only:
+                    continue
                 sig = signature(warped, box)
                 if key in pending:
                     if diff(pending[key], sig) > STILL:  # still moving
@@ -107,7 +121,8 @@ def scan(video: str, start: float = 0, end: float | None = None,
                 # settled after a change: read it
                 stable[key] = sig
                 hits = V.find_cards(warped, box, lib, V.REGION_KINDS[rg],
-                                    bottom)
+                                    bottom, V.REGION_HEIGHT.get(rg),
+                                    V.region_only(rg, lib))
                 reads += 1
                 cards = [{"card": h.card, "score": round(h.score, 3),
                           "rivals": h.rivals} for h in hits]
@@ -116,6 +131,28 @@ def scan(video: str, start: float = 0, end: float | None = None,
                     current[key] = cards
                     out.append({"t": round(t, 1), "seat": seat, "region": rg,
                                 "cards": cards})
+        if numbers:
+            vals = nreader.read_frame(warped)
+            for seat, v in vals.items():
+                if v == n_last.get(seat):
+                    n_pending.pop(seat, None)
+                elif n_pending.get(seat) == v:
+                    n_last[seat] = v
+                    n_pending.pop(seat)
+                    out.append({"t": round(t, 1), "seat": seat,
+                                "region": "numbers", "values": v})
+                else:
+                    n_pending[seat] = v
+        if board:
+            b = BS.read_board(warped)
+            if b == b_last:
+                b_pending = None
+            elif b == b_pending:
+                b_last, b_pending = b, None
+                out.append({"t": round(t, 1), "seat": "G", "region": "board",
+                            "values": b})
+            else:
+                b_pending = b
         if int(t) % 60 == 0 and abs(t - round(t)) < step / 2:
             log(f"  {t / 60:5.1f} min  reads={reads}  changes={len(out)}  "
                 f"({time.time() - t0:.0f}s)")
@@ -129,10 +166,23 @@ def main() -> None:
     ap.add_argument("--end", type=float)
     ap.add_argument("--step", type=float, default=1.0)
     ap.add_argument("--out")
+    ap.add_argument("--regions",
+                    help='scan only these, e.g. "G:row,TL:hand"; their entries '
+                         'replace the same regions in an existing timeline')
     args = ap.parse_args()
 
     out = args.out or os.path.splitext(args.video)[0] + ".timeline.json"
-    tl = scan(args.video, args.start, args.end, args.step)
+    only = None
+    if args.regions:            # "numbers" = board numbers of every seat
+        only = {("*", r) if r in ("numbers", "board") else tuple(r.split(":", 1))
+                for r in args.regions.split(",")}
+    tl = scan(args.video, args.start, args.end, args.step, only=only)
+    if only is not None and os.path.exists(out):
+        with open(out, encoding="utf-8") as f:
+            old = json.load(f)
+        tl = sorted([e for e in old if (e["seat"], e["region"]) not in only
+                     and ("*", e["region"]) not in only] + tl,
+                    key=lambda e: e["t"])
     with open(out, "w", encoding="utf-8") as f:
         json.dump(tl, f, indent=0)
     print(f"wrote {len(tl)} region changes -> {out}")

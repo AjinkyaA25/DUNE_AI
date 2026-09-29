@@ -19,6 +19,7 @@ Debug usage (draws what was recognised onto one frame):
 from __future__ import annotations
 
 import argparse
+import sys
 import json
 import os
 from dataclasses import dataclass
@@ -47,6 +48,7 @@ ROW_TOL = 6         # px: cards in one strip/row share the same top edge
 # dark cards that match empty table well and can never be in a hand/row
 NEVER_HELD = {"reclaimedForces", "muadDibFirstPlayer"}
 EMPTY = "_empty"
+BACK_ID = "_back"
 BLANK_STD = 15
 CLIP_TOP = 44  # in a region cut off by the video edge, match card tops only
 
@@ -61,9 +63,64 @@ REGIONS = {
            "reveal": (320, 850, 730, 935), "discard": (662, 655, 730, 745)},
     "BR": {"hand": (1240, 915, 1775, 1075), "agent": (1270, 765, 1600, 850),
            "reveal": (1270, 850, 1740, 935), "discard": (1422, 655, 1490, 745)},
+    # shared: the 5-card Imperium Row under the central board, and the
+    # current Conflict card (shown sideways under the Conflict deck)
+    "G": {"row": (920, 795, 1205, 895), "conflict": (880, 605, 945, 700)},
 }
 REGION_KINDS = {"hand": ("imperium", "intrigue"), "agent": ("imperium",),
-                "reveal": ("imperium",), "discard": ("imperium",)}
+                "reveal": ("imperium",), "discard": ("imperium",),
+                "row": ("imperium",), "conflict": ("intrigue",)}
+# regions whose cards are printed at a different size than CARD_H
+REGION_HEIGHT = {"row": 68, "conflict": 66}
+# regions that can only hold these library cards
+CONFLICT_CARDS = frozenset((
+    "battleForArrakeen", "battleForImperialBasin", "battleForSpiceRefinery",
+    "bl_Skirmish", "bl_StormsInTheSouth", "choamSecurity", "propaganda",
+    "protectTheSietches", "secureImperialBasin", "seizeSpiceRefinery",
+    "shadowContest", "siegeOfArrakeen", "skirmishA", "skirmishB", "skirmishC",
+    "spiceFreighters", "testOfLoyalty", "tradeDispute"))
+REGION_ONLY = {"conflict": CONFLICT_CARDS}
+
+
+# engine card -> mod id where the mod spells the card differently
+MOD_SPELLING = {
+    "councilorAmbition": "Councilor's Ambition",
+    "bl_DeliverLogistics": "Delivery Logistics",
+    "nothernWatermaster": "Northern Watermaster",
+    "publicSpectable": "Public Spectacle",
+    "shaddamFavor": "Shaddam's Favor",
+    "smugglerHarvester": "Smuggler's Harvester",
+    "smugglerHaven": "Smuggler's Haven",
+    "spacingGuildFavor": "Spacing Guild's Favor",
+    "theBeastSpoils": "The Beast's Spoils",
+    "trecherousManeuver": "Treacherous Maneuver",
+}
+
+
+def region_only(rg: str, lib: "Library") -> frozenset:
+    return REGION_ONLY.get(rg) or game_cards(lib)
+
+
+# never in a hand / row / played: conflict cards, Steersman's Navigation
+# cards (named like techs), per-player-count components, community variants
+NOT_HAND_CARDS = CONFLICT_CARDS | frozenset((
+    "bl_AdvancedDataAnalysis", "bl_ChoamTransports", "bl_DeliveryBay",
+    "bl_ForbiddenWeapons", "bl_GeneLockedVault", "bl_Glowglobes",
+    "bl_NavigationChamber", "bl_OrnithopterFleet", "bl_Panopticon",
+    "bl_PlanetaryArray", "bl_YrkoonPersuasion", "muadDib4to6p", "reshuffle"))
+
+
+def game_cards(lib: "Library") -> frozenset:
+    """Library ids that can show up in a hand, the Row or a played row.
+    NOT limited to the engine's card list: the tournament games use cards the
+    engine doesn't have yet (e.g. Ixian Probe), and hiding those would turn
+    them into lookalike misreads."""
+    if lib._game_cards is None:
+        lib._game_cards = frozenset(
+            c for c in lib.index
+            if c not in NOT_HAND_CARDS and not c.endswith("_com")
+            and not c.startswith("placeSpy")) | {BACK_ID, EMPTY}
+    return lib._game_cards
 
 
 def _kind(w: int, h: int) -> str | None:
@@ -85,6 +142,9 @@ class Template:
 
 class Library:
     def __init__(self, cards_dir: str = CARDS):
+        self._game_cards = None
+        self.full: dict = {}          # (card, id(template)) -> library image
+        self._scaled: dict = {}
         with open(os.path.join(cards_dir, "index.json"), encoding="utf-8") as f:
             self.index = json.load(f)
         self.templates: dict[str, list[Template]] = {k: [] for k in CARD_H}
@@ -97,9 +157,10 @@ class Library:
                     continue
                 h = CARD_H[kind]
                 w = round(im.shape[1] * h / im.shape[0])
-                self.templates[kind].append(Template(
-                    card, kind, cv2.resize(im, (w, h),
-                                           interpolation=cv2.INTER_AREA)))
+                t = Template(card, kind, cv2.resize(im, (w, h),
+                                                    interpolation=cv2.INTER_AREA))
+                self.templates[kind].append(t)
+                self.full[card, id(t)] = im
 
         # empty-slot artwork (e.g. the discard pile placeholder) so it wins
         # its spot instead of the nearest card; removed from results
@@ -108,7 +169,21 @@ class Library:
                 im = cv2.imread(os.path.join(LAYOUT, fn))
                 self.templates["imperium"].append(Template(EMPTY, "imperium", im))
 
+    def at(self, kind: str, h: int) -> list[Template]:
+        """This kind's templates rescaled to height h (cached)."""
+        key = (kind, h)
+        if key not in self._scaled:
+            self._scaled[key] = [
+                Template(t.card, t.kind, cv2.resize(
+                    self.full[t.card, id(t)], (round(self.full[t.card, id(t)].shape[1]
+                                                     * h / self.full[t.card, id(t)].shape[0]), h),
+                    interpolation=cv2.INTER_AREA))
+                for t in self.templates[kind] if (t.card, id(t)) in self.full]
+        return self._scaled[key]
+
     def name(self, card: str) -> str:
+        if card in MOD_SPELLING:
+            return MOD_SPELLING[card]
         names = self.index.get(card, {}).get("names") or [card]
         return names[0]
 
@@ -172,7 +247,8 @@ class Hit:
 
 def find_cards(frame: np.ndarray, region: tuple[int, int, int, int],
                lib: Library, kinds: tuple[str, ...],
-               bottom: int | None = None) -> list[Hit]:
+               bottom: int | None = None, height: int | None = None,
+               only: frozenset | None = None) -> list[Hit]:
     """Best non-overlapping card matches inside one region, left to right.
 
     If the video ends above the region's bottom edge, cards are only partly
@@ -186,7 +262,9 @@ def find_cards(frame: np.ndarray, region: tuple[int, int, int, int],
     roi = frame[y0:y1, x0:x1]
     cands: list[Hit] = []
     for kind in kinds:
-        for t in lib.templates[kind]:
+        for t in (lib.at(kind, height) if height else lib.templates[kind]):
+            if only is not None and t.card not in only:
+                continue
             img = t.img[:CLIP_TOP] if clipped else t.img
             th, tw = img.shape[:2]
             if tw > roi.shape[1]:
@@ -252,7 +330,8 @@ def _overlap_x(a, b) -> float:
 
 def read_frame(frame: np.ndarray, lib: Library, bottom: int | None = None
                ) -> dict[str, dict[str, list[Hit]]]:
-    return {seat: {rg: find_cards(frame, box, lib, REGION_KINDS[rg], bottom)
+    return {seat: {rg: find_cards(frame, box, lib, REGION_KINDS[rg], bottom,
+                                  REGION_HEIGHT.get(rg), region_only(rg, lib))
                    for rg, box in regs.items()}
             for seat, regs in REGIONS.items()}
 

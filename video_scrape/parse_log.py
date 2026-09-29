@@ -122,11 +122,11 @@ P = {
                           r"aequo)?\s*:\s*(?P<leader>[^-–→]+)$", re.I),
     "elo": re.compile(r"^(?P<pl>\d)\s*(?:st|nd|rd|th)\s*:\s*(?P<name>.+?)\s*-\s*"
                       r"(?P<a>\d{3,4})\s*\D+(?P<b>\d{3,4})", re.I),
-    "color": re.compile(r"^(?P<name>\S+)\s+is\s+colou?r\s*(?P<color>[A-Za-z]+)",
+    "color": re.compile(r"^(?P<name>.+?)\s*is\s+colou?r\s*(?P<color>[A-Za-z]+)",
                         re.I),
-    "picked_leader": re.compile(r"^(?P<name>\S+)\s+picked leader\s+"
+    "picked_leader": re.compile(r"^(?P<name>.+?)\s+picked leader\s+"
                                 r"(?P<leader>.+?)\.?$", re.I),
-    "picked_pos": re.compile(r"^(?P<name>\S+)\s+picked position\s*(?P<n>\d)",
+    "picked_pos": re.compile(r"^(?P<name>.+?)\s+picked position\s*(?P<n>\d)",
                              re.I),
     "manual": re.compile(r"^(?P<leader>.+?)\s+(?P<verb>spent|recei\w*)\s+"
                          r"(?P<n>\d+)\s*(?P<what>.+?)\s*manually", re.I),
@@ -186,12 +186,28 @@ def parse(chat_path: str) -> dict:
 
     # --- pass 1: players (name, color, leader, seat) from setup lines
     players: dict[str, dict] = {}
+    def pkey(name: str) -> str:
+        """Player key tolerant of OCR misspellings (u/v, dropped letters)."""
+        k = _key(name).replace("u", "v")
+        for existing in players:
+            if difflib.SequenceMatcher(None, k, existing).ratio() >= 0.85:
+                return existing
+        return k
+
+    spellings: dict[str, dict[str, int]] = {}
     for t, text in lines:
+        m = P["turn_of"].match(text)
+        if m:
+            nm = m.group("name").strip()
+            k = pkey(nm)
+            if k in players:
+                spellings.setdefault(k, {}).setdefault(nm, 0)
+                spellings[k][nm] += 1
         for key in ("color", "picked_leader", "picked_pos"):
             m = P[key].match(text)
             if m:
-                name = m.group("name")
-                p = players.setdefault(_key(name), {"name": name})
+                name = m.group("name").strip()
+                p = players.setdefault(pkey(name), {"name": name})
                 if key == "color":
                     p["color"] = m.group("color").capitalize()
                     p["_color_t"] = t
@@ -200,7 +216,24 @@ def parse(chat_path: str) -> dict:
                     p.setdefault("leader", ld)
                 else:
                     p["seat"] = int(m.group("n"))
+    # display the spelling OCR produced most often ("Dinosaur11", not
+    # "Dinosaur 1 1"), then fill leaders the setup lines missed from the
+    # "<name>'s turn." -> "Turn: <leader>" pairs seen during play
+    for k, p in players.items():
+        if spellings.get(k):
+            p["name"] = max(spellings[k], key=spellings[k].get)
     known = [p["name"] for p in players.values()]
+    votes: dict[str, dict[str, int]] = {}
+    for (_, a), (_, b) in zip(lines, lines[1:]):
+        m1, m2 = P["turn_of"].match(a), P["turn_leader"].match(b)
+        if m1 and m2 and "?" not in b:
+            k = pkey(m1.group("name"))
+            ld = m2.group("leader").strip(" .")
+            votes.setdefault(k, {}).setdefault(ld, 0)
+            votes[k][ld] += 1
+    for k, p in players.items():
+        if "leader" not in p and votes.get(k):
+            p["leader"] = max(votes[k], key=votes[k].get)
     # player-name overlays ("... Benten") get glued onto log lines
     name_tail = re.compile(r"\s+(?:%s)\s*$" % "|".join(
         re.escape(n) for n in known)) if known else None

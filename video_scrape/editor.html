@@ -152,7 +152,9 @@ async function openGame(vid) {
   game = await fetch(`/api/game/${vid}`).then(r => r.json());
   location.hash = vid;
   setDirty(false);
-  if (yt && yt.loadVideoById) yt.cueVideoById(vid); else makePlayer(vid);
+  // several games can come from one stream ("<id>_g2"): play the real video
+  const ytid = (game.url || "").split("/").pop() || vid.replace(/_g\d+$/, "");
+  if (yt && yt.loadVideoById) yt.cueVideoById(ytid); else makePlayer(ytid);
   renderMeta(); render();
 }
 
