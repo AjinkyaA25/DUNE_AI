@@ -39,6 +39,40 @@ _RES_VALUE = {
     "influence_bene_gesserit": 2.2, "influence_fremen": 2.2,
     "sandworm": 3.0, "sandworm_maker_space": 3.0, "contract": 1.5,
 }
+# Tunable knobs (fitted to human games by video_scrape/tune_heuristic.py).
+# Defaults reproduce the hand-set heuristic exactly; a HeuristicAgent with a
+# `tuning` dict applies its own values at the start of every score() call.
+_BASE_RES_VALUE = dict(_RES_VALUE)
+TUNE_DEFAULTS = {
+    # multipliers on _RES_VALUE entries
+    "res_contract": 1.0, "res_spy": 1.0, "res_intrigue": 1.0, "res_draw": 1.0,
+    "res_solari": 1.0, "res_spice": 1.0, "res_water": 1.0, "res_troops": 1.0,
+    # other levers
+    "sm_solari": 2.0,        # per solari toward Swordmaster (Spice Refinery etc.)
+    "combat": 1.0,           # combat-space bonus multiplier
+    "influence": 1.0,        # faction influence value multiplier
+    "reveal_bias": 0.0,      # added to the Reveal turn's score
+    "ptw_tax": 4.0,          # Prepare the Way penalty per extra copy
+    "tier_blend": 0.70,      # tier list vs situational card value
+    "faction_space": 0.0,    # flat bonus for sending an agent to a faction space
+}
+_TUNE = dict(TUNE_DEFAULTS)
+
+
+def _apply_tuning(t: dict) -> None:
+    global _TUNE, _RES_VALUE, _TIER_BLEND
+    _TUNE = t
+    res = dict(_BASE_RES_VALUE)
+    for k, v in t.items():
+        if k.startswith("res_"):
+            name = k[4:]
+            for key in list(res):
+                if key == name or (name == "spy" and key.startswith("spy")):
+                    res[key] = _BASE_RES_VALUE[key] * v
+    _RES_VALUE = res
+    _TIER_BLEND = t["tier_blend"]
+
+
 _INF_KEYS = ("influence_emperor", "influence_spacing_guild",
              "influence_bene_gesserit", "influence_fremen")
 _FACTION_OF = {
@@ -205,7 +239,7 @@ def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> floa
     if cur >= 4 and gs.alliance_holder.get(fac) == pid \
             and any(q.influence.get(fac, 0) >= cur - 1 for q in gs.players if q.id != pid):
         v += 1.5 * amt * urgency                      # defend a contested alliance
-    return v
+    return v * _TUNE["influence"]
 
 
 # ---------------------------------------------------------------------------
@@ -473,7 +507,7 @@ def _acquire_card_value(gs: GameState, pid: int, card, lean: bool = False) -> fl
         owned = sum(1 for z in (p.deck, p.discard, p.hand, p.in_play)
                     for c in z if c.name == "Prepare the Way")
         if owned >= 1:
-            s -= 4.0 + 2.0 * (owned - 1)
+            s -= _TUNE["ptw_tax"] + 2.0 * (owned - 1)
 
     # Deck-dilution pressure. Applied AFTER the tier blend so it bites every
     # card equally: once the deck is bloated, a C-tier filler (blended ~3) goes
@@ -759,8 +793,9 @@ class HeuristicAgent(Agent):
                  opening_book: Optional[OpeningBook] = None,
                  temperature: float = 0.0, lean_deck: bool = False,
                  sm_boost: bool = True, faction_focus: bool = True,
-                 bloodlines: bool = True):
+                 bloodlines: bool = True, tuning: Optional[dict] = None):
         self.rng = random.Random(seed)
+        self.tuning = {**TUNE_DEFAULTS, **(tuning or {})}
         # bloodlines=False (`heuristic:nobl`): decline every tech / commander /
         # activation - the baseline for checking the Bloodlines scoring pays off
         self.bloodlines = bloodlines
@@ -792,6 +827,8 @@ class HeuristicAgent(Agent):
     def score(self, gs: GameState, pid: int, a: GameAction) -> float:
         global _FACTION_FOCUS
         _FACTION_FOCUS = self.faction_focus
+        if _TUNE is not self.tuning:
+            _apply_tuning(self.tuning)
         p = gs.players[pid]
         at = a.action_type
         s = 0.0
@@ -805,7 +842,7 @@ class HeuristicAgent(Agent):
                     s += _wall_break_value(gs, pid)
             fac = gs._faction_for_space(a.space_name)
             if fac:
-                s += _influence_gain_value(gs, pid, fac, 1)
+                s += _influence_gain_value(gs, pid, fac, 1) + _TUNE["faction_space"]
             cost = SPACE_MANDATORY_COSTS.get(a.space_name, {})
             s -= sum(_RES_VALUE.get(k, 0.4) * v for k, v in cost.items())
             # High Council (+2 persuasion every future Reveal turn) and
@@ -844,9 +881,9 @@ class HeuristicAgent(Agent):
                         gs.get_space_effects_preview(a.space_name, a.space_option)
                         if isinstance(e.get("solari"), (int, float)) and e["solari"] > 0)
                     if solari_here:
-                        s += 2.0 * min(solari_here, gap)
+                        s += _TUNE["sm_solari"] * min(solari_here, gap)
             if sp.is_combat_space and gs.current_conflict is not None:
-                s += _conflict_worth(gs, pid) * (1.0 + 0.3 * min(p.troops_garrison, 4)
+                s += _TUNE["combat"] * _conflict_worth(gs, pid) * (1.0 + 0.3 * min(p.troops_garrison, 4)
                                                   + 0.5 * _combat_build_strength(gs, pid))
             if a.space_option == "pay_spice" and p.spice < 3:
                 s -= 1.0
@@ -861,7 +898,7 @@ class HeuristicAgent(Agent):
 
         elif at == ActionType.REVEAL_TURN:
             # revealing is fine once agent plays are weak; slight positive base
-            s = 1.0 + 0.4 * len(p.hand)
+            s = 1.0 + 0.4 * len(p.hand) + _TUNE["reveal_bias"]
 
         elif at == ActionType.ACQUIRE_CARD:
             card = next((c for c in gs.imperium_row if c.name == a.acquire_card_name), None)
@@ -1387,6 +1424,7 @@ def make_agent(spec: str, seed: Optional[int] = None,
         sm_boost = True
         faction_focus = True
         bloodlines = True
+        tuning = None
         for p in parts[1:]:
             if p.startswith("T"):
                 temp = float(p[1:])
@@ -1398,9 +1436,14 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 faction_focus = False
             elif p == "nobl":
                 bloodlines = False
+            elif p.startswith("tuned="):
+                import json as _json
+                with open(p[6:], encoding="utf-8") as _f:
+                    tuning = _json.load(_f)
         return HeuristicAgent(seed=seed, opening_book=opening_book,
                               temperature=temp, lean_deck=lean, sm_boost=sm_boost,
-                              faction_focus=faction_focus, bloodlines=bloodlines)
+                              faction_focus=faction_focus, bloodlines=bloodlines,
+                              tuning=tuning)
     if kind == "search":
         from src.ai.search import RoundSearchAgent
         kw = {"k": 5, "m": 24, "margin": 0.02, "horizon": "end"}

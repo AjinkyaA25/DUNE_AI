@@ -1,0 +1,14 @@
+{
+ "res_contract": 0.5,
+ "res_spy": 3,
+ "res_intrigue": 2,
+ "res_draw": 0.5,
+ "res_solari": 0.75,
+ "res_water": 2,
+ "res_troops": 0.5,
+ "combat": 0.5,
+ "influence": 1.5,
+ "reveal_bias": 2,
+ "tier_blend": 0.3,
+ "faction_space": 4
+}
