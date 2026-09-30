@@ -509,6 +509,8 @@ def replay_file(path: str, out_dir: str) -> dict:
                 "skipped": f"Immortality expansion in play ({ev})"}
     if game.get("duplicate_of"):
         return {"game": game["video_id"], "skipped": f"duplicate of {game['duplicate_of']}"}
+    from clean import clean_game
+    game = clean_game(game, _card_factory())
     rp = Replay(game)
     rp.run()
     win = rp.winner()
