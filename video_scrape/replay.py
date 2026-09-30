@@ -57,7 +57,7 @@ from src.data.card_definitions import (  # noqa: E402
     create_reserve_spice_must_flow, create_starter_cards, setup_game)
 from src.game.bloodlines.cards import (  # noqa: E402
     create_bloodlines_imperium_cards, create_community_imperium_cards,
-    create_foldspace)
+    create_foldspace, create_replay_only_cards)
 from src.game.gameState import ActionType  # noqa: E402
 
 FACE_DOWN = "facedowncard"   # vision's name for a card seen from the back
@@ -75,7 +75,8 @@ def _card_factory() -> dict:
     cards = {}
     for c in (create_starter_cards() + create_imperium_cards()
               + create_bloodlines_imperium_cards()
-              + create_community_imperium_cards() + [create_foldspace()]
+              + create_community_imperium_cards() + create_replay_only_cards()
+              + [create_foldspace()]
               + create_reserve_prepare_the_way(1) + create_reserve_spice_must_flow(1)):
         cards.setdefault(norm(c.name), c)
     return cards

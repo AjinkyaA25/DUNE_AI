@@ -213,8 +213,23 @@ def create_bloodlines_intrigues() -> List[IntrigueCard]:
 # read from the dunecardshub.com card images (2026-09-29). Kept separate from
 # the Bloodlines lists so feature indices of those stay stable.
 # ---------------------------------------------------------------------------
+# Seen in recorded games but NOT in the community mod's current pool (user,
+# 2026-09-30): kept only so replays of older games can recreate them.
+REPLAY_ONLY = frozenset(("Crysknife", "Dr. Yueh", "Fedaykin Death Commando",
+                         "Missionaria Protectiva", "Other Memory", "Lisan al Gaib",
+                         "CHOAM Delegate"))
+
+
 def create_community_imperium_cards() -> List:
-    return _with_discard_triggers(_community_imperium_cards())
+    """Community-pool cards dealt in engine games."""
+    return [c for c in _with_discard_triggers(_community_imperium_cards())
+            if c.name not in REPLAY_ONLY]
+
+
+def create_replay_only_cards() -> List:
+    """Cards recognised when replaying recorded games, never dealt."""
+    return [c for c in _with_discard_triggers(_community_imperium_cards())
+            if c.name in REPLAY_ONLY]
 
 
 def _community_imperium_cards() -> List:
