@@ -685,6 +685,11 @@ class Bloodlines:
             elif k == "bl_free_commander":
                 p.commanders_garrison += 1
                 p.troops_garrison += 1
+            elif k == "bl_recover_bene":             # Other Memory
+                card = next((c for c in reversed(p.discard) if self._is_bene(c)), None)
+                if card is not None:
+                    p.discard.remove(card)
+                    p.hand.append(card)
             elif k == "bl_reveal_persuasion":        # Recruitment Mission
                 p.bl_reveal_bonus = getattr(p, "bl_reveal_bonus", 0) + int(v)
             elif k == "bl_topdeck_round":

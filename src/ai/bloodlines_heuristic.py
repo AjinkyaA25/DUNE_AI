@@ -31,7 +31,7 @@ BL_RES_VALUE: Dict[str, float] = {
     "bl_tech_offer": 1.5, "bl_free_commander": 2.0, "bl_force_retreat": 0.8,
     "bl_opponents_lose_troop": 1.2, "bl_commander_discount": 0.3,
     "bl_shigawire": 0.8, "bl_complete_contract": 2.0, "bl_retreat": -0.5,
-    "grant_deploy": 0.5, "swords": SWORD,
+    "grant_deploy": 0.5, "swords": SWORD, "bl_recover_bene": 1.2,
 }
 
 _WEAK = ("Reconnaissance", "Diplomacy", "Dune, the Desert Planet",

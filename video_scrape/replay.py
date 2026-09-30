@@ -101,7 +101,13 @@ def resolve_name(name: str, factory: dict) -> str:
     if n in factory or not n:
         return n
     best = difflib.get_close_matches(n, list(factory), n=1, cutoff=0.82)
-    return best[0] if best else n
+    if best:
+        return best[0]
+    # chat lines sometimes run on into the next line: 'Mercantile Affairs'
+    # + 'recalled to gather intelligence' -> match a known name at the start
+    pre = [k for k in factory if len(k) >= 8 and
+           difflib.SequenceMatcher(None, k, n[:len(k)]).ratio() >= 0.85]
+    return max(pre, key=len) if pre else n
 
 
 class Replay:

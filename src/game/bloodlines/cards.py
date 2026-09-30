@@ -214,6 +214,10 @@ def create_bloodlines_intrigues() -> List[IntrigueCard]:
 # the Bloodlines lists so feature indices of those stay stable.
 # ---------------------------------------------------------------------------
 def create_community_imperium_cards() -> List:
+    return _with_discard_triggers(_community_imperium_cards())
+
+
+def _community_imperium_cards() -> List:
     m = _make
     return [
         m("Gene Manipulation", 3, I, access=["landsraad", "city"],
@@ -258,7 +262,44 @@ def create_community_imperium_cards() -> List:
         m("Truthsayer", 3, I, access=["emperor", "bene_gesserit", "landsraad"],
           tags=["emperor", "bene_gesserit"],
           agent={"discard_then": {"draw": 1}}, persuasion=1, swords=1),
+        # --- seen in the stream chat logs (dunecardshub.com, 2026-09-30) ---
+        m("Crysknife", 3, I, access=["fremen", "desert"], tags=["fremen"],
+          agent={"solari": 1}, swords=1,
+          reveal={"if_fremen_bond": {"influence_fremen": 1}}),
+        m("Dr. Yueh", 1, I, access=["city"], agent={"draw": 1}, persuasion=1),
+        m("Fedaykin Death Commando", 3, I, access=["city", "desert"],
+          tags=["fremen"], agent={"trash": 1}, persuasion=1,
+          reveal={"if_fremen_bond": {"swords": 3}}),
+        m("Missionaria Protectiva", 1, I, access=["city"], tags=["bene_gesserit"],
+          agent={"if_tag_other_bene": {"influence_any": 1}}, persuasion=1),
+        m("Other Memory", 4, I, access=["city", "desert"], tags=["bene_gesserit"],
+          agent={"bl_choose": {"options": [{"draw": 1}, {"bl_recover_bene": 1}]}},
+          persuasion=2,
+          notes="Agent: draw a card OR take a Bene Gesserit card from your "
+                "discard pile into your hand."),
+        m("Piter de Vries", 5, I, access=["landsraad", "city"],
+          agent={"intrigue": 1}, persuasion=3, swords=1),
+        m("Keys to Power", 5, I, access=["spacing_guild", "bene_gesserit", "landsraad"],
+          tags=["spacing_guild", "bene_gesserit"],
+          agent={"if_influence_emperor_2": {"spice": 2}}, persuasion=2),
+        m("Spice Trader", 4, I, access=["city", "desert"], tags=["fremen"],
+          agent={"if_influence_fremen_2": {"discard_then": {"spice": 2}}},
+          persuasion=2, swords=1),
+        m("Lisan al Gaib", 4, I, access=["fremen", "city", "desert"],
+          tags=["bene_gesserit", "fremen"], acquire={"spice": 1},
+          agent={"if_tag_other_bene": {"influence_fremen": 1}}, persuasion=1,
+          reveal={"if_fremen_bond": {"swords": 2}}),
+        m("CHOAM Delegate", 1, I, access=["desert"], trash={"solari": 3},
+          notes="When discarded or trashed: 3 solari (icon reading - to "
+                "confirm)."),
     ]
+
+
+def _with_discard_triggers(cards: List) -> List:
+    for c in cards:
+        if c.name == "CHOAM Delegate":
+            c.bl_on_discard = {"solari": 3}
+    return cards
 
 
 def create_foldspace() -> "object":
