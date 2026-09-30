@@ -168,6 +168,15 @@ def main() -> None:
     n_ocr = 0
     t_start = time.time()
     fi = int(args.start * vfps)
+    # progress is saved every few minutes of video and resumed from
+    ckpt = out + ".partial"
+    if os.path.exists(ckpt):
+        import json
+        with open(ckpt, encoding="utf-8") as f:
+            ck = json.load(f)
+        log, stamps, fi = ck["log"], ck["stamps"], max(fi, ck["fi"])
+        print(f"  resuming at {fi / vfps / 60:.1f} min ({len(log)} lines saved)")
+    last_ck = fi
     cap.set(cv2.CAP_PROP_POS_FRAMES, fi)
     while fi / vfps <= end:
         ok = cap.grab()
@@ -187,6 +196,12 @@ def main() -> None:
                 t = fi / vfps
                 log.extend(new)
                 stamps.extend([t] * len(new))
+                if fi - last_ck >= 300 * vfps:
+                    import json
+                    with open(ckpt + ".tmp", "w", encoding="utf-8") as f:
+                        json.dump({"fi": fi, "log": log, "stamps": stamps}, f)
+                    os.replace(ckpt + ".tmp", ckpt)
+                    last_ck = fi
                 if n_ocr % 50 == 0:
                     el = time.time() - t_start
                     print(f"  {t/60:5.1f} min  ocr={n_ocr}  lines={len(log)}"
@@ -196,6 +211,8 @@ def main() -> None:
     with open(out, "w", encoding="utf-8") as f:
         for t, line in zip(stamps, log):
             f.write(f"{int(t//60):02d}:{t%60:05.2f}\t{line}\n")
+    if os.path.exists(ckpt):
+        os.remove(ckpt)
     print(f"wrote {len(log)} lines -> {out}  ({n_ocr} OCR calls, "
           f"{time.time()-t_start:.0f}s)")
 

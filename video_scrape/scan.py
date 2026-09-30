@@ -71,9 +71,16 @@ def samples(video: str, start: float, end: float | None, step: float):
         n += every
 
 
+CHECKPOINT_EVERY = 300.0   # s of video between progress saves
+
+
 def scan(video: str, start: float = 0, end: float | None = None,
-         step: float = 1.0, log=print, only: set | None = None) -> list[dict]:
-    """`only`: {(seat, region), ...} to scan just those regions."""
+         step: float = 1.0, log=print, only: set | None = None,
+         checkpoint: str | None = None) -> list[dict]:
+    """`only`: {(seat, region), ...} to scan just those regions.
+    `checkpoint`: file where progress is saved every CHECKPOINT_EVERY s of
+    video; an existing one resumes the scan from where it stopped (regions
+    are re-read once on resume, which only repeats readings)."""
     lib = V.Library()
     aligner = V.Aligner()
     M, last_align = None, -1e9
@@ -91,6 +98,12 @@ def scan(video: str, start: float = 0, end: float | None = None,
     b_last, b_pending = None, None
     out: list[dict] = []
     t0, reads = time.time(), 0
+    if checkpoint and os.path.exists(checkpoint):
+        with open(checkpoint, encoding="utf-8") as f:
+            ck = json.load(f)
+        out, start = ck["out"], max(start, ck["t"])
+        log(f"  resuming at {start / 60:.1f} min ({len(out)} changes saved)")
+    last_ck = start
 
     for t, frame in samples(video, start, end, step):
         if M is None or t - last_align >= REALIGN_EVERY:
@@ -156,6 +169,12 @@ def scan(video: str, start: float = 0, end: float | None = None,
         if int(t) % 60 == 0 and abs(t - round(t)) < step / 2:
             log(f"  {t / 60:5.1f} min  reads={reads}  changes={len(out)}  "
                 f"({time.time() - t0:.0f}s)")
+        if checkpoint and t - last_ck >= CHECKPOINT_EVERY:
+            tmp = checkpoint + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({"t": t, "out": out}, f)
+            os.replace(tmp, checkpoint)
+            last_ck = t
     return out
 
 
@@ -176,7 +195,9 @@ def main() -> None:
     if args.regions:            # "numbers" = board numbers of every seat
         only = {("*", r) if r in ("numbers", "board") else tuple(r.split(":", 1))
                 for r in args.regions.split(",")}
-    tl = scan(args.video, args.start, args.end, args.step, only=only)
+    ckpt = out + ".partial"
+    tl = scan(args.video, args.start, args.end, args.step, only=only,
+              checkpoint=ckpt)
     if only is not None and os.path.exists(out):
         with open(out, encoding="utf-8") as f:
             old = json.load(f)
@@ -185,6 +206,8 @@ def main() -> None:
                     key=lambda e: e["t"])
     with open(out, "w", encoding="utf-8") as f:
         json.dump(tl, f, indent=0)
+    if os.path.exists(ckpt):
+        os.remove(ckpt)
     print(f"wrote {len(tl)} region changes -> {out}")
 
 
