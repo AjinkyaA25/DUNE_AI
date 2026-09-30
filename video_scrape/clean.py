@@ -24,6 +24,8 @@ import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FACE_DOWN = "face-down card"
+STARTERS = frozenset(("Dune, the Desert Planet", "Convincing Argument", "Reconnaissance",
+                      "Dagger", "Diplomacy", "Signet Ring", "Seek Allies"))
 DUP_S = 25.0
 
 _LEADER_IDS = (
@@ -109,6 +111,11 @@ def clean_game(g: dict, factory: dict | None = None) -> dict:
             continue
         keep.append(a)
     acts = keep
+
+    # starter cards can't be bought: such 'buys' are misreads
+    before = len(acts)
+    acts = [a for a in acts if not (a["kind"] == "buy" and a.get("card") in STARTERS)]
+    stats["starter_buys"] = before - len(acts)
 
     # duplicates
     keep = []
