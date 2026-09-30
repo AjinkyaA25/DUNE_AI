@@ -48,7 +48,7 @@ import parse_log as P  # noqa: E402
 GAMES = os.path.join(HERE, "games")
 VISION = os.path.join(GAMES, ".vision")
 CHAT_DIRS = [os.path.join(HERE, d) for d in ("raw_streams", "raw_streams2", "raw")]
-LOBBY_S = 300.0           # s of lobby (colour picks) before a game start
+LOBBY_S = 900.0           # s of lobby (colour picks) before a game start
 REAPPEAR_S = 90.0        # s: a "bought" card back in the Row = flicker
 MATCH_S = 20.0            # agent turn in chat vs video: same space within
 GAME_START = re.compile(r"phase\s*:?\s*leader\s*selection|phase\s*:?\s*game\s*start",
@@ -208,6 +208,11 @@ def merge_one(vis_path: str, segs) -> dict | None:
     names = map_names(chat, vis, colours)
     names = {k: v for k, v in names.items()}
     if len(set(names.values())) < 3:
+        # no chat merge: still drop the video's Row-flicker 'buys'
+        buys = [a for a in vis["actions"] if a["kind"] == "buy"]
+        keep = {id(a) for a in filter_row_buys(vid, buys)}
+        vis["actions"] = [a for a in vis["actions"]
+                          if a["kind"] != "buy" or id(a) in keep]
         vis.setdefault("merge_notes", []).append(
             f"chat not merged: only {len(set(names.values()))} seats matched "
             f"(lobby colours {colours})")

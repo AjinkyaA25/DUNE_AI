@@ -143,6 +143,16 @@ class Replay:
         self.round_t = {r["round"]: r["t"] for r in game["rounds"]}
         self.round_conflict = {r["round"]: r.get("conflict") for r in game["rounds"]}
         self.synced_round = 0
+        # the recorded game decides when it ends: a misread VP track must not
+        # end the engine's copy early
+        n_rounds = len(game["rounds"])
+        real_check = self.gs.check_victory_conditions
+
+        def check_victory():
+            if self.gs.round < n_rounds:
+                return False
+            return real_check()
+        self.gs.check_victory_conditions = check_victory
 
     # -- setup ----------------------------------------------------------------
     def _seat_order(self) -> list[str]:
@@ -438,6 +448,54 @@ class Replay:
         return max(pids, key=key)
 
 
+# ---------------------------------------------------------------------------
+# game version filter: only Uprising + Bloodlines (community edition or not).
+# Immortality games (Tleilaxu deck, graft cards, research track) are skipped.
+# ---------------------------------------------------------------------------
+IMMORTALITY_CARDS = frozenset((
+    "beguilingPheromones", "chairdog", "contaminator", "corrinoGenes", "faceDancer",
+    "faceDancerInitiate", "fromTheTanks", "ghola", "guildImpersonator",
+    "industrialEspionage", "piterGeniusAdvisor", "scientificBreakthrough",
+    "sligFarmer", "stitchedHorror", "subjectX137", "tleilaxuInfiltrator",
+    "twistedMentat", "unnaturalReflexes", "usurp", "beneTleilaxLab",
+    "beneTleilaxResearcher", "tleilaxuMaster", "tleilaxuPuppet", "tleilaxuSurgeon",
+    "experimentation"))
+IMMORTALITY_CHAT = re.compile(r"specimen|graft|tleilax|research track|beetle", re.I)
+IMMORTALITY_MIN = 3          # independent sightings needed to call it
+
+
+def immortality_evidence(game: dict) -> dict:
+    """Signs the game was played with the Immortality expansion: confident
+    video sightings of Tleilaxu-deck / graft cards and chat lines about
+    specimens, grafts, the Tleilaxu or the research track."""
+    base = re.sub(r"_g\d+$", "", game["video_id"])
+    ts_ = [a["t"] for a in game["actions"]] or [0]
+    t0, t1 = min(ts_) - 300, max(ts_) + 120
+    seen = collections.Counter()
+    chat_hits = 0
+    for d in ("raw_streams", "raw_streams2", "raw_tournament", "raw"):
+        tl = os.path.join(HERE, d, f"{base}.timeline.json")
+        if os.path.exists(tl):
+            for e in json.load(open(tl, encoding="utf-8")):
+                if t0 <= e["t"] <= t1:
+                    for c in e.get("cards", []):
+                        if c["card"] in IMMORTALITY_CARDS and c["score"] >= 0.85:
+                            seen[c["card"]] += 1
+        ch = os.path.join(HERE, d, f"{base}.chat.txt")
+        if os.path.exists(ch):
+            for line in open(ch, encoding="utf-8"):
+                if "	" not in line:
+                    continue
+                t, txt = line.split("	", 1)
+                m, sec = t.split(":")
+                if t0 <= int(m) * 60 + float(sec) <= t1 and IMMORTALITY_CHAT.search(txt):
+                    chat_hits += 1
+    distinct_cards = len(seen)
+    return {"cards": dict(seen), "chat_lines": chat_hits,
+            "immortality": distinct_cards >= IMMORTALITY_MIN
+            or chat_hits >= IMMORTALITY_MIN}
+
+
 def replay_file(path: str, out_dir: str) -> dict:
     with open(path, encoding="utf-8") as f:
         game = json.load(f)
@@ -445,6 +503,10 @@ def replay_file(path: str, out_dir: str) -> dict:
     if len(set(colours)) != len(colours):
         # seat colours misread: agent spaces and VP can't be attributed
         return {"game": game["video_id"], "skipped": "seat colours not distinct"}
+    ev = immortality_evidence(game)
+    if ev["immortality"]:
+        return {"game": game["video_id"],
+                "skipped": f"Immortality expansion in play ({ev})"}
     if game.get("duplicate_of"):
         return {"game": game["video_id"], "skipped": f"duplicate of {game['duplicate_of']}"}
     rp = Replay(game)
