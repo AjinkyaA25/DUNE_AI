@@ -92,6 +92,17 @@ def conflict_by_name(name: str):
     return _CONFLICTS.get(norm(name))
 
 
+def resolve_name(name: str, factory: dict) -> str:
+    """Engine spelling key for a scraped card name (OCR typos like
+    'Chaom Demands' / 'Possibte Futures' map to the closest known card)."""
+    import difflib
+    n = norm(name)
+    if n in factory or not n:
+        return n
+    best = difflib.get_close_matches(n, list(factory), n=1, cutoff=0.82)
+    return best[0] if best else n
+
+
 class Replay:
     def __init__(self, game: dict, seed: int = 0):
         self.game = game
@@ -113,6 +124,10 @@ class Replay:
                          if p["name"] == a["player"]), None)
             if seat is None:
                 continue
+            if a.get("card"):
+                key = resolve_name(a["card"], self.factory)
+                if key in self.factory:
+                    a["card"] = self.factory[key].name
             if a["kind"] == "agent" and a.get("space") and a.get("card"):
                 self.agents[seat, a["round"]].append(a)
             elif a["kind"] == "buy" and a.get("card"):
@@ -373,7 +388,16 @@ class Replay:
 
     # -- output ----------------------------------------------------------------
     def winner(self):
-        """Seat -> engine pid of the winner, from the last VP readings."""
+        """Engine pid of the winner: the chat's final standings when the
+        game has them, else the last VP readings of the board."""
+        res = self.game.get("result") or []
+        first = [r["player"] for r in res if r.get("place") == 1]
+        if len(first) == 1:
+            seat = next((p["seat"] for p in self.game["players"]
+                         if p["name"] == first[0]), None)
+            if seat in self.pid_of:
+                self.stats["winner_from_chat"] += 1
+                return self.pid_of[seat]
         last = {}
         for t, b in self.game.get("board", []):
             for colour, vp in b["vp"].items():

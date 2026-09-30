@@ -243,8 +243,11 @@ def create_community_imperium_cards() -> List:
         m("High Priority Travel", 1, I, access=["landsraad", "desert"],
           tags=["spacing_guild"],
           agent={"if_influence_spacing_guild_2": {"bl_choose": {"options": [
-              {"draw": 1}, {"bl_trash_card": "High Priority Travel"}]}}},
-          persuasion=1, reveal={"solari": 1}),
+              {"draw": 1}, {"grant_deploy": 0}]}}},
+          persuasion=1, reveal={"solari": 1},
+          notes="Agent: with 2+ Spacing Guild influence, draw a card OR this "
+                "turn's space counts as a combat space (deploy troops, like "
+                "Rapid Dropships) - confirmed by the user."),
         m("Imperium Ceremony", 6, I, access=["emperor", "spacing_guild", "landsraad"],
           tags=["emperor", "spacing_guild"], agent={"intrigue": 1}, persuasion=3,
           notes="Agent: look at the top two Intrigues, keep one, put the other "
