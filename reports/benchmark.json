@@ -1,0 +1,122 @@
+[
+ {
+  "date": "2026-09-30 17:43",
+  "games_per_version": 300,
+  "opponent": "3x original heuristic",
+  "bloodlines": true,
+  "results": [
+   {
+    "vs": "heuristic",
+    "games": 300,
+    "win_share": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "avg_rounds": 9.59,
+    "name": "random",
+    "spec": "random",
+    "what": "picks a random legal move",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic",
+    "games": 300,
+    "win_share": 0.18,
+    "ci95": [
+     0.137,
+     0.223
+    ],
+    "avg_rounds": 9.72,
+    "name": "heuristic, Bloodlines-blind",
+    "spec": "heuristic:nobl",
+    "what": "hand-written rules, ignores techs/commanders (the AI before Bloodlines support)",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic",
+    "games": 300,
+    "win_share": 0.27,
+    "ci95": [
+     0.22,
+     0.32
+    ],
+    "avg_rounds": 9.77,
+    "name": "heuristic (original)",
+    "spec": "heuristic",
+    "what": "hand-written rules incl. Bloodlines scoring - the benchmark opponent itself",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic",
+    "games": 300,
+    "win_share": 0.283,
+    "ci95": [
+     0.232,
+     0.334
+    ],
+    "avg_rounds": 9.7,
+    "name": "value net v1 (models/)",
+    "spec": "value:models/value_best.npz",
+    "what": "1-ply lookahead + value net, self-play training run 1 (base Uprising)",
+    "minutes": 0.3
+   },
+   {
+    "vs": "heuristic",
+    "games": 300,
+    "win_share": 0.3,
+    "ci95": [
+     0.248,
+     0.352
+    ],
+    "avg_rounds": 9.68,
+    "name": "value+policy v2 (models_policy/)",
+    "spec": "value:models_policy/value_best.npz:models_policy/policy_best.npz",
+    "what": "adds the AWR policy head (base Uprising self-play)",
+    "minutes": 0.4
+   },
+   {
+    "vs": "heuristic",
+    "games": 300,
+    "win_share": 0.3,
+    "ci95": [
+     0.248,
+     0.352
+    ],
+    "avg_rounds": 9.78,
+    "name": "value+policy v3 (models_policy2/)",
+    "spec": "value:models_policy2/value_best.npz:models_policy2/policy_best.npz",
+    "what": "policy head, warm-started run - previous 'current best'",
+    "minutes": 0.5
+   },
+   {
+    "vs": "heuristic",
+    "games": 300,
+    "win_share": 0.257,
+    "ci95": [
+     0.207,
+     0.306
+    ],
+    "avg_rounds": 9.71,
+    "name": "search-trained nets s1 (models_search/)",
+    "spec": "value:models_search/value_s1.npz:models_search/policy_s1.npz",
+    "what": "nets trained on 192 search self-play games + 16 human video games",
+    "minutes": 0.5
+   },
+   {
+    "vs": "heuristic",
+    "games": 300,
+    "win_share": 0.327,
+    "ci95": [
+     0.274,
+     0.38
+    ],
+    "avg_rounds": 9.63,
+    "name": "heuristic, tuned to human games",
+    "spec": "heuristic:tuned=config/heuristic_tuned.json",
+    "what": "11 heuristic weights fitted to 1,617 human decisions",
+    "minutes": 0.0
+   }
+  ]
+ }
+]
