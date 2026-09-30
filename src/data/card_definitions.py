@@ -717,10 +717,11 @@ def setup_game(
 
     imperium, intrigues = create_imperium_cards(), create_intrigue_deck()
     if use_bloodlines:
-        from src.game.bloodlines.cards import (create_bloodlines_imperium_cards,
-                                               create_bloodlines_intrigues)
-        imperium += create_bloodlines_imperium_cards()
-        intrigues += create_bloodlines_intrigues()
+        from src.game.bloodlines.cards import (
+            create_bloodlines_imperium_cards, create_bloodlines_intrigues,
+            create_community_imperium_cards, create_community_intrigues)
+        imperium += create_bloodlines_imperium_cards() + create_community_imperium_cards()
+        intrigues += create_bloodlines_intrigues() + create_community_intrigues()
     gs.setup_conflict_deck(create_conflict_deck(gs.rng))
     gs.setup_imperium_deck(
         imperium,

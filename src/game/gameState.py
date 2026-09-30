@@ -1900,7 +1900,8 @@ class GameState:
         """Acquired cards go to the discard pile - or on top of the deck with
         Spaceport (always taken: a fresh card is drawn sooner)."""
         p = self.players[player_id]
-        if self.bl and self.bl.has(player_id, "Spaceport"):
+        if self.bl and (self.bl.has(player_id, "Spaceport")
+                        or getattr(p, "bl_topdeck", False)):   # Recruitment Mission
             p.deck.append(card)             # deck.pop() draws from the end
         else:
             p.discard.append(card)

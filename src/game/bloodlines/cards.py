@@ -205,3 +205,76 @@ def create_bloodlines_intrigues() -> List[IntrigueCard]:
         # (user: "discard 2 cards to draw 2 cards").
         IC("Ixian Probe", _PLOT, [{"bl_discard_for": {"reward": {"draw": 2}, "n": 2}}]),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Community pool additions: cards from other expansions that the TTS mod's
+# community-balanced pool uses, seen in the user's tournament videos. Text
+# read from the dunecardshub.com card images (2026-09-29). Kept separate from
+# the Bloodlines lists so feature indices of those stay stable.
+# ---------------------------------------------------------------------------
+def create_community_imperium_cards() -> List:
+    m = _make
+    return [
+        m("Gene Manipulation", 3, I, access=["landsraad", "city"],
+          tags=["bene_gesserit"],
+          agent={"trash": 1, "if_tag_other_bene": {"spice": 2}}, persuasion=2),
+        m("Satellite Ban", 5, I, access=["spacing_guild", "fremen"],
+          tags=["spacing_guild", "fremen"],
+          agent={"discard_then": {"spice": 1, "water": 1}}, persuasion=1,
+          reveal={"retreat": 2},
+          notes="Reveal: retreat up to two of your troops (taken when losing)."),
+        m("Smuggler's Thopter", 4, I, access=["desert"], tags=["spacing_guild"],
+          agent={"if_influence_spacing_guild_2": {"draw": 2}}, persuasion=1,
+          reveal={"spice": 1}),
+        m("Imperial Bashar", 4, I, access=["city"], tags=["emperor"],
+          agent={"bl_choose": {"options": [{"troops": 1}, {"trash": 1}]}},
+          persuasion=1, swords=2, reveal={"swords_per_other_revealed_card": 1},
+          notes="Reveal: +1 sword per other revealed card with swords."),
+        m("Imperial Shock Trooper", 3, I, tags=["emperor"], persuasion=1,
+          swords=2, reveal={"if_bl_agent_on_emperor": {"swords": 3}}),
+        m("Local Fence", 3, I, access=["city"], agent={"bl_choose": {"options": [
+            {}, {"pay_then": {"cost": {"spice": 2}, "solari": 5}},
+            {"pay_then": {"cost": {"solari": 5}, "spice": 4}}]}}, persuasion=2),
+        m("Stillsuit Manufacturer", 5, I, access=["fremen", "city"],
+          tags=["fremen"],
+          agent={"water": 1, "if_alliance_fremen": {"return_self_to_hand": 1}},
+          persuasion=1, reveal={"if_fremen_bond": {"spice": 2}}),
+        m("High Priority Travel", 1, I, access=["landsraad", "desert"],
+          tags=["spacing_guild"],
+          agent={"if_influence_spacing_guild_2": {"bl_choose": {"options": [
+              {"draw": 1}, {"bl_trash_card": "High Priority Travel"}]}}},
+          persuasion=1, reveal={"solari": 1}),
+        m("Imperium Ceremony", 6, I, access=["emperor", "spacing_guild", "landsraad"],
+          tags=["emperor", "spacing_guild"], agent={"intrigue": 1}, persuasion=3,
+          notes="Agent: look at the top two Intrigues, keep one, put the other "
+                "back (engine: draw one)."),
+        m("Sietch Reverend Mother", 4, I, access=["bene_gesserit", "fremen"],
+          tags=["bene_gesserit", "fremen"], agent={"trash": 1},
+          reveal={"if_fremen_bond": {"persuasion": 3, "spice": 1}}),
+        m("Truthsayer", 3, I, access=["emperor", "bene_gesserit", "landsraad"],
+          tags=["emperor", "bene_gesserit"],
+          agent={"discard_then": {"draw": 1}}, persuasion=1, swords=1),
+    ]
+
+
+def create_foldspace() -> "object":
+    """Foldspace (reserve card, all icons): draw a card, trash this card.
+    Only for replays - how it is gained in the user's pool is unconfirmed."""
+    return _make("Foldspace", 0, CardType.RESERVE, access=ALL_ICONS,
+                 agent={"draw": 1, "trash_self": 1})
+
+
+def create_community_intrigues() -> List[IntrigueCard]:
+    IC = IntrigueCard
+    return [
+        IC("War Chest", _CE, [
+            {"choose_by_combat": {"combat": {"pay_then": {"cost": {"solari": 2},
+                                                          "swords": 4}}, "else": {}}},
+            {"if_bl_endgame_solari_10": {"vp": 1}}]),
+        IC("Weirding Combat", _COMBAT,
+           [{"swords": 3, "if_influence_bene_gesserit_3": {"swords": 2}}]),
+        IC("Recruitment Mission", _PLOT,
+           [{"bl_reveal_persuasion": 1, "bl_topdeck_round": 1}]),
+        IC("Dispatch an Envoy", _PLOT, [{"bl_envoy": 1}]),
+    ]

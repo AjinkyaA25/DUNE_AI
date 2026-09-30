@@ -94,7 +94,28 @@ _OPP_DECK_FEATS = _OPP_DECK_PER * (MAX_PLAYERS - 1)
 def _feature_dim() -> int:
     return (MAX_PLAYERS * _PLAYER_FEATS + _GLOBAL_FEATS
             + _deck_feats_dim() + _row_feats_dim() + _OPP_DECK_FEATS
-            + _bl_feats_dim())
+            + _bl_feats_dim() + _comm_feats_dim())
+
+
+def _comm_feats_dim() -> int:
+    _ensure_bl_index()
+    return 2 * len(_COMM_CARDS)
+
+
+def _comm_block(gs, pid: int) -> np.ndarray:
+    """Community-pool cards owned / in the Row (zeros outside Bloodlines)."""
+    _ensure_bl_index()
+    v = np.zeros(_comm_feats_dim(), dtype=np.float32)
+    if getattr(gs, "bl", None) is None:
+        return v
+    ix = {n: k for k, n in enumerate(_COMM_CARDS)}
+    for name in _owned_card_names(gs.players[pid]):
+        if name in ix:
+            v[ix[name]] = min(3.0, v[ix[name]] + 0.5)
+    for c in gs.imperium_row:
+        if c.name in ix:
+            v[len(_COMM_CARDS) + ix[c.name]] = 1.0
+    return v
 
 
 # --- Bloodlines block --------------------------------------------------------
@@ -103,6 +124,7 @@ _BL_SKILLS = ("Canny", "Charismatic", "Desperate", "Driven", "Fierce", "Hardy",
 _BL_PER_SEAT = 4 + len(_BL_SKILLS)
 _BL_TECHS: Tuple[str, ...] = ()
 _BL_CARDS: Tuple[str, ...] = ()
+_COMM_CARDS: Tuple[str, ...] = ()   # community-pool cards (appended block)
 
 
 def _ensure_bl_index() -> None:
@@ -113,6 +135,9 @@ def _ensure_bl_index() -> None:
     from src.game.bloodlines.cards import create_bloodlines_imperium_cards
     _BL_TECHS = tuple(t.name for t in TECHS)
     _BL_CARDS = tuple(c.name for c in create_bloodlines_imperium_cards())
+    from src.game.bloodlines.cards import create_community_imperium_cards
+    global _COMM_CARDS
+    _COMM_CARDS = tuple(c.name for c in create_community_imperium_cards())
 
 
 def _bl_feats_dim() -> int:
@@ -359,6 +384,7 @@ def encode_state(gs, perspective_pid: int) -> np.ndarray:
         _row_block(gs),
         np.asarray(_opp_deck_block(gs, order), dtype=np.float32),
         _bl_block(gs, perspective_pid, order),
+        _comm_block(gs, perspective_pid),
     ])
     assert arr.shape[0] == FEATURE_DIM, (arr.shape, FEATURE_DIM)
     return arr

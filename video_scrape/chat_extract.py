@@ -45,31 +45,59 @@ def _same(a: str, b: str) -> bool:
     return difflib.SequenceMatcher(None, na, nb).ratio() >= 0.85
 
 
-def ocr_lines(ocr: RapidOCR, crop: np.ndarray) -> list[str]:
-    """OCR the chat crop and return its text lines top-to-bottom."""
-    big = cv2.resize(crop, None, fx=2.5, fy=2.5, interpolation=cv2.INTER_CUBIC)
-    res, _ = ocr(big, use_cls=False)
-    if not res:
-        return []
-    # group fragments into rows by vertical centre
-    items = []
-    for box, txt, conf in res:
-        if float(conf) < 0.5:
-            continue
-        ys = [p[1] for p in box]
-        items.append(((min(ys) + max(ys)) / 2, box[0][0], txt))
-    items.sort()
-    rows: list[list[tuple[float, float, str]]] = []
-    for it in items:
-        if rows and abs(rows[-1][0][0] - it[0]) < 18:
-            rows[-1].append(it)
+LINE_H = 15.5     # px height of one chat line at 1080p
+
+
+def _line_bands(crop: np.ndarray) -> list[tuple[int, int, int, int]]:
+    """(y0, y1, x0, x1) of each text line. Chat text is saturated colour on a
+    grey box, so saturated pixels are ink; runs of inked rows taller than one
+    line are split evenly (lines sit almost touching)."""
+    hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+    ink = (hsv[..., 1] > 90) & (hsv[..., 2] > 70)
+    rows = np.flatnonzero(ink.sum(axis=1) > 3)
+    runs: list[list[int]] = []
+    for y in rows:
+        if runs and y - runs[-1][1] <= 1:
+            runs[-1][1] = y
         else:
-            rows.append([it])
-    lines = [" ".join(t for _, _, t in sorted(r, key=lambda z: z[1])).strip()
-             for r in rows]
-    # floating TTS player-name tags sometimes overlap the box; drop
-    # fragments that are too short to be a log line
-    return [l for l in lines if len(_norm(l)) >= 4]
+            runs.append([y, y])
+    out = []
+    for a, b in runs:
+        h = b - a + 1
+        if h < 6:
+            continue
+        k = max(1, round(h / LINE_H))
+        for n in range(k):
+            y0, y1 = a + n * h // k, a + (n + 1) * h // k - 1
+            cols = np.flatnonzero(ink[y0:y1 + 1].sum(axis=0) > 0)
+            if len(cols) == 0:
+                continue
+            # drop stray ink far right of the text (box border, name tags)
+            gaps = np.flatnonzero(np.diff(cols) > 25)
+            x1 = cols[gaps[0]] if len(gaps) else cols[-1]
+            out.append((y0, y1, int(cols[0]), int(x1)))
+    return out
+
+
+def ocr_lines(ocr: RapidOCR, crop: np.ndarray) -> list[str]:
+    """OCR the chat crop and return its text lines top-to-bottom.
+
+    Lines are located from the ink (above) and only the recogniser runs, one
+    image per line: ~4x faster than full text detection on the whole box."""
+    imgs = []
+    for y0, y1, x0, x1 in _line_bands(crop):
+        line = crop[max(0, y0 - 2):y1 + 3, max(0, x0 - 3):x1 + 4]
+        imgs.append(cv2.resize(line, None, fx=2.5, fy=2.5,
+                               interpolation=cv2.INTER_CUBIC))
+    if not imgs:
+        return []
+    res = ocr.text_recognizer(imgs)[0]
+    lines = []
+    for txt, conf in res:
+        txt = "".join(ch for ch in txt if ord(ch) < 128).strip(" :.")
+        if float(conf) >= 0.5 and len(_norm(txt)) >= 4:
+            lines.append(txt)
+    return lines
 
 
 def stitch(log: list[str], snap: list[str]) -> list[str]:

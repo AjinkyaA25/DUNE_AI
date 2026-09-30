@@ -319,6 +319,7 @@ class Bloodlines:
             EffectResolver.resolve_single_effect(dict(eff), p, self.gs)
         p.bl_completed_contract = False
         p.bl_commander_discount = 0
+        p.bl_envoy = False
         p.bl_recruited_this_turn = False
         p.bl_flags.discard("ignore_blocking")
         p.bl_flags.discard("dropships")
@@ -405,6 +406,9 @@ class Bloodlines:
                 else:
                     p.spice = 0
                     self._trash_tile(pid, t.name)
+        if getattr(p, "bl_reveal_bonus", 0):            # Recruitment Mission
+            gs.gain_persuasion(pid, p.bl_reveal_bonus)
+            p.bl_reveal_bonus = 0
         if self.commanders_in_conflict[pid] > 0:
             if "Hardy" in p.skills:
                 p.gain_troops(1)
@@ -580,6 +584,12 @@ class Bloodlines:
         if name == "other_bene":
             from src.game.cards.card import CardTag
             return p.count_cards_with_tag_in_play(CardTag.BENE_GESSERIT) >= 2
+        if name == "agent_on_emperor":
+            from src.game.board.board import SPACE_ICONS
+            return any(gs.agent_on_space.get(s) == p.id
+                       for s, ic in SPACE_ICONS.items() if ic == "emperor")
+        if name == "endgame_solari_10":
+            return gs.game_over and p.solari >= 10
         if name == "not_endgame":
             return not gs.game_over
         if name == "endgame_techs_3":
@@ -675,6 +685,12 @@ class Bloodlines:
             elif k == "bl_free_commander":
                 p.commanders_garrison += 1
                 p.troops_garrison += 1
+            elif k == "bl_reveal_persuasion":        # Recruitment Mission
+                p.bl_reveal_bonus = getattr(p, "bl_reveal_bonus", 0) + int(v)
+            elif k == "bl_topdeck_round":
+                p.bl_topdeck = True
+            elif k == "bl_envoy":                    # Dispatch an Envoy
+                p.bl_envoy = True
             elif k == "bl_shigawire":
                 p.bl_shigawire = True
             elif k == "bl_commander_discount":
@@ -714,6 +730,8 @@ class Bloodlines:
             icons |= set(ALL_AGENT_ICONS)                   # Urgent Shigawire
         if card.name == "Delivery Logistics":
             icons |= self.contract_icons(pid)
+        if getattr(p, "bl_envoy", False):
+            icons |= set(FACTIONS)                          # Dispatch an Envoy
         return icons
 
     def contract_icons(self, pid: int) -> set:
@@ -733,6 +751,8 @@ class Bloodlines:
     def reset_round(self) -> None:
         for p in self.gs.players:
             p.bl_shigawire = False
+            p.bl_reveal_bonus = 0
+            p.bl_topdeck = False
 
     # ------------------------------------------------------------------
     # endgame
