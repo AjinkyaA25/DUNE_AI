@@ -60,6 +60,7 @@ from src.game.bloodlines.cards import (  # noqa: E402
     create_foldspace)
 from src.game.gameState import ActionType  # noqa: E402
 
+FACE_DOWN = "facedowncard"   # vision's name for a card seen from the back
 GAMMA = 0.90            # same discounted win target as self-play
 POLICY_KMAX = 20
 MOVE_CAP = 4000
@@ -130,7 +131,7 @@ class Replay:
                     a["card"] = self.factory[key].name
             if a["kind"] == "agent" and a.get("space") and a.get("card"):
                 self.agents[seat, a["round"]].append(a)
-            elif a["kind"] == "buy" and a.get("card"):
+            elif a["kind"] == "buy" and a.get("card") and norm(a["card"]) != FACE_DOWN:
                 self.buys[seat, a["round"]].append(a)
         self.round_t = {r["round"]: r["t"] for r in game["rounds"]}
         self.round_conflict = {r["round"]: r.get("conflict") for r in game["rounds"]}
@@ -219,6 +220,15 @@ class Replay:
 
     def _match_agent(self, valid, rec):
         n, space = norm(rec["card"]), rec["space"]
+        if n == FACE_DOWN:
+            # the card was face-down on the table (a card still turning over,
+            # or a leader ability like Ilesa Ecaz's): keep the space, play the
+            # player's best card for it
+            m = [a for a in valid if a.action_type == ActionType.AGENT_TURN
+                 and a.space_name == space]
+            if m:
+                self.stats["face_down_space_only"] += 1
+            return max(m, key=lambda a: self.h.score(self.gs, a.player_id, a)) if m else None
         m = [a for a in valid if a.action_type == ActionType.AGENT_TURN
              and norm(a.card_name) == n and a.space_name == space]
         if not m:
@@ -362,7 +372,7 @@ class Replay:
                 if queue and gs.players[pid].agents_available > 0:
                     rec = queue[0]
                     act = self._match_agent(valid, rec)
-                    if act is None and self._force_in_hand(gs.players[pid], rec["card"]):
+                    if act is None and norm(rec["card"]) != FACE_DOWN and                             self._force_in_hand(gs.players[pid], rec["card"]):
                         valid = gs.get_valid_actions(pid)
                         act = self._match_agent(valid, rec)
                     if act is None:
