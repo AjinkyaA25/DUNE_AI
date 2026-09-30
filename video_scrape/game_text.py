@@ -117,7 +117,8 @@ def render(g: dict) -> str:
                  for p in g["players"]),
              "sources: lines without a tag come from the chat log; [video] = read "
              "from the video (less certain); '?' = unknown, fill in; "
-             "'deployed ?' = a combat space, troops may have been deployed",
+             "'deployed ?' = a combat space, troops may have been deployed; "
+             "'bought' = cards acquired that round (during the reveal turn)",
              f"cleaning: {cs}",
              ""]
     acts = sorted((a for a in g["actions"] if a["kind"] in ("agent", "reveal")),
@@ -128,16 +129,30 @@ def render(g: dict) -> str:
         lines.append(combat_line(r, nxt if nxt != float("inf") else
                                  max([a["t"] for a in acts] or [r["t"]]) + 120,
                                  res, label))
+        # cards bought this round, per player (bought during the reveal turn)
+        bought = {}
+        for b in g["actions"]:
+            if b["kind"] == "buy" and r["t"] <= b["t"] < nxt and b.get("card"):
+                tag = "" if b.get("source") == "chat" else " [video]"
+                bought.setdefault(b["player"], []).append(b["card"] + tag)
+        revealed = set()
         for a in acts:
             if not (r["t"] <= a["t"] < nxt):
                 continue
             who = label.get(a["player"], a["player"])
             if a["kind"] == "reveal":
-                lines.append(f"{who}: reveal")
+                revealed.add(a["player"])
+                buys = bought.get(a["player"])
+                lines.append(f"{who}: reveal, bought "
+                             + (", ".join(buys) if buys else "nothing seen"))
                 continue
             dep = deployed(a.get("space") or "")
             src = "" if a.get("source") == "chat" else "  [video]"
             lines.append(f"{who}: {a.get('space') or '?'}, {a.get('card') or '?'}{dep}{src}")
+        for pl, buys in bought.items():        # buys whose reveal wasn't seen
+            if pl not in revealed:
+                lines.append(f"{label.get(pl, pl)}: reveal (not seen), bought "
+                             + ", ".join(buys))
         lines.append("")
     return "\n".join(lines)
 
