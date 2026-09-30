@@ -87,6 +87,7 @@ class RoundSearchAgent:
 
     def select_action(self, gs: GameState, pid: int,
                       valid: List[GameAction]) -> GameAction:
+        self.last = None
         acts = [a for a in valid if a.action_type != ActionType.NO_OP] or valid
         if len(acts) <= 1 or not any(a.action_type in SEARCHED for a in acts):
             return self.h.select_action(gs, pid, valid)
@@ -124,6 +125,9 @@ class RoundSearchAgent:
                 best, best_gain = i, gain
         if best:
             self.stats["switched"] += 1
+        # what the search saw, for search-based self-play training
+        self.last = {"cands": cands, "scores": np.nanmean(np.where(
+            np.isnan(vals), -1.0, vals), axis=1).tolist(), "chosen": best}
         return cands[best]
 
     def _playout(self, g: GameState, pid: int, start_round: int) -> float:
