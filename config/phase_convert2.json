@@ -1,0 +1,8 @@
+{
+ "late.influence": 2,
+ "late.combat": 2,
+ "late.res_solari": 0.4,
+ "late.res_spice": 0.4,
+ "late.res_water": 0.4,
+ "late.res_draw": 0.5
+}

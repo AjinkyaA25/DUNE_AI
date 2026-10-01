@@ -64,6 +64,7 @@ function render() {
       ` · seed ${S.seed}`;
   renderConflict();
   renderContracts();
+  renderBloodlines();
   renderBoard();
   renderPlayers();
   renderHand(me);
@@ -92,12 +93,39 @@ function renderConflict() {
     </div>`;
 }
 
+function fmtTrigger(t) {
+  if (!t || !Object.keys(t).length) return "completes as soon as you take it";
+  if (t.board_space) return `complete: send an agent to ${t.board_space}`;
+  return "complete: " + fmtObj(t);
+}
 function renderContracts() {
-  $("contracts").innerHTML = `<div class="panel-title">Contracts (CHOAM)</div>` +
+  $("contracts").innerHTML = `<div class="panel-title">Contracts available <span class="muted">(take one at Accept Contract / Dutiful Service)</span></div>` +
     (S.contracts.length ? S.contracts.map((c) =>
-      `<div class="c"><b>${esc(c.name)}</b><div class="muted">${esc(fmtObj(c.rewards))}</div></div>`).join("")
-      : `<div class="muted">none</div>`) +
+      `<div class="c"><b>${esc(c.name)}</b> → <span>${esc(fmtObj(c.rewards))}</span><div class="trig">${esc(fmtTrigger(c.trigger))}</div></div>`).join("")
+      : `<div class="muted">none face-up</div>`) +
     `<div class="muted" style="margin-top:6px">Shield Wall: ${S.shieldWall ? "intact" : "destroyed"}</div>`;
+}
+
+function renderBloodlines() {
+  const bl = S.bl;
+  $("blRow").style.display = bl ? "" : "none";
+  if (!bl) return;
+  $("techs").innerHTML = `<div class="panel-title">Tech market <span class="muted">(buy the top tile of a stack with spice when you send an agent to a green Landsraad space)</span></div>
+    <div class="tech-grid">` + bl.techs.map((t) => t.top ? `
+      <div class="tech">${t.top.img ? `<img src="${t.top.img}" data-img="${t.top.img}" alt="">` : ""}
+        <div><div class="tn">${esc(t.top.name)}</div>
+          <div class="tp">${t.top.price} spice${t.top.price !== t.top.cost ? ` (base ${t.top.cost})` : ""} · ${t.left - 1} more in stack</div>
+          <div class="tt">${esc(t.top.text)}</div></div></div>`
+      : `<div class="tech muted">Stack ${t.stack + 1} empty</div>`).join("") + `</div>`;
+  const cmd = bl.commanders.map((c) => `<span class="cmd ${c.present ? "on" : "off"}" title="${c.present ? "commander still here" : "recruited"}">${esc(c.space)}</span>`).join("");
+  const skills = bl.skills.map((k) => `
+    <div class="skill">${k.img ? `<img src="${k.img}" data-img="${k.img}" alt="">` : ""}
+      <div><div class="sn">${esc(k.name)}${k.heldBy.map((id) => `<span class="held" style="background:${player(id).color}" title="${esc(pname(player(id)))}"></span>`).join("")}</div>
+      <div class="st">${esc(k.text)}</div></div></div>`).join("");
+  $("sardaukar").innerHTML = `<div class="panel-title">Sardaukar commanders <span class="muted">(${bl.commanderCost} solari when you send an agent to one of these spaces)</span></div>
+    <div class="cmd-list">${cmd}</div>
+    <div class="panel-title small">Skills <span class="muted">(pick one you don't hold when recruiting from the board; dots = who has it)</span></div>
+    <div class="skill-grid">${skills}</div>`;
 }
 
 function legalSpaces() {
@@ -117,9 +145,10 @@ function renderBoard() {
       const eff = [fmtEffects(s.effects), s.special].filter(Boolean).join(" · ");
       const ctl = s.controlledBy != null ? `<span class="ctl" style="background:${player(s.controlledBy).color}">ctrl</span>` : "";
       const maker = s.makerSpice ? ` · +${s.makerSpice} bonus spice` : "";
+      const cmdr = S.bl && S.bl.commanders.some((c) => c.space === s.name && c.present) ? `<span class="cmdr" title="Sardaukar commander here">CMDR</span>` : "";
       return `<div class="space ${legal.has(s.name) ? "legal" : ""}" data-space="${esc(s.name)}">
         <span class="dot" style="${occ ? `background:${occ.color};border:0` : ""}" title="${occ ? esc(pname(occ)) : "empty"}"></span>
-        ${ctl}<div class="nm">${esc(s.name)}${s.combat ? " ⚔" : ""}</div>
+        ${ctl}${cmdr}<div class="nm">${esc(s.name)}${s.combat ? " ⚔" : ""}</div>
         <div class="ef">${esc(cost + eff + gate + maker)}</div></div>`;
     }).join("") + `</div>`;
   }).join("");
@@ -140,7 +169,9 @@ function renderPlayers() {
         <span>🧍 <b>${p.agentsAvail}</b>/${p.agentsTotal}</span><span>🛡 <b>${p.garrison}</b></span><span>🕵 <b>${p.spies}</b></span></div>
       <div class="infl">${infl}</div>
       <div class="sub">Hand ${p.handSize} · deck ${p.deck} · intrigue ${p.intrigueCount}${p.swordmaster ? " · Swordmaster" : ""}${p.councilor ? " · High Council" : ""}${p.revealed ? " · revealed" : ""}</div>
-      ${p.techs && p.techs.length ? `<div class="sub">Techs: ${p.techs.map(esc).join(", ")}</div>` : ""}
+      ${p.techs && p.techs.length ? `<div class="techs-mini">${p.techs.map((t) => t.img ? `<img src="${t.img}" data-img="${t.img}" title="${esc(t.name)}: ${esc(t.text)}">` : `<span class="chip">${esc(t.name)}</span>`).join("")}</div>` : ""}
+      ${S.bl ? `<div class="sub">Commanders: ${p.cmdGarrison} garrison · ${p.cmdSupply} supply${p.cmdInConflict ? ` · ${p.cmdInConflict} in Conflict` : ""}${p.skills.length ? ` · skills: ${p.skills.map(esc).join(", ")}` : ""}</div>` : ""}
+      ${p.contractsActive || p.contractsDone ? `<div class="sub">Contracts: ${p.contractsActive} active · ${p.contractsDone} done</div>` : ""}
       ${played}${intr}${hand}
     </div>`;
   }).join("") + `</div>`;

@@ -29,6 +29,7 @@ import traceback
 import uuid
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import quote, unquote
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -113,6 +114,123 @@ def card_img(name: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
+# Bloodlines: tech tiles, Sardaukar commanders, skills
+# ---------------------------------------------------------------------------
+
+TECH_DIR = os.path.join(ROOT, "Tech tiles")
+SKILL_DIR = os.path.join(ROOT, "sard_skills")
+
+
+def _img_index(folder: str) -> Dict[str, str]:
+    if not os.path.isdir(folder):
+        return {}
+    return {_norm(os.path.splitext(f)[0]): f for f in os.listdir(folder)}
+
+
+TECH_IMG, SKILL_IMG = _img_index(TECH_DIR), _img_index(SKILL_DIR)
+
+
+def _match(idx: Dict[str, str], name: str) -> Optional[str]:
+    import difflib
+    k = _norm(name)
+    if k in idx:
+        return idx[k]
+    near = difflib.get_close_matches(k, list(idx), n=1, cutoff=0.8)   # "recievers"
+    return idx[near[0]] if near else None
+
+
+TECH_ALIAS = {"Rapid Dropships": "dropships", "Navigation Chamber": "nav chamber",
+              "Ornithopter Fleet": "orni fleet", "Spy Satellites": "spy sats"}
+
+
+def tech_img(name: str) -> Optional[str]:
+    f = _match(TECH_IMG, TECH_ALIAS.get(name, name))
+    return f"/tech/{quote(f)}" if f else None
+
+
+def skill_img(name: str) -> Optional[str]:
+    f = _match(SKILL_IMG, name)
+    return f"/skill/{quote(f)}" if f else None
+
+
+SKILL_TEXT = {   # src/game/bloodlines/rules.py
+    "Hardy": "Reveal, a commander in the Conflict: +1 troop",
+    "Driven": "Reveal, a commander in the Conflict: +1 spice",
+    "Charismatic": "Reveal, a commander in the Conflict: +1 persuasion",
+    "Desperate": "Reveal, a commander in the Conflict: may trash this skill for +3 swords",
+    "Canny": "Agent on a green space: +2 swords (needs a commander in the Conflict)",
+    "Fierce": "+1 sword, +1 more if an opponent has a sandworm in the Conflict "
+              "(needs a commander in the Conflict)",
+    "Loyal": "3+ Emperor influence: +2 swords (needs a commander in the Conflict)",
+}
+
+
+def _fx(effects) -> str:
+    out = []
+    for e in effects or []:
+        if isinstance(e, dict):
+            out.append(", ".join(f"{v} {k}" if not isinstance(v, (dict, list)) else k
+                                 for k, v in e.items()).replace("_", " "))
+    return "; ".join(out)
+
+
+def tech_info(d, gs=None, pid=None) -> Dict:
+    parts = []
+    for title, key in (("Acquire", "acquire"), ("Reveal", "reveal"),
+                       ("Command (6+ persuasion)", "command"), ("Round start", "round_start"),
+                       ("Win a conflict", "on_win_conflict"),
+                       ("Complete a contract", "on_complete_contract")):
+        t = _fx(getattr(d, key, None))
+        if t:
+            parts.append(f"{title}: {t}")
+    act = getattr(d, "activation", None)
+    if act:
+        cost = ", ".join(f"{v} {k}" for k, v in (act.get("cost") or {}).items())
+        parts.append("Once per round: " + (f"pay {cost} -> " if cost else "")
+                     + _fx(act.get("effects")))
+    if getattr(d, "note", ""):
+        parts.append(d.note)
+    price = d.cost
+    if gs is not None and pid is not None and gs.bl:
+        try:
+            price = gs.bl.tech_price(pid, d, 0)
+        except Exception:
+            pass
+    return {"name": d.name, "cost": d.cost, "price": price,
+            "text": " · ".join(parts), "img": tech_img(d.name)}
+
+
+def bl_choice_label(gs: GameState, a: GameAction) -> str:
+    ch = a.choice or ""
+    pend = next((c for c in (gs.bl.pending if gs.bl else []) if c.player_id == a.player_id), None)
+    kind = pend.kind if pend else ""
+    if ch == "decline":
+        return {"tech_buy": "Don't buy a tech", "tech_offer": "Don't take a tech",
+                "commander": "Don't recruit a commander"}.get(kind, "Decline")
+    if ch.startswith("stack:"):
+        st = gs.bl.tech_stacks[int(ch.split(":")[1])]
+        if st:
+            d = st[0]
+            price = gs.bl.tech_price(a.player_id, d, pend.discount if pend else 0)
+            return f"Buy tech: {d.name} ({price} spice)"
+    if ch.startswith("board:"):
+        cost = gs.bl.commander_cost(a.player_id)
+        skill = ch.split(":", 1)[1]
+        return f"Recruit Sardaukar commander ({cost} solari)" + (f" + skill {skill}" if skill else "")
+    if ch == "supply":
+        return f"Re-recruit a commander from your supply ({gs.bl.commander_cost(a.player_id)} solari)"
+    if kind == "desperate":
+        return "Trash Desperate for +3 swords" if ch == "use" else "Keep Desperate"
+    if kind == "trash_hand":
+        return f"Trash {ch} from hand"
+    if kind == "disposal":
+        return f"Trash {ch} (Disposal Facility)"
+    if kind == "effect" and pend:
+        return f"Choose: {_fx([pend.payloads.get(ch, {})]) or ch}"
+    return f"Choose: {ch}"
+
+
+# ---------------------------------------------------------------------------
 # Labels / serialisation
 # ---------------------------------------------------------------------------
 
@@ -133,7 +251,7 @@ def label(gs: GameState, a: GameAction) -> str:
     if t == ActionType.RESOLVE_OPTIONAL:
         return "Accept optional cost → reward" if a.accept_optional else "Decline optional cost"
     if t == ActionType.RESOLVE_BL_CHOICE:
-        return f"Choose: {a.choice}"
+        return bl_choice_label(gs, a)
     if t == ActionType.ACTIVATE_TECH:
         return f"Activate tech: {a.choice or a.card_name}"
     if t == ActionType.REVEAL_TURN:
@@ -359,7 +477,13 @@ class Session:
                     "hand": [card_info(c) for c in p.hand] if show else None,
                     "intrigues": [{"name": c.name} for c in p.intrigue_cards] if show else None,
                     "intrigueCount": len(p.intrigue_cards),
-                    "techs": pd.get("techs", []), "battleIcons": pd.get("battle_icons", []),
+                    "techs": [tech_info(getattr(t, "d", t)) for t in getattr(p, "techs", [])],
+                    "skills": sorted(getattr(p, "skills", set())),
+                    "cmdGarrison": getattr(p, "commanders_garrison", 0),
+                    "cmdSupply": getattr(p, "commanders_supply", 0),
+                    "cmdInConflict": gs.bl.commanders_in_conflict.get(p.id, 0) if gs.bl else 0,
+                    "contractsActive": pd.get("contracts_active", 0),
+                    "battleIcons": pd.get("battle_icons", []),
                     "contractsDone": pd.get("contracts_completed", 0),
                     "revealed": p.id in gs.players_revealed,
                     "persuasion": gs.persuasion_pool.get(p.id, 0),
@@ -404,6 +528,18 @@ class Session:
                 "row": [card_info(c) for c in gs.imperium_row],
                 "reserve": {"prepare_the_way": len(gs.reserve_prepare_the_way),
                             "spice_must_flow": len(gs.reserve_spice_must_flow)},
+                "bl": None if not gs.bl else {
+                    "techs": [{"stack": i, "left": len(st),
+                               "top": tech_info(st[0], gs, self.seat) if st else None}
+                              for i, st in enumerate(gs.bl.tech_stacks)],
+                    "commanders": [{"space": sp, "present": bool(on)}
+                                   for sp, on in gs.bl.commander_on_space.items()],
+                    "skills": [{"name": k, "text": t, "img": skill_img(k),
+                                "heldBy": [q.id for q in gs.players
+                                           if k in getattr(q, "skills", set())]}
+                               for k, t in SKILL_TEXT.items()],
+                    "commanderCost": gs.bl.commander_cost(self.seat),
+                },
                 "contracts": [{"name": c["name"], "rewards": c.get("rewards"),
                                "trigger": c.get("trigger_condition")}
                               for c in d.get("contracts_on_board", [])],
@@ -448,6 +584,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(os.path.join(STATIC, "index.html"))
         if path.startswith("/static/"):
             return self._file(os.path.join(STATIC, os.path.basename(path)))
+        if path.startswith("/tech/"):
+            return self._file(os.path.join(TECH_DIR, unquote(os.path.basename(path))))
+        if path.startswith("/skill/"):
+            return self._file(os.path.join(SKILL_DIR, unquote(os.path.basename(path))))
         if path.startswith("/cards/"):
             return self._file(os.path.join(CARD_DIR, os.path.basename(path)))
         if path == "/api/options":
@@ -483,10 +623,25 @@ def main() -> None:
     args = ap.parse_args()
     # serve both loopbacks: browsers try ::1 first for "localhost", and an
     # IPv4-only server costs ~2 s per request while they fall back
-    class V6(ThreadingHTTPServer):
+    class Server(ThreadingHTTPServer):
+        # Windows lets a second process bind a port with SO_REUSEADDR, so two
+        # servers would silently share it; claim it exclusively instead
+        allow_reuse_address = False
+
+        def server_bind(self):
+            if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            super().server_bind()
+
+    class V6(Server):
         address_family = socket.AF_INET6
 
-    srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    try:
+        srv = Server(("127.0.0.1", args.port), Handler)
+    except OSError:
+        print(f"A server is already running on port {args.port}: open "
+              f"http://localhost:{args.port}, or stop that one (Ctrl+C in its window) first.")
+        return
     try:
         v6 = V6(("::1", args.port), Handler)
         threading.Thread(target=v6.serve_forever, daemon=True).start()

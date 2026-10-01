@@ -60,13 +60,15 @@ TUNE_DEFAULTS = {
     "sat_solari": 0.0, "sat_spice": 0.0, "sat_water": 0.0,
     "sat_troops": 0.0, "sat_intrigue": 0.0,
 }
-# Situational tuning: a key "<phase>.<knob>" (phase early = rounds 1-3,
-# mid = 4-7, late = 8-10) overrides <knob> in that phase only.
+# Situational tuning: a key "<phase>.<knob>" overrides <knob> in that phase
+# only. Phases follow how the game is played: early = rounds 1-3 (build
+# resources), mid = 4-5, late = 6+ (convert resources and techs into VP
+# through faction influence and combat).
 PHASES = ("early", "mid", "late")
 
 
 def phase_of(rnd: int) -> str:
-    return "early" if rnd <= 3 else "mid" if rnd <= 7 else "late"
+    return "early" if rnd <= 3 else "mid" if rnd <= 5 else "late"
 
 
 def split_phases(tuning: Optional[dict]) -> Dict[str, dict]:
