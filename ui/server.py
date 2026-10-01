@@ -51,7 +51,13 @@ CARD_DIR = os.path.join(ROOT, "video_scrape", "cards")
 
 OPPONENTS = [
     {"spec": "search:K5:M24", "name": "Search (24 playouts)",
-     "note": "strongest; ~5 s per decision"},
+     "note": "strong; ~5 s per decision"},
+    {"spec": "search:K5:M48", "name": "Search (48 playouts)",
+     "note": "strongest; ~10 s per decision"},
+    {"spec": "heuristic:tuned=config/heuristic_winners.json", "name": "Winners' style",
+     "note": "instant; weights fitted to the winners in your videos"},
+    {"spec": "heuristic:tuned=config/heuristic_me.json", "name": "Your style",
+     "note": "instant; weights fitted to Dinosaur11's own moves"},
     {"spec": "search:K5:M8", "name": "Search (8 playouts)",
      "note": "strong; ~2 s per decision"},
     {"spec": "heuristic:tuned=config/heuristic_tuned.json", "name": "Heuristic (human-tuned)",

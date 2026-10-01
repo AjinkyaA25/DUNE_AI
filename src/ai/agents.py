@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -55,7 +55,32 @@ TUNE_DEFAULTS = {
     "ptw_tax": 4.0,          # Prepare the Way penalty per extra copy
     "tier_blend": 0.70,      # tier list vs situational card value
     "faction_space": 0.0,    # flat bonus for sending an agent to a faction space
+    # saturation: a resource gain is worth 1 / (1 + sat * held / 5) of its
+    # value, so 0 = flat (the hand-set heuristic) and 1 halves it at 5 held
+    "sat_solari": 0.0, "sat_spice": 0.0, "sat_water": 0.0,
+    "sat_troops": 0.0, "sat_intrigue": 0.0,
 }
+# Situational tuning: a key "<phase>.<knob>" (phase early = rounds 1-3,
+# mid = 4-7, late = 8-10) overrides <knob> in that phase only.
+PHASES = ("early", "mid", "late")
+
+
+def phase_of(rnd: int) -> str:
+    return "early" if rnd <= 3 else "mid" if rnd <= 7 else "late"
+
+
+def split_phases(tuning: Optional[dict]) -> Dict[str, dict]:
+    """{"early": full knob dict, "mid": ..., "late": ...} from a tuning dict
+    that may hold phase-prefixed keys."""
+    tuning = tuning or {}
+    base = {**TUNE_DEFAULTS, **{k: v for k, v in tuning.items() if "." not in k}}
+    out = {}
+    for ph in PHASES:
+        out[ph] = {**base, **{k.split(".", 1)[1]: v for k, v in tuning.items()
+                              if k.startswith(ph + ".")}}
+    return out
+
+
 _TUNE = dict(TUNE_DEFAULTS)
 
 
@@ -262,8 +287,20 @@ def _effect_value(gs: GameState, pid: int, eff: dict) -> float:
         elif k in _SANDWORM_KEYS:
             v += _sandworm_value(gs, pid) * amt
         else:
-            v += _RES_VALUE.get(k, 0.3) * amt
+            val = _RES_VALUE.get(k, 0.3)
+            sat = _TUNE.get("sat_" + k, 0.0)
+            if sat and amt > 0:
+                val /= 1.0 + sat * _held(gs.players[pid], k) / 5.0
+            v += val * amt
     return v
+
+
+def _held(p, k: str) -> int:
+    if k == "troops":
+        return p.troops_garrison
+    if k == "intrigue":
+        return len(p.intrigue_cards)
+    return getattr(p, k, 0) or 0
 
 
 def _flatten(eff: dict) -> dict:
@@ -796,6 +833,7 @@ class HeuristicAgent(Agent):
                  bloodlines: bool = True, tuning: Optional[dict] = None):
         self.rng = random.Random(seed)
         self.tuning = {**TUNE_DEFAULTS, **(tuning or {})}
+        self._phase_tuning = split_phases(tuning)
         # bloodlines=False (`heuristic:nobl`): decline every tech / commander /
         # activation - the baseline for checking the Bloodlines scoring pays off
         self.bloodlines = bloodlines
@@ -827,8 +865,9 @@ class HeuristicAgent(Agent):
     def score(self, gs: GameState, pid: int, a: GameAction) -> float:
         global _FACTION_FOCUS
         _FACTION_FOCUS = self.faction_focus
-        if _TUNE is not self.tuning:
-            _apply_tuning(self.tuning)
+        t = self._phase_tuning[phase_of(gs.round)]
+        if _TUNE is not t:
+            _apply_tuning(t)
         p = gs.players[pid]
         at = a.action_type
         s = 0.0
@@ -1456,6 +1495,8 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 kw["m"] = int(p[1:])
             elif p == "round":
                 kw["horizon"] = "round"
+            elif p == "B":
+                kw["buys"] = True
             elif p.startswith("tuned="):
                 import json as _json
                 with open(p[6:], encoding="utf-8") as _f:

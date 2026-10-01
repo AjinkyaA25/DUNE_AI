@@ -32,6 +32,9 @@ from src.game.gameState import ActionType, GameAction, GameState
 
 SEARCHED = (ActionType.AGENT_TURN, ActionType.REVEAL_TURN,
             ActionType.RESOLVE_DEPLOY)
+# with buys=True the search also plays out Imperium Row / reserve purchases
+# (and stopping), so self-play records how it values cards in context
+BUY_TYPES = (ActionType.ACQUIRE_CARD, ActionType.ACQUIRE_RESERVE, ActionType.END_REVEAL)
 
 
 def round_value(gs: GameState, pid: int) -> float:
@@ -71,12 +74,13 @@ class RoundSearchAgent:
     def __init__(self, k: int = 4, m: int = 6, margin: float = 1.0,
                  seed: Optional[int] = None, opening_book=None,
                  move_cap: int = 3000, horizon: str = "end",
-                 tuning: Optional[dict] = None):
+                 tuning: Optional[dict] = None, buys: bool = False):
         from src.ai.agents import HeuristicAgent
         # the heuristic both shortlists the candidates and plays every seat in
         # the playouts; `tuning` (e.g. the human-fitted knobs) changes both
         self.h = HeuristicAgent(seed=seed, opening_book=opening_book, tuning=tuning)
         self.k, self.m, self.margin = k, m, margin
+        self.searched = SEARCHED + (BUY_TYPES if buys else ())
         self.rng = np.random.default_rng(seed)
         self.move_cap = move_cap
         # "end": play every sample to the end of the game and score the real
@@ -92,7 +96,7 @@ class RoundSearchAgent:
                       valid: List[GameAction]) -> GameAction:
         self.last = None
         acts = [a for a in valid if a.action_type != ActionType.NO_OP] or valid
-        if len(acts) <= 1 or not any(a.action_type in SEARCHED for a in acts):
+        if len(acts) <= 1 or not any(a.action_type in self.searched for a in acts):
             return self.h.select_action(gs, pid, valid)
         t0 = time.time()
         scores = [self.h.score(gs, pid, a) for a in acts]
