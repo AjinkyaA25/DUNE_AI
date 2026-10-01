@@ -200,6 +200,22 @@ You use Hagga Basin 1.17× vs opponents 0.70× and Imperial Basin 0.56× vs 0.96
 vs 0.28× for non-winners and Imperial Privilege 0.41× vs 0.28×, and High Council
 0.44× vs 0.63×. Full tables: `reports/human_vs_ai_40.txt`.
 
+### 8. Game phases: build early, convert late (hand-set test, 800 games each vs 3× default)
+
+Phases: early = rounds 1-3 (build resources), mid = 4-5, late = 6+ (convert
+resources and techs into VP through faction influence and combat).
+
+| Variant | Win share |
+|---|---|
+| Late: influence & combat ×1.5, solari/spice/water ×0.6, draw ×0.7 | 26.1% |
+| Late: influence & combat ×2, resources ×0.4, draw ×0.5 | 24.4% |
+| Early resources ×1.3 + the ×1.5 late shift | 25.1% |
+
+Guessed multipliers do not move the win rate, so the phase weights are being
+learned from game results instead (`python -m src.selfplay.tune_by_wins`:
+keeps a change only if it wins more against a mixed field of default,
+winners' style and your style, and still does on fresh deals).
+
 ### In progress
 
 Expert iteration: 48-playout search self-play with buys searched
