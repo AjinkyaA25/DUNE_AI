@@ -1456,6 +1456,10 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 kw["m"] = int(p[1:])
             elif p == "round":
                 kw["horizon"] = "round"
+            elif p.startswith("tuned="):
+                import json as _json
+                with open(p[6:], encoding="utf-8") as _f:
+                    kw["tuning"] = _json.load(_f)
         return RoundSearchAgent(seed=seed, opening_book=opening_book, **kw)
     if kind == "bully":
         temp = 0.0

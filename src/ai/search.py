@@ -70,9 +70,12 @@ class RoundSearchAgent:
 
     def __init__(self, k: int = 4, m: int = 6, margin: float = 1.0,
                  seed: Optional[int] = None, opening_book=None,
-                 move_cap: int = 3000, horizon: str = "end"):
+                 move_cap: int = 3000, horizon: str = "end",
+                 tuning: Optional[dict] = None):
         from src.ai.agents import HeuristicAgent
-        self.h = HeuristicAgent(seed=seed, opening_book=opening_book)
+        # the heuristic both shortlists the candidates and plays every seat in
+        # the playouts; `tuning` (e.g. the human-fitted knobs) changes both
+        self.h = HeuristicAgent(seed=seed, opening_book=opening_book, tuning=tuning)
         self.k, self.m, self.margin = k, m, margin
         self.rng = np.random.default_rng(seed)
         self.move_cap = move_cap

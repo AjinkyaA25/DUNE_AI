@@ -36,6 +36,26 @@ def label(a) -> str:
     return t.value
 
 
+ME = "dinosaur"      # the channel owner's TTS name (Dinosaur11, OCR'd variants)
+COLORS = ("Red", "Green", "Blue", "Yellow")
+
+
+def my_color(g: dict) -> str | None:
+    """Dinosaur11's colour from the chat lobby list, when it is unambiguous:
+    named directly (and no other name OCR'd onto the same colour), or the one
+    colour left over when the three opponents are named."""
+    lc = (g.get("merge_stats") or {}).get("lobby_colours") or {}
+    mine = {c for n, c in lc.items() if ME in n.lower()}
+    others = {c for n, c in lc.items() if ME not in n.lower() and "dinosar" not in n.lower()}
+    if len(mine) == 1:
+        c = next(iter(mine))
+        return None if c in others else c
+    if not mine and len(others) == 3:
+        rest = set(COLORS) - others
+        return rest.pop() if len(rest) == 1 else None
+    return None
+
+
 def main() -> None:
     rows = []
     fac = R._card_factory()
@@ -43,10 +63,13 @@ def main() -> None:
         g = json.load(open(p, encoding="utf-8"))
         if g.get("source") != "vision" or g.get("duplicate_of"):
             continue
-        if len({x["color"] for x in g["players"]}) != 4:
+        if len({x["color"] for x in g["players"]}) != 4 or len(g.get("rounds", [])) < 5:
             continue
+        mc = my_color(g)
+        me_seat = next((x["seat"] for x in g["players"] if x["color"] == mc), None)
         g = clean_game(g, fac)
         rp = R.Replay(g)
+        start = len(rows)
 
         def rec(pid, chosen, valid, _rp=rp, _vid=g["video_id"]):
             gs = _rp.gs
@@ -58,9 +81,15 @@ def main() -> None:
                          "type": chosen.action_type.value,
                          "human": label(chosen), "ai": label(best),
                          "agree": repr(best) == repr(chosen),
-                         "same_label": label(best) == label(chosen)})
+                         "same_label": label(best) == label(chosen), "pid": pid})
         rp._record = rec
         rp.run()
+        win = rp.winner()
+        me_pid = rp.pid_of.get(me_seat) if me_seat else None
+        for r in rows[start:]:
+            pid = r.pop("pid")
+            r["me"] = None if me_pid is None else pid == me_pid
+            r["won"] = None if win is None else pid == win
     os.makedirs(os.path.join(ROOT, "reports"), exist_ok=True)
     json.dump(rows, open(os.path.join(ROOT, "reports", "human_vs_ai.json"), "w"), indent=0)
 

@@ -23,7 +23,25 @@ import time
 
 import cv2
 import numpy as np
-from rapidocr_onnxruntime import RapidOCR
+import onnxruntime
+
+# RapidOCR leaves onnxruntime's thread count at "all cores"; with several
+# videos in parallel each OCR process then takes ~12 cores and starves the
+# scans. Cap it (OCR_THREADS env var, default 3).
+_SessionOptions = onnxruntime.SessionOptions
+
+
+def _capped_session_options():
+    so = _SessionOptions()
+    so.intra_op_num_threads = int(os.environ.get("OCR_THREADS", "3"))
+    so.inter_op_num_threads = 1
+    return so
+
+
+onnxruntime.SessionOptions = _capped_session_options
+import rapidocr_onnxruntime.utils  # noqa: E402  (binds SessionOptions at import)
+rapidocr_onnxruntime.utils.SessionOptions = _capped_session_options
+from rapidocr_onnxruntime import RapidOCR  # noqa: E402
 
 # Chat box on a 1920x1080 recording (scaled for other resolutions).
 CHAT_BOX = (8, 908, 400, 1028)

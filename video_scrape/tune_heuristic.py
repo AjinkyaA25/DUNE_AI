@@ -65,7 +65,7 @@ def capture() -> list:
     for p in sorted(glob.glob(os.path.join(HERE, "games", "*.json"))):
         g = json.load(open(p, encoding="utf-8"))
         if g.get("source") != "vision" or g.get("duplicate_of") or \
-                len({x["color"] for x in g["players"]}) != 4:
+                len({x["color"] for x in g["players"]}) != 4 or len(g.get("rounds", [])) < 5:
             continue
         g = clean_game(g, fac)
         rp = R.Replay(g)
@@ -108,10 +108,11 @@ def main() -> None:
         pickle.dump(pos, open(CACHE, "wb"))
     games = sorted({x["game"] for x in pos})
     random.Random(7).shuffle(games)
-    hold = set(games[:4])
+    n_hold = max(4, len(games) // 5)
+    hold = set(games[:n_hold])
     fit = [x for x in pos if x["game"] not in hold]
     val = [x for x in pos if x["game"] in hold]
-    print(f"{len(pos)} positions: fit {len(fit)} ({len(games) - 4} games), "
+    print(f"{len(pos)} positions: fit {len(fit)} ({len(games) - n_hold} games), "
           f"held-out {len(val)} ({sorted(hold)})", flush=True)
 
     cur = dict(TUNE_DEFAULTS)

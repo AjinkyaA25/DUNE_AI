@@ -559,8 +559,12 @@ def main() -> None:
         r = replay_file(p, args.out)
         reports.append(r)
         print(json.dumps(r), flush=True)
-    with open(os.path.join(args.out, "replay_report.json"), "w") as f:
-        json.dump(reports, f, indent=1)
+    # replaying a subset updates its entries and keeps the other games'
+    rep_path = os.path.join(args.out, "replay_report.json")
+    done = {r.get("game") for r in reports}
+    old = json.load(open(rep_path)) if os.path.exists(rep_path) else []
+    with open(rep_path, "w") as f:
+        json.dump([r for r in old if r.get("game") not in done] + reports, f, indent=1)
 
 
 if __name__ == "__main__":
