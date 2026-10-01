@@ -1,0 +1,11 @@
+{
+ "res_contract": 0.5,
+ "res_spy": 3,
+ "res_intrigue": 2,
+ "res_draw": 0.5,
+ "res_water": 1.5,
+ "res_troops": 0.5,
+ "combat": 0.25,
+ "reveal_bias": 3,
+ "tier_blend": 0.3
+}

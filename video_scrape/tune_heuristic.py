@@ -33,7 +33,7 @@ sys.path.insert(0, ROOT)
 from src.ai.agents import HeuristicAgent, TUNE_DEFAULTS  # noqa: E402
 from src.game.gameState import ActionType  # noqa: E402
 
-CACHE = os.path.join(ROOT, "data", "tune_positions.pkl")
+CACHE = os.path.join(ROOT, "data", "tune_positions.pkl")   # positions carry me/won flags
 OUT = os.path.join(ROOT, "config", "heuristic_tuned.json")
 GRID = {
     "res_contract": [0.5, 1, 2, 3, 5], "res_spy": [0.5, 1, 2, 3], "res_intrigue": [0.5, 1, 2, 3],
@@ -60,6 +60,7 @@ def label(a) -> str:
 def capture() -> list:
     import replay as R
     from clean import clean_game
+    from compare_ai import my_color
     fac = R._card_factory()
     pos = []
     for p in sorted(glob.glob(os.path.join(HERE, "games", "*.json"))):
@@ -67,8 +68,11 @@ def capture() -> list:
         if g.get("source") != "vision" or g.get("duplicate_of") or \
                 len({x["color"] for x in g["players"]}) != 4 or len(g.get("rounds", [])) < 5:
             continue
+        mc = my_color(g)
+        me_seat = next((x["seat"] for x in g["players"] if x["color"] == mc), None)
         g = clean_game(g, fac)
         rp = R.Replay(g)
+        start = len(pos)
 
         def rec(pid, chosen, valid, _rp=rp, _vid=g["video_id"]):
             cands = [a for a in valid if a.action_type != ActionType.NO_OP]
@@ -84,6 +88,11 @@ def capture() -> list:
                         else chosen.action_type.value})
         rp._record = rec
         rp.run()
+        win = rp.winner()
+        me_pid = rp.pid_of.get(me_seat) if me_seat else None
+        for x in pos[start:]:          # who made each decision
+            x["me"] = None if me_pid is None else x["pid"] == me_pid
+            x["won"] = None if win is None else x["pid"] == win
         print(f"  {g['video_id']}: {len(pos)} positions so far", flush=True)
     return pos
 
@@ -100,7 +109,18 @@ def agreement(pos: list, tuning: dict) -> float:
         {k: round(sum(v) / len(v), 3) for k, v in by.items()}
 
 
+SUBSETS = {"all": lambda x: True,
+           "winners": lambda x: x.get("won") is True,
+           "me": lambda x: x.get("me") is True}
+
+
 def main() -> None:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--subset", choices=sorted(SUBSETS), default="all",
+                    help="whose decisions to fit: everyone, game winners, or Dinosaur11")
+    ap.add_argument("--out", default=OUT)
+    args = ap.parse_args()
     if os.path.exists(CACHE):
         pos = pickle.load(open(CACHE, "rb"))
     else:
@@ -110,8 +130,10 @@ def main() -> None:
     random.Random(7).shuffle(games)
     n_hold = max(4, len(games) // 5)
     hold = set(games[:n_hold])
-    fit = [x for x in pos if x["game"] not in hold]
-    val = [x for x in pos if x["game"] in hold]
+    keep = SUBSETS[args.subset]
+    fit = [x for x in pos if x["game"] not in hold and keep(x)]
+    val = [x for x in pos if x["game"] in hold and keep(x)]
+    print(f"subset '{args.subset}'", flush=True)
     print(f"{len(pos)} positions: fit {len(fit)} ({len(games) - n_hold} games), "
           f"held-out {len(val)} ({sorted(hold)})", flush=True)
 
@@ -140,9 +162,9 @@ def main() -> None:
     print(f"tuned: fit {best:.3f} {fit_by}\n       held-out {val_sc:.3f} {val_by} "
           f"(default {base_val:.3f} {base_by})", flush=True)
     changed = {k: v for k, v in cur.items() if v != TUNE_DEFAULTS[k]}
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    json.dump(changed, open(OUT, "w"), indent=1)
-    print(f"changed knobs -> {OUT}: {changed}")
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    json.dump(changed, open(args.out, "w"), indent=1)
+    print(f"changed knobs -> {args.out}: {changed}")
 
 
 if __name__ == "__main__":
