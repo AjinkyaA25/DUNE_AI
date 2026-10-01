@@ -65,6 +65,9 @@ def main() -> None:
     args = ap.parse_args()
     videos = sorted(p for p in glob.glob(os.path.join(args.dir, "*"))
                     if p.endswith(VIDEO_EXT) and ".f" not in os.path.basename(p))
+    # videos with checkpointed progress first, so a restart finishes them soonest
+    videos.sort(key=lambda p: not glob.glob(os.path.splitext(p)[0] + ".*.partial")
+                and not os.path.exists(os.path.splitext(p)[0] + ".timeline.json"))
     print(f"{len(videos)} videos, {args.workers} workers", flush=True)
     with ProcessPoolExecutor(args.workers) as pool:
         futs = [pool.submit(process, v, args.keep) for v in videos]
