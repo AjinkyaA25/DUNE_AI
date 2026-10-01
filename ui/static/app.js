@@ -122,10 +122,15 @@ function renderBloodlines() {
     <div class="skill">${k.img ? `<img src="${k.img}" data-img="${k.img}" alt="">` : ""}
       <div><div class="sn">${esc(k.name)}${k.heldBy.map((id) => `<span class="held" style="background:${player(id).color}" title="${esc(pname(player(id)))}"></span>`).join("")}</div>
       <div class="st">${esc(k.text)}</div></div></div>`).join("");
+  const row = bl.skillRow.map((k) => `
+    <div class="skill ${k.youHave ? "have" : ""}">${k.img ? `<img src="${k.img}" data-img="${k.img}" alt="">` : ""}
+      <div><div class="sn">${esc(k.name)}${k.youHave ? ` <span class="muted">(you have it)</span>` : ""}</div>
+      <div class="st">${esc(k.text)}</div></div></div>`).join("");
   $("sardaukar").innerHTML = `<div class="panel-title">Sardaukar commanders <span class="muted">(${bl.commanderCost} solari when you send an agent to one of these spaces)</span></div>
     <div class="cmd-list">${cmd}</div>
-    <div class="panel-title small">Skills <span class="muted">(pick one you don't hold when recruiting from the board; dots = who has it)</span></div>
-    <div class="skill-grid">${skills}</div>`;
+    <div class="panel-title small">Skill row <span class="muted">(take one you don't hold when recruiting from the board or with Plasteel Blades; the slot is refilled · ${bl.skillDeckLeft} tiles face-down)</span></div>
+    <div class="skill-grid">${row || `<span class="muted">empty</span>`}</div>
+    <details class="skill-ref"><summary class="muted">All 7 skills · who holds them</summary><div class="skill-grid">${skills}</div></details>`;
 }
 
 function legalSpaces() {
@@ -215,7 +220,7 @@ function renderTurn() {
     const ranked = [...S.players].sort((a, b) => b.vp - a.vp);
     h += `<div class="over">Game over</div>` + ranked.map((p) =>
       `<div>${p.id === S.winner ? "🏆 " : ""}${esc(pname(p))}: <b>${p.vp} VP</b></div>`).join("");
-    if (S.saved) h += `<div class="muted" style="margin-top:8px">Saved: ${esc(S.saved.log)}${S.saved.training ? `<br>Your decisions: ${esc(S.saved.training)}` : ""}</div>`;
+    if (S.saved) h += `<div class="muted" style="margin-top:8px">Saved: ${esc(S.saved.log)}${S.saved.positions ? `<br>Your decisions: ${esc(S.saved.positions)}` : ""}${S.saved.training ? `<br>Training shard: ${esc(S.saved.training)}` : ""}</div>`;
     $("turn").innerHTML = h; return;
   }
   if (S.thinking != null) {
@@ -272,7 +277,8 @@ function renderLog() {
     return `<div class="le ${ai ? "ai" : ""} ${openLog.has(e.n) ? "open" : ""}" data-n="${e.n}">
       <span class="r">R${e.round}</span><span class="pd" style="background:${p ? p.color : "#666"}"></span>
       <span class="${ai ? "has-why" : ""}">${p && p.you ? "<b>You</b>" : esc(p ? p.colorName : "?")}: ${esc(e.label)}</span>
-      ${e.error ? `<span style="color:var(--bad)"> (${esc(e.error)})</span>` : ""}${why}</div>`;
+      ${e.error ? `<span style="color:var(--bad)"> (${esc(e.error)})</span>` : ""}
+      ${e.ai_pick && !e.agree ? `<div class="aipick">AI would have played: ${esc(e.ai_pick)}</div>` : ""}${why}</div>`;
   }).join("");
 }
 

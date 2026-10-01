@@ -48,6 +48,29 @@ from src.game.board.board import UPRISING_BOARD  # noqa: E402
 from src.game.gameState import ActionType, GameAction, GameState  # noqa: E402
 
 STATIC = os.path.join(HERE, "static")
+LOG_DIR = os.path.join(ROOT, "game_logs")            # ui_<time>_<id>.json, autosaved
+POS_DIR = os.path.join(ROOT, "data", "ui_games")     # your decisions as positions
+# the decision types the weight fitter learns from (video_scrape/tune_heuristic.py)
+FIT_TYPES = (ActionType.AGENT_TURN, ActionType.ACQUIRE_CARD,
+             ActionType.ACQUIRE_RESERVE, ActionType.REVEAL_TURN)
+
+
+def fit_label(a: GameAction) -> str:
+    """Same move label as tune_heuristic / compare_ai use."""
+    t = a.action_type
+    if t == ActionType.AGENT_TURN:
+        return f"agent {a.space_name}"
+    if t == ActionType.ACQUIRE_CARD:
+        return f"buy {a.acquire_card_name}"
+    if t == ActionType.ACQUIRE_RESERVE:
+        return f"buy {a.reserve_type}"
+    return t.value
+
+
+def _dump(path: str, write) -> None:
+    tmp = path + ".tmp"
+    write(tmp)
+    os.replace(tmp, path)
 CARD_DIR = os.path.join(ROOT, "video_scrape", "cards")
 
 OPPONENTS = [
@@ -206,7 +229,8 @@ def bl_choice_label(gs: GameState, a: GameAction) -> str:
     kind = pend.kind if pend else ""
     if ch == "decline":
         return {"tech_buy": "Don't buy a tech", "tech_offer": "Don't take a tech",
-                "commander": "Don't recruit a commander"}.get(kind, "Decline")
+                "commander": "Don't recruit a commander",
+                "plasteel": "Keep Plasteel Blades (no extra skill)"}.get(kind, "Decline")
     if ch.startswith("stack:"):
         st = gs.bl.tech_stacks[int(ch.split(":")[1])]
         if st:
@@ -219,6 +243,9 @@ def bl_choice_label(gs: GameState, a: GameAction) -> str:
         return f"Recruit Sardaukar commander ({cost} solari)" + (f" + skill {skill}" if skill else "")
     if ch == "supply":
         return f"Re-recruit a commander from your supply ({gs.bl.commander_cost(a.player_id)} solari)"
+    if kind == "plasteel":
+        return ("Keep Plasteel Blades" if ch == "decline"
+                else f"Trash Plasteel Blades → gain skill {ch.split(':', 1)[1]}")
     if kind == "desperate":
         return "Trash Desperate for +3 swords" if ch == "use" else "Keep Desperate"
     if kind == "trash_hand":
@@ -306,6 +333,13 @@ class Session:
         self.error: Optional[str] = None
         self.lock = threading.RLock()
         self.moves = []                       # play_game-format move log
+        self.started = datetime.now()
+        self.positions: List[Dict] = []       # your decisions (fitter format)
+        from src.ai.agents import HeuristicAgent
+        self.coach = HeuristicAgent(seed=0)   # "the AI would have played..."
+        stamp = self.started.strftime("%Y%m%d_%H%M%S")
+        self.log_path = os.path.join(LOG_DIR, f"ui_{stamp}_{self.id[:8]}.json")
+        self.pos_path = os.path.join(POS_DIR, f"ui_{stamp}_{self.id[:8]}.pkl")
         self.train = {"feats": [], "rounds": [], "actA": [], "ci": []}
         self.saved: Optional[Dict] = None
         self._thread: Optional[threading.Thread] = None
@@ -404,9 +438,66 @@ class Session:
                 return "bad action index"
             act = valid[index]
             self._record_training(valid, act)
+            pick = self._record_position(valid, act)
             self._apply(self.seat, act)
+            if pick:
+                self.log[-1].update(pick)
+            self.autosave()
         self.kick()
         return None
+
+    def _record_position(self, valid, act) -> Optional[Dict]:
+        """Save the decision (position, options, your choice, the AI's pick)
+        so the weight fitter and comparison tools can use your games."""
+        gs, pid = self.gs, self.seat
+        cands = [a for a in valid if a.action_type != ActionType.NO_OP]
+        if len(cands) < 2:
+            return None
+        scores = [float(self.coach.score(gs, pid, a)) for a in cands]
+        best = max(range(len(cands)), key=lambda i: scores[i])
+        top = sorted(range(len(cands)), key=lambda i: -scores[i])[:5]
+        pick = {"ai_pick": label(gs, cands[best]),
+                "agree": repr(cands[best]) == repr(act),
+                "ai_top": [{"label": label(gs, cands[i]), "score": round(scores[i], 2)}
+                           for i in top]}
+        if act.action_type in FIT_TYPES:
+            self.positions.append({
+                "game": f"ui_{self.id[:8]}", "source": "ui", "gs": gs.clone(),
+                "pid": pid, "cands": cands, "human": fit_label(act),
+                "type": "buy" if "acquire" in act.action_type.value else act.action_type.value,
+                "me": True, "won": None, "round": gs.round,
+                "ai_pick": fit_label(cands[best])})
+        return pick
+
+    def autosave(self) -> None:
+        """Write the game so far (every move, the AI's reasoning, your
+        decisions); called after each of your moves and at the end."""
+        import pickle
+        gs = self.gs
+        vp = [p.victory_points for p in gs.players]
+        winner = None
+        if gs.game_over:
+            winner = gs.winner if gs.winner is not None else int(np.argmax(vp))
+        mine = [e for e in self.log if e.get("pid") == self.seat and "agree" in e]
+        doc = {"game_id": self.id, "source": "ui", "started": self.started.isoformat(),
+               "saved": datetime.now().isoformat(), "seed": self.seed,
+               "bloodlines": bool(gs.bl), "human_id": self.seat,
+               "opponents": {str(k): v for k, v in self.specs.items()},
+               "finished": gs.game_over, "round": gs.round, "winner": winner,
+               "you_won": None if winner is None else winner == self.seat, "vp": vp,
+               "agreement_with_ai": round(sum(e["agree"] for e in mine) / len(mine), 3) if mine else None,
+               "log": self.log, "moves": self.moves}
+        os.makedirs(LOG_DIR, exist_ok=True)
+        _dump(self.log_path, lambda t: json.dump(doc, open(t, "w", encoding="utf-8"),
+                                                  indent=0, default=str))
+        if self.positions:
+            for x in self.positions:
+                x["won"] = None if winner is None else winner == self.seat
+            os.makedirs(POS_DIR, exist_ok=True)
+            meta = {k: doc[k] for k in ("game_id", "seed", "human_id", "opponents",
+                                        "finished", "winner", "you_won", "vp")}
+            _dump(self.pos_path, lambda t: pickle.dump({"meta": meta, "positions": self.positions},
+                                                       open(t, "wb")))
 
     def _record_training(self, valid, act) -> None:
         """Your decisions in the shard format train_from_human.py reads
@@ -435,11 +526,10 @@ class Session:
         gs = self.gs
         vp = [p.victory_points for p in gs.players]
         winner = gs.winner if gs.winner is not None else int(np.argmax(vp))
-        log = {"game_id": self.id, "timestamp": datetime.now().isoformat(),
-               "seed": self.seed, "num_players": len(gs.players), "human_id": self.seat,
-               "agents": {str(k): v for k, v in self.specs.items()},
-               "winner": winner, "final_vp": vp, "moves": self.moves}
-        self.saved = {"log": PG.save_log(log, "game_logs")}
+        self.autosave()
+        self.saved = {"log": os.path.relpath(self.log_path, ROOT)}
+        if self.positions:
+            self.saved["positions"] = os.path.relpath(self.pos_path, ROOT)
         if self.train["feats"]:
             self.saved["training"] = PG.save_training_shard(
                 self.train["feats"], self.train["rounds"], self.train["actA"],
@@ -538,6 +628,10 @@ class Session:
                                 "heldBy": [q.id for q in gs.players
                                            if k in getattr(q, "skills", set())]}
                                for k, t in SKILL_TEXT.items()],
+                    "skillRow": [{"name": k, "text": SKILL_TEXT.get(k, ""), "img": skill_img(k),
+                                  "youHave": k in getattr(gs.players[self.seat], "skills", set())}
+                                 for k in getattr(gs.bl, "skill_row", [])],
+                    "skillDeckLeft": len(getattr(gs.bl, "skill_deck", [])),
                     "commanderCost": gs.bl.commander_cost(self.seat),
                 },
                 "contracts": [{"name": c["name"], "rewards": c.get("rewards"),

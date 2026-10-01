@@ -15,8 +15,14 @@ Command - on your Reveal turn, if your total persuasion (cards, techs,
 
 Sardaukar Commanders - one starts on each of 6 spaces. When you send an Agent
   to one of those spaces you may pay 2 solari (max one recruit per turn) to
-  take the commander there into your garrison and choose any skill you don't
-  hold; a recruited space stays empty for the rest of the game. A commander
+  take the commander there into your garrison and take one skill tile you
+  don't hold from the skill row; a recruited space stays empty for the rest
+  of the game.
+
+Skill row - 14 skill tiles (2 of each skill) are shuffled; 4 lie face-up in
+  the row. A skill is taken from the row (recruiting a commander from the
+  board, or Plasteel Blades' bonus skill) and its slot is refilled from the
+  10 face-down tiles while any remain. A commander
   deploys like a troop (strength 2). After combat it goes to your commander
   supply; re-recruiting it (2 solari, no new skill) is only possible by
   sending an Agent to one of the 6 commander spaces.
@@ -56,6 +62,8 @@ SKILLS = ("Canny", "Charismatic", "Desperate", "Driven", "Fierce", "Hardy",
 # Blades' bonus skill): strongest general-purpose skills first.
 SKILL_PRIORITY = ("Canny", "Loyal", "Fierce", "Hardy", "Charismatic",
                   "Driven", "Desperate")
+SKILL_COPIES = 2      # tiles per skill (14 in all)
+SKILL_ROW = 4         # face-up skill tiles
 COMMANDER_COST = 2
 COMMAND_THRESHOLD = 6
 LITANY = "card:Litany Against Fear"
@@ -94,6 +102,10 @@ class Bloodlines:
         pool = [pool[i] for i in order]
         self.tech_stacks: List[List] = [pool[i::3] for i in range(3)]
         self.commander_on_space: Dict[str, bool] = {s: True for s in COMMANDER_SPACES}
+        tiles = [k for k in SKILLS for _ in range(SKILL_COPIES)]
+        gs.rng.shuffle(tiles)
+        self.skill_row: List[str] = tiles[:SKILL_ROW]
+        self.skill_deck: List[str] = tiles[SKILL_ROW:]
         self.commanders_in_conflict: Dict[int, int] = {p.id: 0 for p in gs.players}
         self.pending: List[PendingBLChoice] = []
         for p in gs.players:
@@ -151,6 +163,9 @@ class Bloodlines:
         elif c.kind == "commander":
             live = set(self.recruit_options(pid, c.space))
             c.options = [o for o in c.options if o in live or o == "decline"]
+        elif c.kind == "plasteel":
+            live = {f"skill:{k}" for k in self.row_skills(pid)}
+            c.options = [o for o in c.options if o in live or o == "decline"]
         elif c.kind == "tech_offer":
             live = {f"stack:{i}" for i in self.buyable_stacks(pid, c.discount)}
             c.options = [o for o in c.options if o in live or o == "decline"]
@@ -189,6 +204,9 @@ class Bloodlines:
                     EffectResolver.resolve_single_effect(dict(c.bonus), p, self.gs)
         elif c.kind == "commander":
             self.recruit(pid, c.space, choice)
+        elif c.kind == "plasteel":
+            self._trash_tile(pid, "Plasteel Blades")
+            self.take_skill(pid, choice.split(":", 1)[1])
         elif c.kind == "desperate":
             p = self._p(pid)
             p.skills.discard("Desperate")
@@ -270,11 +288,26 @@ class Bloodlines:
             return []
         opts = []
         if self.commander_on_space.get(space):
-            lacking = [s for s in SKILLS if s not in p.skills]
-            opts += [f"board:{s}" for s in lacking] or ["board:"]
+            opts += [f"board:{s}" for s in self.row_skills(pid)] or ["board:"]
         if p.commanders_supply > 0:
             opts.append("supply")
         return opts
+
+    def row_skills(self, pid: int) -> List[str]:
+        """Skills in the face-up row that this player doesn't hold."""
+        p = self._p(pid)
+        row = getattr(self, "skill_row", None)
+        if row is None:          # positions saved before the skill row existed
+            row = list(SKILLS)
+        return [k for k in dict.fromkeys(row) if k not in p.skills]
+
+    def take_skill(self, pid: int, skill: str) -> None:
+        """Take a skill tile from the row; refill its slot from the deck."""
+        if skill in getattr(self, "skill_row", []):
+            self.skill_row.remove(skill)
+            if self.skill_deck:
+                self.skill_row.append(self.skill_deck.pop(0))
+        self._p(pid).skills.add(skill)
 
     def recruit(self, pid: int, space: str, choice: str) -> None:
         p = self._p(pid)
@@ -285,16 +318,14 @@ class Bloodlines:
             self.commander_on_space[space] = False
             skill = choice.split(":", 1)[1]
             if skill:
-                p.skills.add(skill)
+                self.take_skill(pid, skill)
         p.commanders_garrison += 1
         p.troops_garrison += 1
         p.bl_recruited_this_turn = True
-        # Plasteel Blades: trash it -> an additional skill
-        if self.has(pid, "Plasteel Blades"):
-            extra = next((s for s in SKILL_PRIORITY if s not in p.skills), None)
-            if extra:
-                self._trash_tile(pid, "Plasteel Blades")
-                p.skills.add(extra)
+        # Plasteel Blades: may trash it -> an additional skill from the row
+        if self.has(pid, "Plasteel Blades") and self.row_skills(pid):
+            self.pending.append(PendingBLChoice(
+                pid, "plasteel", [f"skill:{k}" for k in self.row_skills(pid)] + ["decline"]))
 
     def deploy_commanders(self, pid: int, n: int) -> None:
         """Called when n units leave the garrison for the Conflict: commanders

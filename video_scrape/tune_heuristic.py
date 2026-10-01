@@ -109,6 +109,25 @@ def agreement(pos: list, tuning: dict) -> float:
         {k: round(sum(v) / len(v), 3) for k, v in by.items()}
 
 
+UI_DIR = os.path.join(ROOT, "data", "ui_games")
+
+
+def load_positions(include_ui: bool = True) -> list:
+    """Video positions (cached capture) + your finished browser games
+    (ui/server.py saves each decision with me=True and won)."""
+    if os.path.exists(CACHE):
+        pos = pickle.load(open(CACHE, "rb"))
+    else:
+        pos = capture()
+        pickle.dump(pos, open(CACHE, "wb"))
+    if include_ui:
+        for path in sorted(glob.glob(os.path.join(UI_DIR, "*.pkl"))):
+            d = pickle.load(open(path, "rb"))
+            if d.get("meta", {}).get("finished"):
+                pos += d["positions"]
+    return pos
+
+
 SUBSETS = {"all": lambda x: True,
            "winners": lambda x: x.get("won") is True,
            "me": lambda x: x.get("me") is True}
@@ -121,11 +140,10 @@ def main() -> None:
                     help="whose decisions to fit: everyone, game winners, or Dinosaur11")
     ap.add_argument("--out", default=OUT)
     args = ap.parse_args()
-    if os.path.exists(CACHE):
-        pos = pickle.load(open(CACHE, "rb"))
-    else:
-        pos = capture()
-        pickle.dump(pos, open(CACHE, "wb"))
+    pos = load_positions()
+    n_ui = len({x["game"] for x in pos if x.get("source") == "ui"})
+    if n_ui:
+        print(f"including {n_ui} finished browser games", flush=True)
     games = sorted({x["game"] for x in pos})
     random.Random(7).shuffle(games)
     n_hold = max(4, len(games) // 5)

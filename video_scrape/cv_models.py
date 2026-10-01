@@ -50,7 +50,7 @@ def fit(pos: list) -> dict:
 
 
 def run(subset: str, fold: int) -> None:
-    pos = pickle.load(open(T.CACHE, "rb"))
+    pos = T.load_positions()
     games = sorted({x["game"] for x in pos})
     random.Random(11).shuffle(games)
     hold = set(games[fold::K])

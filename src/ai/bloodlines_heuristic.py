@@ -225,6 +225,8 @@ def score_bl_choice(gs, pid: int, choice: str) -> float:
         return tech_buy_value(gs, pid, d, c.discount)
     if c.kind == "commander":
         return commander_value(gs, pid, choice)
+    if c.kind == "plasteel":              # trash Plasteel Blades for a row skill
+        return skill_value(gs, pid, choice.split(":", 1)[1])
     if c.kind == "desperate":
         return 3 * SWORD * 2.0 * min(2.0, _conflict_worth(gs, pid)) \
             - skill_value(gs, pid, "Desperate") * 0.5

@@ -50,7 +50,7 @@ def main() -> None:
     ap.add_argument("--on", default="me", choices=sorted(T.SUBSETS),
                     help="whose positions to compare the two models on")
     args = ap.parse_args()
-    pos = pickle.load(open(T.CACHE, "rb"))
+    pos = T.load_positions()
     games = sorted({x["game"] for x in pos})
     random.Random(7).shuffle(games)
     hold = set(games[:max(4, len(games) // 5)])

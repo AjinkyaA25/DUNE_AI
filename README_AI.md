@@ -41,9 +41,24 @@ in your hand, then a highlighted board space; at reveal click a highlighted
 Imperium Row card to buy it. Every AI move in the log expands to what it
 considered: search opponents show their candidate moves with the playout win
 chance, heuristic opponents their top-scored moves. "Show AI hands" reveals
-the opponents' cards for review. Finished games are saved to `game_logs/`,
-your decisions to `data/human_games/` (training format). Code: `ui/server.py`
-(engine + JSON API) and `ui/static/` (page).
+the opponents' cards for review. The Bloodlines panels show the tech market
+(top tile of each stack), the 4-tile Sardaukar skill row, which commander
+spaces still hold a commander, and the face-up contracts with how to complete
+them. Code: `ui/server.py` (engine + JSON API) and `ui/static/` (page).
+
+**Your games are tracked** (autosaved after every one of your moves, so an
+unfinished game is kept too):
+
+| File | What |
+|---|---|
+| `game_logs/ui_<time>_<id>.json` | every move by every player, the AI's reasoning for each of its moves, what the AI would have played on each of yours, opponents, seed, result |
+| `data/ui_games/ui_<time>_<id>.pkl` | each of your decisions as a position (board, options, your choice, won/lost); finished games are picked up automatically by `tune_heuristic.py`, `compare_models.py` and `cv_models.py` as "you" decisions |
+| `data/human_games/human_*.npz` | your decisions in the neural-net training format (finished games) |
+
+`python ui/games_report.py` summarises them: your record against each
+opponent line-up, how often your moves matched the AI's, and your most common
+differences. Only one server can run at a time; if the page doesn't change
+after an update, stop the running server (Ctrl+C) and start it again.
 
 ## Train by self-play
 
@@ -215,6 +230,14 @@ Guessed multipliers do not move the win rate, so the phase weights are being
 learned from game results instead (`python -m src.selfplay.tune_by_wins`:
 keeps a change only if it wins more against a mixed field of default,
 winners' style and your style, and still does on fresh deals).
+
+### Rules fixes
+
+- Sardaukar skills (2026-10-01): 14 tiles (2 of each of the 7 skills); 4 are
+  face-up in the skill row. Recruiting a commander from the board or Plasteel
+  Blades' bonus takes one of those 4 (one you don't hold), and the slot is
+  refilled from the 10 face-down tiles. Plasteel Blades is now a choice (which
+  row skill, or keep the tile). Previously any skill could be taken.
 
 ### In progress
 

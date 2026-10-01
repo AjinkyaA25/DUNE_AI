@@ -189,3 +189,7 @@ dialog select, dialog input:not([type=checkbox]) { background: var(--panel-2); b
 .pl .techs-mini { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px; }
 .pl .techs-mini img { width: 30px; height: 30px; object-fit: contain; }
 .c .trig { color: var(--muted); font-size: 11px; }
+.skill.have { opacity: .5; }
+.skill-ref { margin-top: 8px; }
+.skill-ref summary { cursor: pointer; margin-bottom: 6px; }
+.le .aipick { margin-left: 14px; font-size: 11px; color: var(--muted); }
