@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dune AI Table</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">Dune AI Table</div>
+  <div class="status" id="status">No game</div>
+  <div class="top-actions">
+    <label class="toggle" title="Show the AI players' hands and intrigues (practice / review mode)">
+      <input type="checkbox" id="reveal"> Show AI hands
+    </label>
+    <button id="newBtn" class="btn">New game</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="left">
+    <div class="conflict-row">
+      <div class="panel conflict" id="conflict"></div>
+      <div class="panel contracts" id="contracts"></div>
+    </div>
+    <div class="panel board" id="board"></div>
+    <div class="panel players" id="players"></div>
+  </section>
+
+  <section class="right">
+    <div class="panel turn" id="turn"></div>
+    <div class="panel log">
+      <div class="panel-title">Moves <span class="muted">(click an AI move to see what it considered)</span></div>
+      <div id="log"></div>
+    </div>
+  </section>
+
+  <section class="bottom">
+    <div class="panel hand">
+      <div class="panel-title">Your hand <span class="muted" id="handHint"></span></div>
+      <div class="cards" id="hand"></div>
+      <div class="panel-title small">Intrigue</div>
+      <div class="chips" id="intrigues"></div>
+      <div class="panel-title small">In play this round</div>
+      <div class="cards small" id="inplay"></div>
+    </div>
+    <div class="panel row">
+      <div class="panel-title">Imperium Row <span class="muted" id="persuasion"></span></div>
+      <div class="cards" id="row"></div>
+      <div class="chips" id="reserve"></div>
+    </div>
+  </section>
+</main>
+
+<div class="zoom" id="zoom"></div>
+
+<dialog id="newDlg">
+  <form method="dialog" id="newForm">
+    <h2>New game</h2>
+    <p class="muted">4 players, neutral leaders. The AI was trained and benchmarked with Bloodlines on.</p>
+    <label>Your seat
+      <select id="seat">
+        <option value="0">Red: plays first</option>
+        <option value="1">Green</option>
+        <option value="2">Blue</option>
+        <option value="3">Yellow</option>
+      </select>
+    </label>
+    <div id="oppRows"></div>
+    <label>Seed <input id="seed" placeholder="random" inputmode="numeric"></label>
+    <label class="inline"><input type="checkbox" id="bloodlines" checked> Bloodlines</label>
+    <div class="dlg-actions">
+      <button value="cancel" class="btn ghost">Cancel</button>
+      <button value="ok" class="btn" id="startBtn">Start</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
