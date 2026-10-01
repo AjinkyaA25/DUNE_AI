@@ -119,7 +119,12 @@ def _card_images() -> Dict[str, str]:
         return {}
     idx = json.load(open(idx_path, encoding="utf-8"))
     out = {}
-    for cid, v in idx.items():
+    # Some names are both an Imperium card and a Bloodlines leader (Piter de
+    # Vries, Chani, Duncan Idaho, Esmar Tuek, Liet Kynes): the leader art is
+    # "bl_<Name>", so take the plain card id first.
+    order = sorted(idx, key=lambda k: (k.startswith("bl_"), k.endswith("_com"), k))
+    for cid in order:
+        v = idx[cid]
         if cid.startswith("_") or not v.get("files"):
             continue
         for n in v.get("names", [])[:1]:          # English name first
