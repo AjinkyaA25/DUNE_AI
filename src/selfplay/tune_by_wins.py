@@ -30,6 +30,9 @@ KNOBS = {
     "res_spy": [1.0, 2.0, 3.0], "influence": [1.0, 1.5, 2.0, 3.0],
     "combat": [0.25, 0.5, 1.0, 1.5], "reveal_bias": [-2.0, 0.0, 2.0],
 }
+# whole-game knobs tried before the phase-specific ones
+GLOBAL = {"troop_hold": [0.5, 1.0, 1.5, 2.0], "ci_hold": [0.5, 1.0, 1.5, 2.5],
+          "plot_hold": [0.0, 0.6, 1.2, 2.0]}
 FIELD = ["heuristic", "heuristic:tuned=config/heuristic_winners.json",
          "heuristic:tuned=config/heuristic_me.json"]
 MIN_GAIN = 0.012
@@ -92,9 +95,12 @@ def main() -> None:
     t0 = time.time()
     for sweep in range(args.sweeps):
         improved = False
-        for ph in args.phases.split(","):
-            for knob, values in KNOBS.items():
-                key = f"{ph}.{knob}"
+        plan = [(k, v) for k, v in GLOBAL.items()] + [
+            (f"{ph}.{knob}", values) for ph in args.phases.split(",")
+            for knob, values in KNOBS.items()]
+        for key, values in plan:
+            if True:
+                knob = key.split(".", 1)[-1]
                 now = cur.get(key, cur.get(knob))
                 for v in values:
                     if now is not None and v == now:

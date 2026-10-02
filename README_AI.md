@@ -239,6 +239,35 @@ winners' style and your style, and still does on fresh deals).
   refilled from the 10 face-down tiles. Plasteel Blades is now a choice (which
   row skill, or keep the tile). Previously any skill could be taken.
 
+- First player (2026-10-02): the First Player token only advanced every
+  OTHER round (0,1,1,2,2,3,…); now it moves every round (0,1,2,3,0,…).
+  Every engine game before this fix was affected.
+- Intrigue choices (2026-10-02, all 59 intrigue cards checked against their
+  art): choices inside cards were made by fixed rules for both players and
+  AI. They are now real decisions (`src/game/choices.py`): Poison Snooper
+  draw/trash, Inspire Awe / Impress card, faction picks (Bribery, Buy Access,
+  Imperium Politics, Sietch Ritual, Change Allegiances), Manipulate, Market
+  Opportunity, Opportunism (optional), troops to retreat (Go to Ground, Reach
+  Agreement, Tactical Option), Special Mission, Emperor's Invitation,
+  Coercive Negotiation, "deploy up to N", which card to discard. OR cards
+  (Detonation, Counterattack, Backed by CHOAM, Insider Information, Sleeper
+  Unit, Spice is Power) are one-or-the-other; Questionable Methods' influence
+  loss is optional; Tenuous Bond (combat) trashes a 1+ card from your discard;
+  Call to Arms counts acquisitions made after playing it.
+
+### 9. Deploying troops and playing combat intrigues (2026-10-02)
+
+The AI deployed the maximum 84% of the time (garrison emptied in 55-75% of
+deploys) and played every combat intrigue it could (only 33% changed its
+placing). Now both decisions use an expected-reward model of the Conflict
+against the value of keeping the troops / card.
+
+| | Old | New |
+|---|---|---|
+| Max deploy, rounds 1-3 | 83% | 46% |
+| Garrison emptied, rounds 1-3 | 55% | 20% |
+| Win share, 2 seats each, 1920 games | 41.0% | **59.0%** |
+
 ### In progress
 
 Expert iteration: 48-playout search self-play with buys searched
