@@ -1,0 +1,14 @@
+{
+ "res_contract": 0.5,
+ "res_spice": 0.5,
+ "res_troops": 0.5,
+ "sm_solari": 0.5,
+ "combat": 0.25,
+ "influence": 1.5,
+ "troop_hold": 1.5,
+ "early.res_troops": 1.0,
+ "late.res_solari": 0.75,
+ "late.res_troops": 1.5,
+ "early.influence": 2.0,
+ "late.res_water": 1.5
+}
