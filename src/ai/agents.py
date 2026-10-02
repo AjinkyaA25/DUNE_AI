@@ -59,6 +59,10 @@ TUNE_DEFAULTS = {
     # value, so 0 = flat (the hand-set heuristic) and 1 halves it at 5 held
     "sat_solari": 0.0, "sat_spice": 0.0, "sat_water": 0.0,
     "sat_troops": 0.0, "sat_intrigue": 0.0,
+    # holding value: a troop kept in the garrison / an intrigue kept in hand
+    # is worth this multiple of its default future value (fight_ev model)
+    "troop_hold": 1.0, "ci_hold": 1.0, "plot_hold": 0.6,
+    "fight_model": 1,        # 0 = the old deploy / combat-intrigue scoring (for A/B)
 }
 # Situational tuning: a key "<phase>.<knob>" overrides <knob> in that phase
 # only. Phases follow how the game is played: early = rounds 1-3 (build
@@ -582,6 +586,99 @@ def _own_combat_intrigue_swords(gs: GameState, pid: int) -> float:
     return min(total, 8.0)
 
 
+# ---------------------------------------------------------------------------
+# Fight model: expected reward from the current Conflict given my strength.
+# Strength = 2 per troop + 3 per sandworm + swords (needs 1+ unit). Opponents
+# are modelled as their visible strength plus what they can still add (troops
+# they could deploy with agents left, reveal swords, combat intrigues in
+# hand), with spread growing with that potential. Deploy and combat-intrigue
+# decisions value the CHANGE in expected reward, against the value of
+# keeping the troop / card for later.
+# ---------------------------------------------------------------------------
+
+def _phi(x: float) -> float:
+    import math
+    return 0.5 * (1.0 + math.erf(x / 1.41421356))
+
+
+def _rounds_left(gs: GameState) -> int:
+    return max(0, 10 - gs.round)
+
+
+def _reward_worth(gs: GameState, pid: int, r) -> float:
+    if not r:
+        return 0.0
+    v = 3.0 * r.get("vp", 0)
+    v += sum(_RES_VALUE.get(k, 0.3) * n for k, n in r.items()
+             if isinstance(n, (int, float)) and k != "vp")
+    return v * _game_urgency(gs, pid)
+
+
+def _opp_fight(gs: GameState, q: int):
+    """(expected final strength, spread, can_place) of opponent q."""
+    p = gs.players[q]
+    units = gs.troops_in_conflict.get(q, 0) + gs.sandworms_in_conflict.get(q, 0)
+    vis = 2 * gs.troops_in_conflict.get(q, 0) + 3 * gs.sandworms_in_conflict.get(q, 0) \
+        + gs.swords_this_reveal.get(q, 0)
+    pot = 0.0
+    if gs.phase.name != "COMBAT":
+        if p.agents_available > 0 and p.troops_garrison > 0:
+            pot += 2.0 * min(p.troops_garrison, 2 + p.agents_available) * 0.45
+        if q not in gs.players_revealed:
+            pot += 2.0                                   # reveal swords, on average
+    pot += 1.2 * min(len(p.intrigue_cards), 3) * 0.5     # combat intrigues maybe
+    can = units > 0 or (gs.phase.name != "COMBAT" and p.agents_available > 0
+                        and p.troops_garrison > 0)
+    return vis + pot, 1.5 + 0.9 * (pot ** 0.5), can
+
+
+def fight_ev(gs: GameState, pid: int, my_strength: float, my_units: int) -> float:
+    """Expected value of this Conflict's rewards for pid at this strength."""
+    cc = gs.current_conflict
+    if cc is None or my_units <= 0:
+        return 0.0
+    rewards = [_conflict_worth(gs, pid),
+               _reward_worth(gs, pid, cc.second_place_reward),
+               _reward_worth(gs, pid, cc.third_place_reward) if gs.num_players >= 4 else 0.0]
+    dist = [1.0]                         # P(k opponents ahead of me)
+    for q in range(gs.num_players):
+        if q == pid:
+            continue
+        mu, sd, can = _opp_fight(gs, q)
+        pa = _phi((mu - my_strength) / sd) if can else 0.0
+        nd = [0.0] * (len(dist) + 1)
+        for k, pk in enumerate(dist):
+            nd[k] += pk * (1 - pa)
+            nd[k + 1] += pk * pa
+        dist = nd
+    return sum(pk * (rewards[k] if k < len(rewards) else 0.0) for k, pk in enumerate(dist))
+
+
+def _my_strength(gs: GameState, pid: int, add_troops: int = 0, add_swords: float = 0.0):
+    t = gs.troops_in_conflict.get(pid, 0) + add_troops
+    w = gs.sandworms_in_conflict.get(pid, 0)
+    sw = gs.swords_this_reveal.get(pid, 0) + add_swords
+    if gs.phase.name != "COMBAT" and pid not in gs.players_revealed:
+        sw += sum(getattr(c, "swords", 0) or 0 for c in gs.players[pid].hand) * 0.7
+    return 2 * t + 3 * w + sw, t + w
+
+
+def _card_swords(ic) -> float:
+    sw = 0.0
+    for e in ic.effects:
+        fe = _flatten(e)
+        v = fe.get("swords", 0)
+        sw += v if isinstance(v, (int, float)) else 2.0
+        for sub in fe.values():
+            if isinstance(sub, dict) and isinstance(sub.get("swords"), (int, float)):
+                sw += sub["swords"]
+    return sw
+
+
+def _troop_hold_value(gs: GameState) -> float:
+    return _RES_VALUE["troops"] * _TUNE.get("troop_hold", 1.0) * min(1.0, _rounds_left(gs) / 3.0)
+
+
 _STARTERS = frozenset(("Reconnaissance", "Diplomacy", "Dune, the Desert Planet",
                        "Dagger", "Convincing Argument", "Seek Allies", "Signet Ring"))
 
@@ -672,19 +769,27 @@ def _intrigue_value(gs: GameState, pid: int, ic) -> float:
     for e in ic.effects:
         v += _effect_with_choices_value(gs, pid, e)   # swords counted inside
     if IntrigueTiming.COMBAT in ts:
-        if in_combat:
+        if in_combat and not _TUNE.get("fight_model", 1):
             worth = _conflict_worth(gs, pid)
             mine = gs.combat_strength.get(pid, 0)
             opp = max((gs.combat_strength.get(q, 0)
                        for q in range(gs.num_players) if q != pid), default=0)
-            # most valuable when a swing would flip the placing
             v += 1.5 * worth if abs(mine - opp) <= 5 else 0.3 * worth
+        elif in_combat:
+            # replace the flat sword value with what the swords change: the
+            # expected Conflict reward, minus keeping the card for later
+            sw = _card_swords(ic)
+            mine, units = _my_strength(gs, pid)
+            gain = fight_ev(gs, pid, mine + sw, units) - fight_ev(gs, pid, mine, units)
+            hold = 0.45 * sw * _TUNE.get("ci_hold", 1.0) * min(1.0, _rounds_left(gs) / 3.0)
+            # (the flat sword value counted above is replaced by `gain`)
+            v += gain - (0.9 + _RES_VALUE.get("swords", 0.3)) * sw - hold
         else:
             v -= 3.0                            # save combat intrigues for combat
     if IntrigueTiming.ENDGAME in ts and not gs.game_over:
         v -= 5.0                                # never waste an endgame card early
     if list(ts) == [IntrigueTiming.PLOT] and not in_combat:
-        v -= 0.6                                # small bias to hold plot intrigues
+        v -= _TUNE.get("plot_hold", 0.6)        # keeping a plot intrigue has value
     return v
 
 
@@ -1060,7 +1165,7 @@ class HeuristicAgent(Agent):
         elif at == ActionType.COMBAT_PASS:
             s = 0.0
 
-        elif at == ActionType.RESOLVE_DEPLOY:
+        elif at == ActionType.RESOLVE_DEPLOY and not _TUNE.get("fight_model", 1):
             worth = _conflict_worth(gs, pid)           # already urgency-scaled
             urgency = _game_urgency(gs, pid)
             n = a.deploy_count
@@ -1113,6 +1218,20 @@ class HeuristicAgent(Agent):
             s -= 0.20 * n * max(0, 3 - gs.round)       # early troops are precious
             if p.troops_garrison - n < 1 and worth < 2.0:
                 s -= 1.5                                # don't empty the garrison cheaply
+
+        elif at == ActionType.RESOLVE_DEPLOY:
+            # deploy only what changes the expected Conflict reward by more
+            # than the troops are worth kept in the garrison (troops in the
+            # Conflict go back to supply after the fight)
+            n = a.deploy_count
+            mine0, u0 = _my_strength(gs, pid)
+            mine, u = _my_strength(gs, pid, add_troops=n)
+            own_ci = _own_combat_intrigue_swords(gs, pid) * 0.6
+            ev = fight_ev(gs, pid, mine + own_ci, u)
+            ev0 = fight_ev(gs, pid, mine0 + own_ci, u0)
+            s = (ev - ev0) - n * _troop_hold_value(gs)
+            if p.troops_garrison - n <= 0 and n > 0 and _rounds_left(gs) > 1:
+                s -= 0.3                                # keep some flexibility
 
         elif at == ActionType.RESOLVE_TRASH:
             # thin the weak starter cards; keep bought cards
