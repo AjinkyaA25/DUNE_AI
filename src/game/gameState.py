@@ -824,7 +824,7 @@ class GameState:
         if p.has_councilor:
             self.gain_persuasion(pid, 2)
         # Assembly Hall bonus: +1 Persuasion if player has an Agent there
-        if self.agent_on_space.get("Assembly Hall") == pid:
+        if self.agent_on_space.get("Assembly Hall") == pid or                 pid in getattr(self, "infiltrated_by", {}).get("Assembly Hall", []):
             self.gain_persuasion(pid, 1)
         self.player_in_reveal_buy = pid
         self.players_revealed.add(pid)
@@ -979,12 +979,15 @@ class GameState:
         name = action.trash_card_name
         if name:                                   # None / "" == decline
             p = self.players[pid]
-            # You may trash only from HAND or DISCARD (never the deck).
+            # Trash from your HAND, DISCARD or PLAY AREA (FAQ: e.g. send Guild
+            # Envoy to Desert Tactics and trash it there) - never the deck.
             card = (next((c for c in p.hand    if c.name == name), None) or
-                    next((c for c in p.discard if c.name == name), None))
+                    next((c for c in p.discard if c.name == name), None) or
+                    next((c for c in p.in_play if c.name == name), None))
             if card is None:
-                raise ValueError(f"Card '{name}' not in hand or discard")
-            (p.hand if card in p.hand else p.discard).remove(card)
+                raise ValueError(f"Card '{name}' not in hand, discard or play")
+            (p.hand if card in p.hand else p.discard if card in p.discard
+             else p.in_play).remove(card)
             self._to_trash(p, card)
             # "When this card is trashed" effects (e.g. Sardaukar Soldier).
             for eff in getattr(card, "trash_effects", []):
@@ -1281,7 +1284,8 @@ class GameState:
         for pt in self.pending_trashes:
             if pt.player_id != player_id:
                 continue
-            names = {c.name for c in p.hand} | {c.name for c in p.discard}
+            names = ({c.name for c in p.hand} | {c.name for c in p.discard}
+                     | {c.name for c in p.in_play})
             for nm in sorted(names):
                 actions.append(GameAction(ActionType.RESOLVE_TRASH,
                                           player_id, trash_card_name=nm))
@@ -2758,7 +2762,10 @@ class GameState:
             return []
         sp = UPRISING_BOARD[space_name]
         if not sp.special:
-            return list(BOARD_SPACE_EFFECTS.get(space_name, []))
+            effs = list(BOARD_SPACE_EFFECTS.get(space_name, []))
+            if space_name == "Assembly Hall":       # +1 Persuasion on your Reveal turn
+                effs.append({"persuasion": 1})
+            return effs
         if space_name == "Sietch Tabr":
             return ([{"water": 1, "destroy_shield_wall": 1}]
                     if space_option == "shield_wall"

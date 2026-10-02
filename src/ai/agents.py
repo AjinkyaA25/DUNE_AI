@@ -66,6 +66,11 @@ TUNE_DEFAULTS = {
     # deck_model 1: value a buy by how it changes the average card you draw
     # for the rest of the game (dilution), not in isolation; deck_k scales it
     "deck_model": 0, "deck_k": 1.0,
+    # buy_plan: agent moves are also valued by the best card the reveal-turn
+    # persuasion they leave you can buy (keep persuasion cards for the reveal,
+    # play Dagger to Assembly Hall, ...); trash_dagger: Daggers are normal
+    # trash targets while another Landsraad-access card remains
+    "buy_plan": 0.0, "trash_dagger": 0,
 }
 # Situational tuning: a key "<phase>.<knob>" overrides <knob> in that phase
 # only. Phases follow how the game is played: early = rounds 1-3 (build
@@ -727,6 +732,53 @@ _STARTERS = frozenset(("Reconnaissance", "Diplomacy", "Dune, the Desert Planet",
                        "Dagger", "Convincing Argument", "Seek Allies", "Signet Ring"))
 
 
+def _reveal_persuasion_after(gs: GameState, pid: int, a) -> float:
+    """Persuasion this player can expect on their Reveal turn if they make
+    agent move `a` now: the cards left in hand (the lowest-persuasion ones
+    go out with the remaining agents), persuasion already gained this round,
+    the space's reveal persuasion (Assembly Hall, High Council) and the
+    played card's agent-box persuasion."""
+    p = gs.players[pid]
+    hand = list(p.hand)
+    played = next((c for c in hand if c.name == a.card_name), None)
+    if played is not None:
+        hand.remove(played)
+    pers = sorted((c.persuasion or 0) for c in hand)
+    left_agents = max(0, p.agents_available - 1)
+    keep = pers[left_agents:]                        # spend the weakest as agents
+    P = sum(keep) + gs.persuasion_pool.get(pid, 0)
+    if p.has_councilor or a.space_name == "High Council":
+        P += 2
+    for eff in gs.get_space_effects_preview(a.space_name, a.space_option):
+        if a.space_name != "High Council":
+            P += eff.get("persuasion", 0) if isinstance(eff, dict) else 0
+    for e in getattr(played, "agent_effects", []) or []:
+        if isinstance(e, dict) and isinstance(e.get("persuasion"), (int, float)):
+            P += e["persuasion"]
+    return P
+
+
+def _best_buy_value(gs: GameState, pid: int, P: float) -> float:
+    best = 0.0
+    cands = list(gs.imperium_row)
+    for stack in (gs.reserve_prepare_the_way, gs.reserve_spice_must_flow):
+        if stack:
+            cands.append(stack[-1])
+    for c in cands:
+        if (c.cost or 0) <= P:
+            best = max(best, _acquire_card_value(gs, pid, c))
+    return best
+
+
+def _landsraad_access_owned(p) -> int:
+    n = 0
+    for zone in (p.deck, p.discard, p.hand, p.in_play):
+        for c in zone:
+            if any(getattr(sy, "value", sy) == "landsraad" for sy in getattr(c, "access_symbols", ())):
+                n += 1
+    return n
+
+
 def _choice_option_value(gs: GameState, pid: int, eff: dict) -> float:
     """Value of one option of a 'choose' decision (src/game/choices.py):
     its normal effects, any nested choice at its best, and the '_' keys."""
@@ -1161,6 +1213,10 @@ class HeuristicAgent(Agent):
                 from src.ai.bloodlines_heuristic import agent_space_bonus
                 s += agent_space_bonus(gs, pid, a.space_name)
             s += 4.0 * self.book.bonus(gs, pid, a)
+            # plan the buy: value the reveal-turn purchase this move leaves
+            if _TUNE.get("buy_plan", 0.0) and gs.round <= 8:
+                s += _TUNE["buy_plan"] * 0.3 * _best_buy_value(
+                    gs, pid, _reveal_persuasion_after(gs, pid, a))
             # discourage wasting the last agent on a weak play
             s += 0.5
 
@@ -1294,6 +1350,9 @@ class HeuristicAgent(Agent):
                 # round ~6 specifically because of this. Keep at least one
                 # around until the structural payoffs it unlocks are secured.
                 s = 2.0 if (p.has_swordmaster and p.has_councilor) else -2.0
+                if _TUNE.get("trash_dagger", 0):
+                    # 0 persuasion: trash it while another Landsraad card remains
+                    s = 1.8 if _landsraad_access_owned(p) >= 2 else -2.0
             elif a.trash_card_name is None:
                 s = 0.5
             else:

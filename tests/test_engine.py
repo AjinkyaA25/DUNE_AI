@@ -1197,3 +1197,24 @@ def test_occupied_space_needs_infiltrate_and_costs_the_spy():
     gs.step(acts[0])
     assert not p.has_spy_at(post)                        # the Spy is spent
     assert gs.agent_on_space["Spice Refinery"] == 2      # first Agent still there
+
+
+def test_trash_a_card_in_play_and_assembly_hall_persuasion():
+    """FAQ: you may trash from hand, discard or play area (send a Dagger to
+    Assembly Hall, then trash it at Desert Tactics)."""
+    from src.game.gameState import GameAction, ActionType
+    from src.game.effects import EffectResolver
+    from src.game.cards.card import Card, CardType
+    gs = setup_game(4, seed=12)
+    p = gs.players[0]
+    dagger = Card("Dagger", CardType.STARTER)
+    p.in_play = [dagger]
+    p.hand, p.discard = [], []
+    EffectResolver.resolve_single_effect({"trash": 1}, p, gs)
+    opts = {a.trash_card_name for a in gs.get_valid_actions(0)
+            if a.action_type == ActionType.RESOLVE_TRASH}
+    assert "Dagger" in opts
+    gs.step(GameAction(ActionType.RESOLVE_TRASH, 0, trash_card_name="Dagger"))
+    assert dagger in p.trash and dagger not in p.in_play
+    prev = gs.get_space_effects_preview("Assembly Hall")
+    assert {"persuasion": 1} in prev
