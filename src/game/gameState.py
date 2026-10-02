@@ -603,11 +603,16 @@ class GameState:
                     seen_cards.add(card.name)
                     for space in self.get_legal_agent_spaces(player_id, card):
                         options = self.get_space_options(player_id, space)
-                        spy_mods = [(False, False)]
                         can_gi  = self.can_gather_intelligence(player_id, space)
                         can_inf = self.can_infiltrate(player_id, space)
-                        if can_gi:
-                            spy_mods.append((True, False))
+                        if self._blocked_for(player_id, space):
+                            # an opponent is there: the only way in is to
+                            # Infiltrate (which spends the bordering Spy)
+                            spy_mods = []
+                        else:
+                            spy_mods = [(False, False)]
+                            if can_gi:
+                                spy_mods.append((True, False))
                         if can_inf:
                             spy_mods.append((False, True))
                         # A Spy on BOTH posts bordering the space: one may
@@ -1589,6 +1594,8 @@ class GameState:
           9. Combat deployment (queue PendingDeployment)
         """
         player = self.players[player_id]
+        if self._blocked_for(player_id, space_name) and not infiltrate:
+            raise ValueError(f"{space_name} is occupied: you must Infiltrate to go there")
         self._agent_turn_active = True
         self._current_agent_space = space_name       # can't uplift THIS agent
         player.troops_recruited_this_turn = 0
@@ -1615,7 +1622,11 @@ class GameState:
             # 2. Pay mandatory cost + place agent
             if space_name in BOARD_SPACE_MANDATORY_COSTS:
                 player.pay_cost(self._space_cost(player_id, space_name))
-            self.agent_on_space[space_name] = player_id
+            if self.agent_on_space.get(space_name) is None:
+                self.agent_on_space[space_name] = player_id
+            else:                                   # Infiltrated: both Agents are there
+                self.infiltrated_by = getattr(self, "infiltrated_by", {})
+                self.infiltrated_by.setdefault(space_name, []).append(player_id)
             player.agents_available -= 1
 
             # 3. Spy recall — MUST happen before effects (FAQ)
@@ -2292,6 +2303,7 @@ class GameState:
 
         for space in ALL_BOARD_SPACES:
             self.agent_on_space[space] = None
+        self.infiltrated_by = {}
 
         # the First Player token passes to the next seat every round
         self.first_player = (self.first_player + 1) % self.num_players
@@ -2420,6 +2432,14 @@ class GameState:
         self.pending_spy_placements.append(
             PendingSpyPlacement(player_id, count, allow_occupied, allowed_posts)
         )
+
+    def _blocked_for(self, player_id: int, space_name: str) -> bool:
+        """An opponent's Agent is on the space (and nothing lets you ignore it)."""
+        occ = self.agent_on_space.get(space_name)
+        if occ is None or occ == player_id:
+            return False
+        p = self.players[player_id]
+        return not (self.bl and "ignore_blocking" in getattr(p, "bl_flags", set()))
 
     def can_infiltrate(self, player_id: int, space_name: str) -> bool:
         if self.agent_on_space.get(space_name) is None:

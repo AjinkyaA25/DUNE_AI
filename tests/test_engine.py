@@ -1175,3 +1175,25 @@ def test_intrigue_requires_its_requirement():
     assert not ok("Buy Access")                       # 5 solari
     p.solari = 5
     assert ok("Buy Access")
+
+
+def test_occupied_space_needs_infiltrate_and_costs_the_spy():
+    from src.game.gameState import GameAction, ActionType
+    from src.game.cards.card import Card, CardType, AccessSymbol
+    gs = setup_game(4, seed=11)
+    gs.agent_on_space["Spice Refinery"] = 2            # an opponent is there
+    p = gs.players[0]
+    card = Card("C", CardType.STARTER); card.add_access_symbol(AccessSymbol.CITY)
+    p.hand = [card]
+    acts = [a for a in gs.get_valid_actions(0)
+            if a.action_type == ActionType.AGENT_TURN and a.space_name == "Spice Refinery"]
+    assert not acts                                     # no Spy: can't go there
+    from src.game.board.board import SPACE_TO_OBSERVATION_POSTS
+    post = next(iter(SPACE_TO_OBSERVATION_POSTS["Spice Refinery"]))
+    p.place_spy(post)
+    acts = [a for a in gs.get_valid_actions(0)
+            if a.action_type == ActionType.AGENT_TURN and a.space_name == "Spice Refinery"]
+    assert acts and all(a.use_infiltrate for a in acts)  # only by Infiltrating
+    gs.step(acts[0])
+    assert not p.has_spy_at(post)                        # the Spy is spent
+    assert gs.agent_on_space["Spice Refinery"] == 2      # first Agent still there
