@@ -154,6 +154,23 @@ class EffectResolver:
           swords                                     — add to per-turn swords pool (reveal only)
           bl_*, if_bl_*, command                     — Bloodlines (bloodlines/rules.py)
         """
+        # ===== CHOICES ("choose ..." effects -> a decision for the player) =====
+        from src.game import choices as _ch
+        if any(k.startswith("_") for k in effect):
+            _ch.apply_internal(game_state, player, effect)
+        if any(k in _ch.CHOICE_KEYS for k in effect):
+            for k in _ch.CHOICE_KEYS:
+                if k in effect:
+                    built = _ch.build(game_state, player, k, effect[k])
+                    if built is not None:
+                        game_state.add_pending_choice(player.id, *built)
+        if any(k.startswith("_") or k in _ch.CHOICE_KEYS for k in effect):
+            effect = {k: v for k, v in effect.items()
+                      if not k.startswith("_") and k not in _ch.CHOICE_KEYS}
+        # Call to Arms: troops for every card acquired later in this Reveal turn
+        if "call_to_arms" in effect:
+            player.call_to_arms_round = game_state.round
+
         _bl = getattr(game_state, "bl", None)
         if _bl is not None and any(k.startswith(("bl_", "if_bl_")) or k == "command"
                                    for k in effect):

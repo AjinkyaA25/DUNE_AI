@@ -582,6 +582,86 @@ def _own_combat_intrigue_swords(gs: GameState, pid: int) -> float:
     return min(total, 8.0)
 
 
+_STARTERS = frozenset(("Reconnaissance", "Diplomacy", "Dune, the Desert Planet",
+                       "Dagger", "Convincing Argument", "Seek Allies", "Signet Ring"))
+
+
+def _choice_option_value(gs: GameState, pid: int, eff: dict) -> float:
+    """Value of one option of a 'choose' decision (src/game/choices.py):
+    its normal effects, any nested choice at its best, and the '_' keys."""
+    from src.game import choices as CH
+    p = gs.players[pid]
+    v = 0.0
+    normal = {k: x for k, x in eff.items() if not k.startswith("_") and k not in CH.CHOICE_KEYS}
+    fe = _flatten(normal)
+    v += _effect_value(gs, pid, fe) + 0.9 * fe.get("swords", 0)
+    for k in CH.CHOICE_KEYS:
+        if k in eff:
+            built = CH.build(gs, p, k, eff[k])
+            if built:
+                v += max(_choice_option_value(gs, pid, o[2]) for o in built[2])
+    if eff.get("_draw_top") and p.deck:
+        v += 0.5 if p.deck[-1].name in _STARTERS else 1.4
+    if eff.get("_trash_top") and p.deck:
+        v += 1.4 if p.deck[-1].name in _STARTERS else -1.0
+    if eff.get("_peek_after_shuffle"):
+        v += 1.0
+    if "_acquire_named" in eff:
+        card = next((c for c in gs.imperium_row if c.name == eff["_acquire_named"]["card"]), None)
+        if card is not None:
+            v += _acquire_card_value(gs, pid, card) + (0.8 if eff["_acquire_named"].get("to_hand") else 0.0)
+    for f in eff.get("_gain_influences", []):
+        v += _influence_gain_value(gs, pid, f, 1)
+    for f in eff.get("_lose_influences", []) + ([eff["_lose_influence"]] if "_lose_influence" in eff else []):
+        v -= 0.9 * _influence_gain_value(gs, pid, f, 1)
+    if "_manipulate" in eff:
+        card = next((c for c in gs.imperium_row if c.name == eff["_manipulate"]), None)
+        if card is not None:
+            v += 0.4 * _acquire_card_value(gs, pid, card)
+    if eff.get("_retreat_n"):
+        n = eff["_retreat_n"]
+        mine = gs.combat_strength.get(pid, 0)
+        best_opp = max((gs.combat_strength.get(q, 0) for q in range(gs.num_players) if q != pid), default=0)
+        v += 0.35 * n if mine + 2 < best_opp else -0.6 * n * min(2.0, _conflict_worth(gs, pid))
+    for k, x in (eff.get("_pay") or {}).items():
+        v -= _RES_VALUE.get(k, 0.5) * x
+    if eff.get("_recall_spy"):
+        v -= 1.2 * eff["_recall_spy"]
+    if "_trash_discard" in eff:
+        card = next((c for c in p.discard if c.name == eff["_trash_discard"]), None)
+        if card is not None:
+            v += 1.2 if card.name in _STARTERS else -0.35 * (card.cost or 0)
+    if "_discard_named" in eff:
+        card = next((c for c in p.hand if c.name == eff["_discard_named"]), None)
+        if card is not None:
+            v -= 0.3 + 0.3 * (card.persuasion + card.swords) + 0.4 * len(getattr(card, "agent_effects", []) or [])
+    if "_take_contract" in eff:
+        i = int(eff["_take_contract"])
+        if i < len(gs.contract_bank):
+            ct = gs.contract_bank[i]
+            v += 1.5 + sum(_effect_value(gs, pid, {k: x}) for k, x in ct.rewards.items()
+                           if isinstance(x, (int, float)))
+    if eff.get("_deploy_n"):
+        v += 0.8 * eff["_deploy_n"] * min(2.0, _conflict_worth(gs, pid)) / 2.0
+    if eff.get("_grant_emperor_access"):
+        v += 0.8
+    if eff.get("_city_spy"):
+        v += 1.2
+    return v
+
+
+def _effect_with_choices_value(gs: GameState, pid: int, e: dict) -> float:
+    """Value of an intrigue effect, counting each 'choose' at its best option."""
+    from src.game import choices as CH
+    if "choose_by_combat" in e:
+        spec = e["choose_by_combat"]
+        in_fight = gs.phase.name == "COMBAT" and (gs.troops_in_conflict.get(pid, 0)
+                                                  + gs.sandworms_in_conflict.get(pid, 0)) > 0
+        branch = spec.get("combat" if in_fight else "else") or {}
+        e = {**{k: x for k, x in e.items() if k != "choose_by_combat"}, **branch}
+    return _choice_option_value(gs, pid, e)
+
+
 def _intrigue_value(gs: GameState, pid: int, ic) -> float:
     """How good is it to play this Intrigue right now?"""
     p = gs.players[pid]
@@ -590,9 +670,7 @@ def _intrigue_value(gs: GameState, pid: int, ic) -> float:
     ts = ic.timing if isinstance(ic.timing, (set, tuple, list, frozenset)) else (ic.timing,)
     v = 0.0
     for e in ic.effects:
-        fe = _flatten(e)
-        v += _effect_value(gs, pid, fe)
-        v += 0.9 * fe.get("swords", 0)          # swords matter in combat
+        v += _effect_with_choices_value(gs, pid, e)   # swords counted inside
     if IntrigueTiming.COMBAT in ts:
         if in_combat:
             worth = _conflict_worth(gs, pid)
@@ -1088,6 +1166,10 @@ class HeuristicAgent(Agent):
                 cost = sum(_RES_VALUE.get(k, 0.3) * v for k, v in op.cost.items())
                 cost += 1.1 * op.discard                  # a discarded card ~ 1 draw
                 s = gain - cost
+        elif at == ActionType.RESOLVE_CHOICE:
+            pc = gs.pending_choice_for(pid)
+            opt = next((o for o in pc.options if o[0] == a.choice), None) if pc else None
+            s = _choice_option_value(gs, pid, opt[2]) if opt else 0.0
         elif at == ActionType.RESOLVE_BL_CHOICE:
             from src.ai.bloodlines_heuristic import score_bl_choice
             if self.bloodlines:

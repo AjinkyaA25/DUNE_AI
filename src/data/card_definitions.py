@@ -567,6 +567,11 @@ _PE = (IntrigueTiming.PLOT, IntrigueTiming.ENDGAME)
 _CE = (IntrigueTiming.COMBAT, IntrigueTiming.ENDGAME)
 
 
+_DETONATION = {"choose_one": {"prompt": "Detonation", "options": [
+    {"label": "Break the Shield Wall", "effect": {"break_shield_wall": 1}},
+    {"label": "Deploy up to 4 troops from your garrison", "effect": {"deploy_up_to": 4}}]}}
+
+
 def create_intrigue_deck() -> List[IntrigueCard]:
     IC = IntrigueCard
     return [
@@ -581,14 +586,16 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         IC("Cunning", _PLOT, [{"draw": 1},
             {"pay_then": {"cost": {"spice": 1}, "trash": 1}}]),
         IC("Buy Access", _PLOT, [{"pay_then": {"cost": {"solari": 5}, "influence_choice": 2}}]),
-        IC("Call to Arms", _PLOT, [{"troops_per_card_acquired_this_turn": 1}]),
+        # Call to Arms: +1 troop whenever you acquire a card during your
+        # Reveal turn this round (after playing it).
+        IC("Call to Arms", _PLOT, [{"call_to_arms": 1}]),
         IC("Councilor's Ambition", _PLOT, [{"if_councilor": {"water": 2}}]),
         IC("Depart for Arrakis", _PLOT, [{"pay_then": {"cost": {"spice": 2}, "troops": 3}},
             {"if_influence_spacing_guild_3": {"draw": 1}}]),
         # Detonation: deploy up to 4 troops; MAY also break the Shield Wall
         # (optional wall-break icon). Two copies in the deck.
-        IC("Detonation", _PLOT, [{"deploy": 4}, {"may_break_shield_wall": 1}]),
-        IC("Detonation", _PLOT, [{"deploy": 4}, {"may_break_shield_wall": 1}]),
+        IC("Detonation", _PLOT, [_DETONATION]),
+        IC("Detonation", _PLOT, [_DETONATION]),
         IC("Distraction", _PLOT, [{"if_units_in_conflict_3": {"spy_special": 1}}]),
         IC("Imperium Politics", _PLOT,
            [{"pay_then": {"cost": {"solari": 1}, "influence_emperor_or_spacing": 1}}]),
@@ -630,14 +637,17 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         # IC("Honor Guard", _PLOT, [{"troops": 1}]),
         # Insider Information: recall a Spy -> draw + trash a card, OR ignore a
         # board space's Influence requirement this turn.
-        IC("Insider Information", _PLOT,
-           [{"recall_spy_then": {"draw": 1, "trash": 1}}, {"ignore_influence_gates": 1}]),
+        IC("Insider Information", _PLOT, [{"choose_one": {"prompt": "Insider Information", "options": [
+            {"label": "Recall a Spy -> draw a card and trash a card",
+             "effect": {"_recall_spy": 1, "draw": 1, "trash": 1}},
+            {"label": "Ignore Influence requirements on board spaces this turn",
+             "effect": {"ignore_influence_gates": 1}}]}}]),
         # Sleeper Unit: pay 1 solari -> place a Spy, OR recall a Spy -> 2 troops.
-        IC("Sleeper Unit", _PLOT,
-           [{"pay_then": {"cost": {"solari": 1}, "spy": 1}},
-            {"recall_spy_then": {"troops": 2}}]),
+        IC("Sleeper Unit", _PLOT, [{"choose_one": {"prompt": "Sleeper Unit", "options": [
+            {"label": "Pay 1 solari -> place a Spy", "effect": {"_pay": {"solari": 1}, "spy": 1}},
+            {"label": "Recall a Spy -> 2 troops", "effect": {"_recall_spy": 1, "troops": 2}}]}}]),
         # ── Combat ──────────────────────────────────────────────────────────
-        IC("Questionable Methods", _COMBAT, [{"lose_influence_any": 1, "swords": 5}]),
+        IC("Questionable Methods", _COMBAT, [{"swords": 1, "lose_influence_for": {"swords": 4}}]),
         IC("Devour", _COMBAT, [{"swords": 2, "if_sandworm_in_conflict": {"swords": 2, "trash": 1}}]),
         IC("Find Weakness", _COMBAT, [{"swords": 2}, {"recall_spy_then": {"swords": 3}}]),
         IC("Go to Ground", _COMBAT,
@@ -649,17 +659,20 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         IC("Ripples in the Sand", _COMBAT, [{"swords": 3, "if_sandworm_in_conflict": {"intrigue": 1}}]),
         # Spice is Power: retreat 3 troops -> 3 spice (only if losing), OR spend
         # 3 spice -> 6 swords.
-        IC("Spice is Power", _COMBAT,
-           [{"retreat_for": {"min": 3, "max": 3, "reward": {"spice": 3},
-                             "only_if_losing": True}},
-            {"pay_then": {"cost": {"spice": 3}, "swords": 6}}]),
+        IC("Spice is Power", _COMBAT, [{"choose_one": {"prompt": "Spice is Power", "options": [
+            {"label": "Retreat 3 troops -> 3 spice", "effect": {"_retreat_n": 3, "spice": 3}},
+            {"label": "Pay 3 spice -> 6 swords", "effect": {"_pay": {"spice": 3}, "swords": 6}}]}}]),
         IC("Spring the Trap", _COMBAT, [{"recall_spies_swords": {"count": 2, "swords": 7}}]),
         IC("Tactical Option", _COMBAT, [{"tactical_option": 1}]),
         IC("Desert Support", _COMBAT, [{"pay_then": {"cost": {"water": 1}, "swords": 5}}]),
         # ── Dual timing ─────────────────────────────────────────────────────
-        IC("Counterattack", _PC, [{"deploy": 2}, {"if_opp_combat_intrigue": {"swords": 4}}]),
-        IC("Backed by CHOAM", _PC, [{"lose_influence_any": 1, "solari": 4},
-            {"if_contracts_2": {"swords": 4}}]),
+        # Plot / Combat cards are "one OR the other": the half that applies
+        # follows when it is played.
+        IC("Counterattack", _PC, [{"choose_by_combat": {
+            "combat": {"if_opp_combat_intrigue": {"swords": 4}}, "else": {"deploy_up_to": 2}}}]),
+        IC("Backed by CHOAM", _PC, [{"choose_by_combat": {
+            "combat": {"if_contracts_2": {"swords": 4}},
+            "else": {"lose_influence_for": {"solari": 4}}}}]),
         # Contingency Plan: Plot -> 2 solari; Combat -> 3 swords.  Three copies.
         IC("Contingency Plan", _PC, [{"choose_by_combat": {"combat": {"swords": 3},
                                                            "else": {"solari": 2}}}]),
@@ -670,7 +683,7 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         # Tenuous Bond: Plot -> influence swap; Combat -> 4 swords if you trashed
         # a 1+ persuasion card this round.
         IC("Tenuous Bond", _PC, [{"choose_by_combat": {
-            "combat": {"if_trashed_costly": {"swords": 4}},
+            "combat": {"trash_discard_for": {"min_cost": 1, "reward": {"swords": 4}}},
             "else": {"influence_swap": 1}}}]),
         # Grasp Arrakis: Combat -> 3 swords; Endgame -> 1 VP if you hold 2+
         # unmatched battle icons.

@@ -67,6 +67,7 @@ function render() {
   renderBloodlines();
   renderBoard();
   renderPlayers();
+  renderPurchases();
   renderHand(me);
   renderRow(me);
   renderTurn();
@@ -84,7 +85,7 @@ function renderConflict() {
   $("conflict").innerHTML = `
     ${c.img ? `<img src="${c.img}" data-img="${c.img}" alt="">` : ""}
     <div style="flex:1;min-width:0">
-      <div class="panel-title">Conflict: ${esc(c.name)} <span class="muted">level ${c.level} · ${S.conflictsLeft} left</span></div>
+      <div class="panel-title">Conflict: ${esc(c.name)} <span class="muted">level ${c.level} · ${S.conflictsLeft} left</span>${c.icon ? ` ${iconChips([c.icon])}` : ""}</div>
       <div class="rewards">
         <div>🥇 ${esc(fmtObj(c.first))}</div><div>🥈 ${esc(fmtObj(c.second))}</div>${c.third ? `<div>🥉 ${esc(fmtObj(c.third))}</div>` : ""}
         ${c.location ? `<div class="muted">Location: ${esc(c.location)}</div>` : ""}
@@ -177,9 +178,26 @@ function renderPlayers() {
       ${p.techs && p.techs.length ? `<div class="techs-mini">${p.techs.map((t) => t.img ? `<img src="${t.img}" data-img="${t.img}" title="${esc(t.name)}: ${esc(t.text)}">` : `<span class="chip">${esc(t.name)}</span>`).join("")}</div>` : ""}
       ${S.bl ? `<div class="sub">Commanders: ${p.cmdGarrison} garrison · ${p.cmdSupply} supply${p.cmdInConflict ? ` · ${p.cmdInConflict} in Conflict` : ""}${p.skills.length ? ` · skills: ${p.skills.map(esc).join(", ")}` : ""}</div>` : ""}
       ${p.contractsActive || p.contractsDone ? `<div class="sub">Contracts: ${p.contractsActive} active · ${p.contractsDone} done</div>` : ""}
+      <div class="sub">Battle icons: ${p.battleIcons.length ? iconChips(p.battleIcons) : "none"}</div>
       ${played}${intr}${hand}
     </div>`;
   }).join("") + `</div>`;
+}
+
+const ICON_CLS = { "Crysknife": "ic-knife", "Desert Mouse": "ic-mouse", "Ornithopter": "ic-thopter", "Wild": "ic-wild" };
+function iconChips(list) {
+  return list.map((i) => `<span class="bicon ${ICON_CLS[i] || ""}">${esc(i)}</span>`).join("");
+}
+
+function renderPurchases() {
+  $("purchases").innerHTML = `<div class="panel-title">Cards bought <span class="muted">(by round; hover for the card)</span></div>
+    <div class="buy-grid">` + S.players.map((p) => `
+      <div class="buycol" style="border-top:3px solid ${p.color}">
+        <div class="who">${esc(pname(p))} <span class="muted">· ${p.purchases.length}</span></div>
+        ${p.purchases.length ? p.purchases.map((b) => `
+          <div class="buy" data-img="${b.img || ""}"><span class="r">R${b.round}</span> ${esc(b.card)}${b.cost != null ? ` <span class="muted">(${b.cost})</span>` : ""}${b.free ? ` <span class="muted">free</span>` : ""}</div>`).join("")
+          : `<div class="muted">nothing yet</div>`}
+      </div>`).join("") + `</div>`;
 }
 
 function renderHand(me) {
@@ -231,6 +249,7 @@ function renderTurn() {
   if (S.active !== S.seat) { $("turn").innerHTML = h + `<div class="muted">Waiting…</div>`; return; }
 
   h += `<div class="who-turn">Your move</div>`;
+  if (S.choicePrompt) h += `<div class="prompt">${esc(S.choicePrompt)}</div>`;
   if (choiceSpace) {
     const vs = S.actions.filter((a) => a.type === "agent_turn" && a.card === selectedCard && a.space === choiceSpace);
     h += `<div class="group"><h5>${esc(selectedCard)} → ${esc(choiceSpace)}: choose</h5>` +

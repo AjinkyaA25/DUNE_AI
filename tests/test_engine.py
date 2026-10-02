@@ -300,6 +300,10 @@ def test_arrow_effects_are_optional():
     ig0 = len(p.intrigue_cards)
     EffectResolver.resolve_single_effect({"discard_then": {"draw": 1, "intrigue": 1}}, p, gs)
     gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
+    # which card to discard is now the player's choice
+    choice = [a for a in gs.get_valid_actions(0) if a.action_type == ActionType.RESOLVE_CHOICE]
+    assert {a.choice for a in choice} == {"H0", "H1", "H2", "H3"}
+    gs.step(choice[0])
     assert len(p.intrigue_cards) == ig0 + 1
 
     # pay_then with an unaffordable cost is never queued.
@@ -307,6 +311,16 @@ def test_arrow_effects_are_optional():
     EffectResolver.resolve_single_effect(
         {"pay_then": {"cost": {"spice": 3}, "trash": 1, "draw": 1}}, p, gs)
     assert not gs.pending_optional_payments
+
+
+def _choose(gs, pid, key=None):
+    """Resolve the player's pending 'choose' decision (src/game/choices.py)."""
+    from src.game.gameState import ActionType
+    opts = [a for a in gs.get_valid_actions(pid) if a.action_type == ActionType.RESOLVE_CHOICE]
+    assert opts, "expected a pending choice"
+    a = next(a for a in opts if a.choice == key) if key is not None else opts[0]
+    gs.step(a)
+    return [o.choice for o in opts]
 
 
 def test_card_corrections_batch5():
@@ -334,6 +348,7 @@ def test_card_corrections_batch5():
         {"discard_then_sg": {"base": {"draw": 1}, "sg_bonus": {"draw": 1}}}, p, gs)
     hand_before = len(p.hand)
     gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
+    _choose(gs, 0, "GuildJunk")                               # which card to discard
     assert guild in p.discard
     assert len(p.hand) == hand_before - 1 + 2                 # -1 discard, +2 draw
 
@@ -587,6 +602,7 @@ def test_combat_intrigue_batch():
     n_spy = len(gs.pending_spy_placements)
     EffectResolver.resolve_single_effect(
         {"retreat_for": {"min": 1, "max": 2, "reward": {"spy": 1}}}, p, gs)
+    assert set(_choose(gs, 0, "retreat1")) == {"retreat1", "retreat2", "decline"}
     assert gs.troops_in_conflict[0] == 1 and p.troops_garrison == 1
     assert len(gs.pending_spy_placements) == n_spy + 1
 
@@ -637,7 +653,8 @@ def test_ignore_gates_and_emperor_access():
     ok, _ = gs2.can_send_agent(0, "Sardaukar", q.hand[0])
     assert not ok
     EffectResolver.resolve_single_effect({"emperor_access_or_draw": 1}, q, gs2)
-    assert q.grant_emperor_access_this_turn        # no Emperor card in hand -> took access
+    assert set(_choose(gs2, 0, "access")) == {"draw", "access"}
+    assert q.grant_emperor_access_this_turn
     ok, why = gs2.can_send_agent(0, "Sardaukar", q.hand[0])
     assert ok, why
 
@@ -738,7 +755,8 @@ def test_intrigue_leverage_manipulate():
     q = gs2.players[0]
     row_before = list(gs2.imperium_row)
     EffectResolver.resolve_single_effect({"manipulate": 1}, q, gs2)
-    assert q.reserved_card is not None and q.reserved_card not in gs2.imperium_row
+    picked = _choose(gs2, 0)[0]                    # options = the Row cards
+    assert q.reserved_card is not None and q.reserved_card.name == picked and q.reserved_card not in gs2.imperium_row
     assert q.reserved_card in row_before
     assert len(gs2.imperium_row) == len(row_before)          # refilled
     assert q.reserved_discount == 1
@@ -770,12 +788,14 @@ def test_intrigue_corrections_2026_09_04():
     # Sietch Ritual: restricted influence choice (bene or fremen only).
     p.influence["emperor"] = 5
     EffectResolver.resolve_single_effect({"influence_bene_or_fremen": 1}, p, gs)
+    assert set(_choose(gs, 0, "fremen")) == {"bene_gesserit", "fremen"}
     assert p.influence["emperor"] == 5
     assert p.influence["bene_gesserit"] + p.influence["fremen"] == 1
 
     # Imperium Politics: emperor or spacing only.
     e0, s0 = p.influence["emperor"], p.influence["spacing_guild"]
     EffectResolver.resolve_single_effect({"influence_emperor_or_spacing": 1}, p, gs)
+    assert set(_choose(gs, 0, "spacing_guild")) == {"emperor", "spacing_guild"}
     assert (p.influence["emperor"] + p.influence["spacing_guild"]) == e0 + s0 + 1
 
     # Distraction: special spy ONLY with 3+ units in the Conflict.
@@ -799,6 +819,7 @@ def test_intrigue_corrections_2026_09_04():
         h0 = len(p.hand)
         EffectResolver.resolve_single_effect(
             {"acquire_free": {"max_cost": 99, "to_hand_if_sandworm": True}}, p, gs)
+        _choose(gs, 0)
         assert len(p.hand) == h0 + 1
 
 
@@ -997,3 +1018,118 @@ def test_two_spies_allow_infiltrate_plus_gather_not_double_draw():
     gs.step(act)
     assert p.spies_available == spies_before + 2   # both spies recalled
     assert p.spies_on_board == {}
+
+
+# ---------------------------------------------------------------------------
+# Choices inside intrigues are the player's (2026-10-01 audit vs card images)
+# ---------------------------------------------------------------------------
+
+def _resolve_intrigue(gs, p, name):
+    from src.data.card_definitions import create_intrigue_deck
+    from src.game.effects import EffectResolver
+    ic = next(c for c in create_intrigue_deck() if c.name == name)
+    for e in ic.effects:
+        EffectResolver.resolve_single_effect(dict(e), p, gs)
+
+
+def test_poison_snooper_draw_or_trash_the_top_card():
+    from src.game.cards.card import Card, CardType
+    gs = setup_game(4, seed=1)
+    p = gs.players[0]
+    p.deck = [Card("Bottom", CardType.STARTER), Card("Top", CardType.STARTER)]
+    p.hand = []
+    _resolve_intrigue(gs, p, "Poison Snooper")
+    assert set(_choose(gs, 0, "trash")) == {"draw", "trash"}
+    assert [c.name for c in p.trash] == ["Top"] and not p.hand
+    _resolve_intrigue(gs, p, "Poison Snooper")
+    _choose(gs, 0, "draw")
+    assert [c.name for c in p.hand] == ["Bottom"]
+
+
+def test_inspire_awe_chooses_the_row_card():
+    gs = setup_game(4, seed=2)
+    p = gs.players[0]
+    cheap = [c.name for c in gs.imperium_row if c.cost <= 3]
+    if not cheap:
+        return
+    _resolve_intrigue(gs, p, "Inspire Awe")
+    opts = _choose(gs, 0, cheap[-1])
+    assert set(opts) == set(cheap)
+    assert any(c.name == cheap[-1] for c in p.discard)   # no sandworm -> discard
+
+
+def test_bribery_and_buy_access_choose_factions():
+    gs = setup_game(4, seed=3)
+    p = gs.players[0]
+    p.solari = 10
+    _resolve_intrigue(gs, p, "Bribery")            # pay 2 solari -> influence
+    from src.game.gameState import GameAction, ActionType
+    gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
+    assert set(_choose(gs, 0, "fremen")) == {"emperor", "spacing_guild", "bene_gesserit", "fremen"}
+    assert p.influence["fremen"] == 1 and p.solari == 8
+    _resolve_intrigue(gs, p, "Buy Access")         # 5 solari -> two Factions
+    gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
+    opts = _choose(gs, 0, "emperor+bene_gesserit")
+    assert len(opts) == 6                          # two different Factions
+    assert p.influence["emperor"] == 1 and p.influence["bene_gesserit"] == 1
+
+
+def test_detonation_is_one_or_the_other():
+    gs = setup_game(4, seed=4)
+    p = gs.players[0]
+    p.troops_garrison = 5
+    _resolve_intrigue(gs, p, "Detonation")
+    assert set(_choose(gs, 0, "o1")) == {"o0", "o1", "decline"}     # deploy
+    assert gs.shield_wall_intact
+    _choose(gs, 0, "deploy3")                      # up to 4: picked 3
+    assert gs.troops_in_conflict[0] == 3 and p.troops_garrison == 2
+
+
+def test_questionable_methods_influence_loss_is_optional():
+    gs = setup_game(4, seed=5)
+    p = gs.players[0]
+    p.influence["fremen"] = 2
+    _resolve_intrigue(gs, p, "Questionable Methods")
+    assert gs.swords_this_reveal[0] == 1
+    _choose(gs, 0, "decline")
+    assert gs.swords_this_reveal[0] == 1 and p.influence["fremen"] == 2
+    _resolve_intrigue(gs, p, "Questionable Methods")
+    _choose(gs, 0, "fremen")
+    assert gs.swords_this_reveal[0] == 1 + 1 + 4 and p.influence["fremen"] == 1
+
+
+def test_tenuous_bond_combat_trashes_from_discard():
+    from src.game.cards.card import Card, CardType
+    from src.game.gameState import Phase
+    gs = setup_game(4, seed=6)
+    p = gs.players[0]
+    gs.phase = Phase.COMBAT
+    gs.troops_in_conflict[0] = 1
+    cheap, costly = Card("Free", CardType.STARTER), Card("Costly", CardType.IMPERIUM)
+    costly.cost = 2
+    p.discard = [cheap, costly]
+    _resolve_intrigue(gs, p, "Tenuous Bond")
+    assert set(_choose(gs, 0, "Costly")) == {"Costly", "decline"}   # cost 1+ only
+    assert costly in p.trash and gs.swords_this_reveal[0] == 4
+
+
+def test_call_to_arms_counts_later_acquisitions():
+    gs = setup_game(4, seed=7)
+    p = gs.players[0]
+    g0 = p.troops_garrison
+    _resolve_intrigue(gs, p, "Call to Arms")
+    assert p.troops_garrison == g0                 # nothing yet
+    card = gs.imperium_row[0]
+    gs.acquire_card(0, card)
+    assert p.troops_garrison == g0 + 1
+
+
+def test_first_player_rotates_every_round():
+    gs = setup_game(4, seed=8)
+    firsts = []
+    for _ in range(5):
+        firsts.append(gs.first_player)
+        gs.resolve_recall_phase()
+        gs.start_new_round()
+        assert gs.turn_order[0] == gs.first_player
+    assert firsts == [0, 1, 2, 3, 0]

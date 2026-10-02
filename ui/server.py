@@ -101,8 +101,11 @@ SPECIAL = {   # rulebook wording, shortened (rulebook_spaces_text.txt)
     "Imperial Basin": "+ bonus spice; controller +1 spice",
     "Arrakeen": "controller +1 solari",
 }
-COLORS = ["#c0392b", "#27ae60", "#2e6fd8", "#d4a017"]   # red green blue yellow
-COLOR_NAMES = ["Red", "Green", "Blue", "Yellow"]
+# seats in turn order (first player moves on each round): red, green, yellow, blue
+COLORS = ["#c0392b", "#27ae60", "#d4a017", "#2e6fd8"]
+COLOR_NAMES = ["Red", "Green", "Yellow", "Blue"]
+ICON_NAMES = {"crysknife": "Crysknife", "desert_mouse": "Desert Mouse",
+              "ornithopter": "Ornithopter", "wild": "Wild"}
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +277,10 @@ def label(gs: GameState, a: GameAction) -> str:
         if a.space_option:
             mods.append(a.space_option)
         return f"{a.card_name} → {a.space_name}" + (f" [{', '.join(mods)}]" if mods else "")
+    if t == ActionType.RESOLVE_CHOICE:
+        pc = gs.pending_choice_for(a.player_id)
+        opt = next((o for o in pc.options if o[0] == a.choice), None) if pc else None
+        return opt[1] if opt else f"Choose: {a.choice}"
     if t == ActionType.RESOLVE_CONTRACT:
         try:
             c = gs.contracts_on_board[a.contract_index]
@@ -424,6 +431,9 @@ class Session:
         entry = {"n": len(self.log), "round": gs.round, "phase": gs.phase.value,
                  "pid": pid, "label": label(gs, act), "type": act.action_type.value,
                  "explain": explain, "secs": round(secs, 1)}
+        bought = self._bought(gs, act)
+        if bought:
+            entry["bought"] = bought
         _, reward, _, info = gs.step(act)
         if info.get("error"):
             entry["error"] = info["error"]
@@ -432,6 +442,30 @@ class Session:
                            "phase": before["phase"], "active_player": pid,
                            "is_human": pid == self.seat, "action": PG.action_to_dict(act),
                            "reward": reward, "error": info.get("error")})
+
+    @staticmethod
+    def _bought(gs: GameState, act: GameAction) -> Optional[Dict]:
+        """The card a move acquires (Row buy, reserve, or a free acquire)."""
+        t = act.action_type
+        if t == ActionType.ACQUIRE_CARD:
+            card = next((c for c in gs.imperium_row if c.name == act.acquire_card_name), None)
+            if card is None:
+                rc = gs.players[act.player_id].reserved_card
+                card = rc if rc is not None and rc.name == act.acquire_card_name else None
+            return {"card": act.acquire_card_name, "cost": getattr(card, "cost", None),
+                    "img": card_img(act.acquire_card_name)}
+        if t == ActionType.ACQUIRE_RESERVE:
+            name = "Prepare the Way" if act.reserve_type == "prepare_the_way" else "The Spice Must Flow"
+            return {"card": name, "cost": None, "img": card_img(name), "reserve": True}
+        if t == ActionType.RESOLVE_CHOICE:
+            pc = gs.pending_choice_for(act.player_id)
+            opt = next((o for o in pc.options if o[0] == act.choice), None) if pc else None
+            spec = (opt[2] or {}).get("_acquire_named") if opt else None
+            if spec:
+                card = next((c for c in gs.imperium_row if c.name == spec["card"]), None)
+                return {"card": spec["card"], "cost": getattr(card, "cost", None),
+                        "img": card_img(spec["card"]), "free": True}
+        return None
 
     def human_move(self, index: int) -> Optional[str]:
         with self.lock:
@@ -578,7 +612,9 @@ class Session:
                     "cmdSupply": getattr(p, "commanders_supply", 0),
                     "cmdInConflict": gs.bl.commanders_in_conflict.get(p.id, 0) if gs.bl else 0,
                     "contractsActive": pd.get("contracts_active", 0),
-                    "battleIcons": pd.get("battle_icons", []),
+                    "battleIcons": [ICON_NAMES.get(i, i) for i in pd.get("battle_icons", [])],
+                    "purchases": [{"round": e["round"], **e["bought"]} for e in self.log
+                                  if e.get("pid") == p.id and e.get("bought")],
                     "contractsDone": pd.get("contracts_completed", 0),
                     "revealed": p.id in gs.players_revealed,
                     "persuasion": gs.persuasion_pool.get(p.id, 0),
@@ -592,7 +628,9 @@ class Session:
                             "second": cc.second_place_reward,
                             "third": cc.third_place_reward or None,
                             "location": cc.location,
-                            "img": card_img(cc.name.split(" (")[0])}
+                            "img": card_img(cc.name.split(" (")[0]),
+                            "icon": ICON_NAMES.get(getattr(cc.battle_icon, "value", None),
+                                                   getattr(cc.battle_icon, "value", None))}
             spaces = []
             for name, s in UPRISING_BOARD.items():
                 spaces.append({"name": name, "type": s.space_type.value,
@@ -643,6 +681,8 @@ class Session:
                                "trigger": c.get("trigger_condition")}
                               for c in d.get("contracts_on_board", [])],
                 "actions": actions, "log": self.log[-400:], "saved": self.saved,
+                "choicePrompt": (gs.pending_choice_for(self.seat).prompt
+                                 if act == self.seat and gs.pending_choice_for(self.seat) else None),
             }
 
 

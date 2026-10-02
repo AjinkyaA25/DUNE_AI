@@ -111,6 +111,7 @@ class ActionType(Enum):
     NO_OP                = "no_op"
     # Bloodlines
     RESOLVE_BL_CHOICE    = "resolve_bl_choice"  # tech buy / commander / skill choices
+    RESOLVE_CHOICE       = "resolve_choice"     # a "choose" inside a card / intrigue (choices.py)
     ACTIVATE_TECH        = "activate_tech"      # flip a once-per-round tech tile
 
 
@@ -370,6 +371,7 @@ class GameState:
         self.pending_influence_choices: List[PendingInfluenceChoice] = []
         self.pending_contract_choices:  List[PendingContractChoice] = []
         self.pending_optional_payments: List[PendingOptionalPayment] = []
+        self.pending_choices: List = []        # src.game.choices.PendingChoice
 
         # ===== COMBAT PHASE TURN TRACKING =====
         self.combat_turn_idx: int = 0
@@ -524,6 +526,7 @@ class GameState:
             "pending_influence_choices": len(self.pending_influence_choices),
             "pending_contract_choices": len(self.pending_contract_choices),
             "pending_optional_payments": len(self.pending_optional_payments),
+            "pending_choices":    len(getattr(self, "pending_choices", [])),
             # --- players (all public per rules) ---
             "players": [p.get_visible_state(p.id) for p in self.players],
             # --- research track ---
@@ -778,6 +781,8 @@ class GameState:
             self._step_play_intrigue(action)
         elif at == ActionType.COMBAT_PASS:
             self._step_combat_pass(action)
+        elif at == ActionType.RESOLVE_CHOICE:
+            self._step_resolve_choice(action)
         elif at == ActionType.RESOLVE_BL_CHOICE and self.bl:
             self.bl.resolve_choice(pid, action.choice)
         elif at == ActionType.ACTIVATE_TECH and self.bl:
@@ -1025,6 +1030,21 @@ class GameState:
                 p.recalled_spy_this_turn = True
             else:
                 setattr(p, k, getattr(p, k) - v)
+        if pending.discard == 1 and len({c.name for c in p.hand}) > 1:
+            # which card to discard is the player's choice
+            from src.game.cards.card import CardTag
+            opts, seen = [], set()
+            for c in p.hand:
+                if c.name in seen:
+                    continue
+                seen.add(c.name)
+                eff = {"_discard_named": c.name, **pending.reward}
+                if pending.discard_tag and pending.tag_bonus and c.has_tag(CardTag(pending.discard_tag)):
+                    for k, v in pending.tag_bonus.items():
+                        eff[k] = eff.get(k, 0) + v if isinstance(v, (int, float)) else v
+                opts.append((c.name, f"Discard {c.name}", eff))
+            self.add_pending_choice(pid, "discard", "Choose a card to discard", opts)
+            return
         discarded_tag = False
         for _ in range(pending.discard):
             if pending.discard_tag:
@@ -1042,6 +1062,31 @@ class GameState:
         EffectResolver.resolve_single_effect(pending.reward, p, self)
         if discarded_tag and pending.tag_bonus:
             EffectResolver.resolve_single_effect(pending.tag_bonus, p, self)
+
+    def _step_resolve_choice(self, action: GameAction) -> None:
+        pid = action.player_id
+        pc = next((c for c in getattr(self, "pending_choices", []) if c.player_id == pid), None)
+        if pc is None:
+            raise ValueError("No pending choice for player")
+        opt = next((o for o in pc.options if o[0] == action.choice), None)
+        if opt is None:
+            raise ValueError(f"'{action.choice}' is not an option of {pc.kind}")
+        self.pending_choices.remove(pc)
+        if opt[2]:
+            EffectResolver.resolve_single_effect(dict(opt[2]), self.players[pid], self)
+
+    def add_pending_choice(self, player_id: int, kind: str, prompt: str, options) -> None:
+        """Queue a 'choose' decision (see src/game/choices.py)."""
+        from src.game.choices import PendingChoice
+        if not options:
+            return
+        if not hasattr(self, "pending_choices"):
+            self.pending_choices = []
+        self.pending_choices.append(PendingChoice(player_id, kind, prompt, list(options)))
+
+    def pending_choice_for(self, player_id: int):
+        return next((c for c in getattr(self, "pending_choices", [])
+                     if c.player_id == player_id), None)
 
     def _step_resolve_influence(self, action: GameAction) -> None:
         pid = action.player_id
@@ -1176,6 +1221,7 @@ class GameState:
             any(p.player_id == player_id for p in self.pending_influence_choices) or
             any(p.player_id == player_id for p in self.pending_contract_choices) or
             any(p.player_id == player_id for p in self.pending_optional_payments) or
+            any(p.player_id == player_id for p in getattr(self, "pending_choices", [])) or
             (self.bl is not None and self.bl.has_pending(player_id))
         )
 
@@ -1260,6 +1306,11 @@ class GameState:
                 actions.append(GameAction(ActionType.RESOLVE_CONTRACT,
                                           player_id, contract_index=i))
 
+        pc = self.pending_choice_for(player_id)
+        if pc is not None:
+            for key, _label, _eff in pc.options:
+                actions.append(GameAction(ActionType.RESOLVE_CHOICE, player_id, choice=key))
+
         if self.bl:
             for opt in self.bl.pending_options(player_id):
                 actions.append(GameAction(ActionType.RESOLVE_BL_CHOICE, player_id,
@@ -1332,11 +1383,9 @@ class GameState:
     def start_new_round(self) -> None:
         self.round += 1
 
-        idx = self.turn_order.index(self.first_player) if self.first_player in self.turn_order else 0
-        self.turn_order = (
-            list(range(self.num_players))[idx:] +
-            list(range(self.num_players))[:idx]
-        )
+        # play goes clockwise from the First Player token (seat order 0..n-1)
+        n = self.num_players
+        self.turn_order = [(self.first_player + i) % n for i in range(n)]
 
         if self.conflict_deck:
             self.current_conflict = self.conflict_deck.pop(0)
@@ -1889,6 +1938,8 @@ class GameState:
         self.imperium_row.remove(card)
         self._to_acquired_pile(player_id, card)
         self.players[player_id].cards_acquired_this_turn += 1
+        from src.game.choices import _call_to_arms
+        _call_to_arms(self, self.players[player_id])
         # Refill row FIRST, then trigger acquire effects (FAQ requirement)
         self.refill_imperium_row()
         self._trigger_acquire_effects(player_id, card)
@@ -1918,6 +1969,8 @@ class GameState:
         card = stack.pop()
         self._to_acquired_pile(player_id, card)
         self.players[player_id].cards_acquired_this_turn += 1
+        from src.game.choices import _call_to_arms
+        _call_to_arms(self, self.players[player_id])
         self._trigger_acquire_effects(player_id, card)
         if self.use_choam:
             self.check_acquire_contracts(player_id, card.name)
@@ -2240,8 +2293,8 @@ class GameState:
         for space in ALL_BOARD_SPACES:
             self.agent_on_space[space] = None
 
-        idx = self.turn_order.index(self.first_player)
-        self.first_player = self.turn_order[(idx + 1) % self.num_players]
+        # the First Player token passes to the next seat every round
+        self.first_player = (self.first_player + 1) % self.num_players
 
         self.phase = Phase.ROUND_START
 
