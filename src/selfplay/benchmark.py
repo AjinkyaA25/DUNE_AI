@@ -38,7 +38,19 @@ VERSIONS = [
      "nets trained on 192 search self-play games + 16 human video games"),
     ("heuristic, tuned to human games", "heuristic:tuned=config/heuristic_tuned.json",
      "11 heuristic weights fitted to 1,617 human decisions"),
+    # --- added 2026-10-02 (run on the fixed rules) ---
+    ("heuristic + fight model (new default)", "heuristic",
+     "deploy / combat intrigues from expected Conflict reward vs holding value"),
+    ("your style (Dinosaur11 fit) + fight model", "heuristic:tuned=config/heuristic_me.json",
+     "weights fitted to your 1,211 video decisions"),
+    ("winners' style + fight model", "heuristic:tuned=config/heuristic_winners.json",
+     "weights fitted to 2,207 winners' video decisions"),
+    ("search, 8 playouts", "search:K5:M8", "round search over the heuristic's top 5 moves"),
+    ("search, 24 playouts", "search:K5:M24", "round search, 24 full-game playouts per move"),
 ]
+# The fixed opponent. Plain "heuristic" now includes the fight model, so the
+# original heuristic is pinned with fight_model=0 to keep runs comparable.
+OPPONENT = "heuristic:tuned=config/fight_old.json"
 
 
 def main() -> None:
@@ -47,12 +59,17 @@ def main() -> None:
     ap.add_argument("--games", type=int, default=300)
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--seed", type=int, default=130_000)
+    ap.add_argument("--only", default="", help="comma-separated substrings of version names to run")
     args = ap.parse_args()
     os.makedirs("reports", exist_ok=True)
     out = []
     for name, spec, what in VERSIONS:
+        if args.only and not any(o in name for o in args.only.split(",")):
+            continue
         t0 = time.time()
-        r = arena(spec, "heuristic", args.games, args.workers, args.seed)
+        # the original heuristic IS the opponent: same scoring in every seat
+        r = arena(OPPONENT if name == "heuristic (original)" else spec,
+                  OPPONENT, args.games, args.workers, args.seed)
         r.update(name=name, spec=spec, what=what,
                  minutes=round((time.time() - t0) / 60, 1))
         out.append(r)

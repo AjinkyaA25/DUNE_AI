@@ -432,7 +432,8 @@ def create_imperium_cards() -> List[Card]:
 def create_reserve_prepare_the_way(count: int = 8) -> List[Card]:
     return [_make("Prepare the Way", 2, CardType.RESERVE,
                   access=["landsraad", "city"], tags=["bene_gesserit"],
-                  agent={"if_influence_bene_gesserit_2": {"solari": 1}},
+                  # card: "Bene Gesserit 2 Influence: draw a card" (was 1 solari)
+                  agent={"if_influence_bene_gesserit_2": {"draw": 1}},
                   persuasion=2, tier="B") for _ in range(count)]
 
 

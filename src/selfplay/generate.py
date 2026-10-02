@@ -126,7 +126,9 @@ def generate_selfplay(n_games: int, agent_spec: str = "heuristic:T0.7",
         import multiprocessing as mp
         ctx = mp.get_context("spawn")
         with ctx.Pool(workers, initializer=_worker_init, initargs=(cfg,)) as pool:
-            results = pool.map(_play_one, range(n_games))
+            # one game per message: a big default chunk can exceed the Windows
+            # pipe limit ("Insufficient system resources") with Bloodlines on
+            results = pool.map(_play_one, range(n_games), chunksize=1)
 
     Xs, ys, ws = [], [], []
     PAs, PMs, PCIs = [], [], []

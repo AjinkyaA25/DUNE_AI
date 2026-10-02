@@ -63,6 +63,9 @@ TUNE_DEFAULTS = {
     # is worth this multiple of its default future value (fight_ev model)
     "troop_hold": 1.0, "ci_hold": 1.0, "plot_hold": 0.6,
     "fight_model": 1,        # 0 = the old deploy / combat-intrigue scoring (for A/B)
+    # deck_model 1: value a buy by how it changes the average card you draw
+    # for the rest of the game (dilution), not in isolation; deck_k scales it
+    "deck_model": 0, "deck_k": 1.0,
 }
 # Situational tuning: a key "<phase>.<knob>" overrides <knob> in that phase
 # only. Phases follow how the game is played: early = rounds 1-3 (build
@@ -473,7 +476,48 @@ def _faction_cards_owned(p, fac: str) -> int:
     return n
 
 
+def _tier_of(card):
+    """The card's tier-list grade; a tuning dict may override it for testing
+    ("tier_overrides": {"Prepare the Way": "D"})."""
+    return (_TUNE.get("tier_overrides") or {}).get(card.name, getattr(card, "tier", None))
+
+
+def _card_play_quality(gs: GameState, pid: int, card) -> float:
+    """What a card is worth each time it is drawn and played: persuasion,
+    swords, agent + reveal effects, faction access (flat), blended with the
+    tier list. The same yardstick for owned cards and Row cards."""
+    q = 1.5 * (card.persuasion or 0) + 0.9 * (card.swords or 0)
+    for e in getattr(card, "agent_effects", []) + getattr(card, "reveal_effects", []):
+        q += 0.8 * _card_effect_value(gs, pid, e)
+    q += 0.6 * sum(1 for s_ in getattr(card, "access_symbols", ())
+                   if getattr(s_, "value", s_) in _FACTION_OF.values())
+    anchor = _TIER_ANCHOR.get(_tier_of(card))
+    if anchor is not None:
+        q = _TIER_BLEND * anchor + (1.0 - _TIER_BLEND) * q
+    return q
+
+
+def _deck_buy_value(gs: GameState, pid: int, card) -> float:
+    """deck_model: immediate acquire effects + (draws of this card left in
+    the game) x (its quality - the average quality of the cards you own).
+    Filler below your deck's average scores negative, so 'buy nothing' or
+    'one strong card' beats bloating the deck."""
+    p = gs.players[pid]
+    owned = [c for z in (p.deck, p.discard, p.hand, p.in_play) for c in z]
+    mean = sum(_card_play_quality(gs, pid, c) for c in owned) / max(1, len(owned))
+    draws_left = max(0.0, 9.5 - gs.round) * 5.0          # ~5 cards a round
+    my_draws = draws_left / (len(owned) + 1)
+    v = my_draws * (_card_play_quality(gs, pid, card) - mean) * _TUNE.get("deck_k", 1.0)
+    for e in getattr(card, "acquire_effects", []):
+        v += _card_effect_value(gs, pid, e)
+    if card.name == "The Spice Must Flow" and gs.round < 4:
+        v *= 0.15
+    return v
+
+
 def _acquire_card_value(gs: GameState, pid: int, card, lean: bool = False) -> float:
+    if _TUNE.get("deck_model", 0):
+        return _deck_buy_value(gs, pid, card)
     """
     Shared valuation for buying a card, whether from the Imperium Row
     (ACQUIRE_CARD) or a reserve stack (ACQUIRE_RESERVE — The Spice Must Flow /
@@ -535,7 +579,7 @@ def _acquire_card_value(gs: GameState, pid: int, card, lean: bool = False) -> fl
     # (a card whose condition is live, an alliance you now hold, influence at
     # 1->2, ...), but the anchor stops filler from scoring the same as an
     # S-tier card just because the net is card-blind. tier=None -> unchanged.
-    anchor = _TIER_ANCHOR.get(getattr(card, "tier", None))
+    anchor = _TIER_ANCHOR.get(_tier_of(card))
     if anchor is not None:
         s = _TIER_BLEND * anchor + (1.0 - _TIER_BLEND) * s
 
@@ -1146,6 +1190,8 @@ class HeuristicAgent(Agent):
         elif at == ActionType.END_REVEAL:
             pool = gs.persuasion_pool.get(pid, 0)
             s = -0.5 + (2.0 if pool < 2 else -1.0)
+            if _TUNE.get("deck_model", 0):
+                s = 0.0               # stopping is neutral: buys must beat your deck
             # Banking a lean turn is a legitimate choice. If the deck is already
             # a healthy size and nothing affordable in the Row or reserves is an
             # actual upgrade (its dilution-adjusted value is weak), stopping now
