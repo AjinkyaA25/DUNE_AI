@@ -373,3 +373,112 @@ def _call_to_arms(gs, p) -> None:
     round, after the card was played."""
     if getattr(p, "call_to_arms_round", None) == gs.round:
         p.gain_troops(1)
+
+
+# ---------------------------------------------------------------------------
+# Can this card be played at all? (You may only play an intrigue whose
+# requirement you meet: a cost you can pay, a condition you satisfy, or an
+# option that is actually available. "Deploy up to N" includes 0, so it never
+# blocks a card - e.g. Detonation is always playable.)
+# ---------------------------------------------------------------------------
+
+_GAINS = {"solari", "spice", "water", "vp", "troops", "draw", "intrigue", "swords",
+          "persuasion", "contract", "influence_any", "influence_emperor",
+          "influence_spacing_guild", "influence_bene_gesserit", "influence_fremen",
+          "grant_deploy", "call_to_arms", "ignore_influence_gates", "spice_or_match_icon",
+          "sandworm", "break_shield_wall", "uplift", "maker_hooks", "deploy",
+          "deploy_up_to", "swords_per_friendship", "troops_per_card_acquired_this_turn"}
+
+
+def condition_met(gs: "GameState", p: "Player", key: str) -> Optional[bool]:
+    """The 'if_<key>' conditions intrigues use; None = not known here."""
+    if key == "councilor":
+        return p.has_councilor
+    if key == "swordmaster":
+        return p.has_swordmaster
+    if key == "fremen_bond":
+        return p.influence["fremen"] >= 2
+    if key == "any_alliance":
+        return any(p.alliances.values())
+    if key.startswith("alliance_"):
+        return p.alliances.get(key[9:], False)
+    if key.startswith("influence_"):
+        fac, _, n = key[10:].rpartition("_")
+        return n.isdigit() and p.influence.get(fac, 0) >= int(n)
+    if key.startswith("contracts_"):
+        return len(p.contracts_completed) >= int(key[10:])
+    if key.startswith("spies_"):
+        return sum(p.spies_on_board.values()) >= int(key[6:])
+    if key.startswith("units_in_conflict_"):
+        return _units_in_conflict(gs, p.id) >= int(key.rsplit("_", 1)[1])
+    if key == "sandworm_in_conflict":
+        return gs.sandworms_in_conflict.get(p.id, 0) > 0
+    if key == "opp_combat_intrigue":
+        return True        # depends on the other players' plays; don't block
+    return None
+
+
+def effect_possible(gs: "GameState", p: "Player", e: Dict) -> bool:
+    """Would playing this effect actually do something for p right now?"""
+    if "choose_by_combat" in e:
+        in_fight = gs.phase.name == "COMBAT" and _units_in_conflict(gs, p.id) > 0
+        branch = e["choose_by_combat"].get("combat" if in_fight else "else") or {}
+        rest = {k: v for k, v in e.items() if k != "choose_by_combat"}
+        return bool(branch) and effect_possible(gs, p, branch) or \
+            (bool(rest) and effect_possible(gs, p, rest))
+    for k, v in e.items():
+        if k in _GAINS:
+            if k == "deploy_up_to" or k == "deploy":
+                return True                      # "up to" includes 0
+            return True
+        if k == "spy" or k == "spy_special":
+            if p.spies_available > 0:
+                return True
+        elif k == "pay_then":
+            cost = v.get("cost", {})
+            if all(getattr(p, r, 0) >= n for r, n in cost.items() if r != "recall_spy") and \
+                    sum(p.spies_on_board.values()) >= cost.get("recall_spy", 0):
+                return True
+        elif k == "recall_spy_then" or k == "recall_spies_swords":
+            need = v.get("count", 1) if isinstance(v, dict) and k == "recall_spies_swords" else 1
+            if sum(p.spies_on_board.values()) >= need:
+                return True
+        elif k in ("discard_then", "bl_discard_for"):
+            if p.hand:
+                return True
+        elif k.startswith("if_bl_"):
+            bl = getattr(gs, "bl", None)
+            try:
+                met = bl.cond(k[6:], p) if bl is not None else False
+            except Exception:
+                met = True                       # unknown condition: don't block
+            if met and (not isinstance(v, dict) or effect_possible(gs, p, v)):
+                return True
+        elif k == "bl_choose":
+            if any(effect_possible(gs, p, o) for o in v.get("options", []) if o):
+                return True
+        elif k.startswith("if_"):
+            ok = condition_met(gs, p, k[3:])
+            if ok is None or (ok and isinstance(v, dict) and effect_possible(gs, p, v)):
+                return True
+        elif k in CHOICE_KEYS:
+            if k == "deploy_up_to":
+                return True
+            built = build(gs, p, k, v)
+            if built and any(o[0] != "decline" for o in built[2]):
+                return True
+        elif k in ("trash", "trash_then", "lose_influence_any"):
+            return True
+        elif k == "bl_tech_offer":
+            bl = getattr(gs, "bl", None)
+            if bl is None or bl.buyable_stacks(p.id, 1):
+                return True
+        elif k.startswith("bl_") or k in ("special_mission", "false_orders", "manipulate"):
+            return True                          # handled elsewhere / always has a use
+        elif not isinstance(v, (int, float, dict)):
+            return True
+    return False
+
+
+def card_playable(gs: "GameState", p: "Player", effects: List[Dict]) -> bool:
+    return any(effect_possible(gs, p, e) for e in effects)

@@ -1133,3 +1133,45 @@ def test_first_player_rotates_every_round():
         gs.start_new_round()
         assert gs.turn_order[0] == gs.first_player
     assert firsts == [0, 1, 2, 3, 0]
+
+
+def test_intrigue_requires_its_requirement():
+    """You can only play an intrigue whose cost / condition you meet
+    (user, 2026-10-02); 'deploy up to N' includes 0, so Detonation is
+    always playable."""
+    from src.data.card_definitions import create_intrigue_deck
+    d = {c.name: c for c in create_intrigue_deck()}
+    gs = setup_game(4, seed=9)
+    p = gs.players[0]
+
+    def ok(name):
+        return d[name].can_play(p, gs, is_agent_turn=True)[0]
+
+    p.spice = 0
+    assert not ok("Adaptive Tactics")                 # 1 spice -> troop + deploy
+    p.spice = 1
+    assert ok("Adaptive Tactics")
+
+    p.solari, p.influence = 0, {f: 2 for f in p.influence}
+    assert not ok("Opportunism")                      # needs 2 solari ...
+    p.solari = 2
+    p.influence = {f: 0 for f in p.influence}
+    p.influence["fremen"] = 1
+    assert not ok("Opportunism")                      # ... and 2 influence
+    p.influence["emperor"] = 1
+    assert ok("Opportunism")
+
+    p.has_councilor = False
+    assert not ok("Councilor's Ambition")
+    p.has_councilor = True
+    assert ok("Councilor's Ambition")
+
+    p.troops_garrison = 0
+    assert ok("Detonation")                           # may deploy 0 / break the Wall
+
+    p.water = 1
+    assert not ok("Unexpected Allies")                # 2 water
+    p.solari = 4
+    assert not ok("Buy Access")                       # 5 solari
+    p.solari = 5
+    assert ok("Buy Access")

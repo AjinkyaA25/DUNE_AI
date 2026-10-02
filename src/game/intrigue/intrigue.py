@@ -126,6 +126,14 @@ class IntrigueCard:
         if not ok:
             return False, reason
 
+        # You may only play an intrigue whose requirement you meet: at least
+        # one of its effects must be payable / satisfied / available now
+        # (Endgame resolution is automatic and not gated here).
+        if game_state.phase != Phase.GAME_OVER:
+            from src.game.choices import card_playable
+            if not card_playable(game_state, player, self.effects):
+                return False, f"Intrigue '{self.name}': requirement not met"
+
         return True, ""
 
     def _check_condition(
