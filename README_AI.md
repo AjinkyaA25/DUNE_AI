@@ -180,8 +180,22 @@ fair 50% / 50%):
 | Heuristic + fight model | 9.8 | 60% |
 | Value + policy v2 / RL retrained | 9.8 | 50% / 61% |
 
-**Final head-to-head** (one table, every game: your style, search 24,
-search 8, RL retrained; 96 games): _see below, filled in when it finishes._
+**Final head-to-head** (corrected engine; every game has one of each at the
+table, seats rotated through all 24 orders; 96 games; games ended on round
+9.4):
+
+| Player | Win share | 95% range | Avg VP | Avg placing |
+|---|---|---|---|---|
+| **Search, 24 playouts** | **63.5%** | 54-73% | 9.6 | 1.5 |
+| Search, 8 playouts | 27.1% | 18-36% | 7.7 | 2.1 |
+| Your style (heuristic fitted to your video games) | 5.2% | 1-10% | 6.4 | 2.7 |
+| RL + AWR policy, retrained on the corrected engine | 4.2% | 0-8% | 5.6 | 3.1 |
+
+Search wins outright: more playouts are still the strongest lever (8 -> 24:
+27% -> 64%). The human-trained heuristic and the self-play RL model are
+close to each other and far behind search. Both search agents play with the
+heuristic inside their playouts, so the heuristic fixes above also make
+search stronger (search 24 vs 3x original: 84% -> 90%).
 
 **Open issues found along the way**
 
