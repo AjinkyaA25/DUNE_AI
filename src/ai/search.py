@@ -74,13 +74,15 @@ class RoundSearchAgent:
     def __init__(self, k: int = 4, m: int = 6, margin: float = 1.0,
                  seed: Optional[int] = None, opening_book=None,
                  move_cap: int = 3000, horizon: str = "end",
-                 tuning: Optional[dict] = None, buys: bool = False):
+                 tuning: Optional[dict] = None, buys: bool = False,
+                 halving: bool = False):
         from src.ai.agents import HeuristicAgent
         # the heuristic both shortlists the candidates and plays every seat in
         # the playouts; `tuning` (e.g. the human-fitted knobs) changes both
         self.h = HeuristicAgent(seed=seed, opening_book=opening_book, tuning=tuning)
         self.k, self.m, self.margin = k, m, margin
         self.searched = SEARCHED + (BUY_TYPES if buys else ())
+        self.halving = halving
         self.rng = np.random.default_rng(seed)
         self.move_cap = move_cap
         # "end": play every sample to the end of the game and score the real
@@ -105,17 +107,35 @@ class RoundSearchAgent:
         from src.ai.determinize import determinize
         # common random numbers: sample j uses the same hidden-information
         # world for every candidate, so differences come from the move
-        seeds = self.rng.integers(0, 2**31 - 1, size=self.m)
-        vals = np.full((len(cands), self.m), np.nan)
-        for i, a in enumerate(cands):
-            for j, sd in enumerate(seeds):
-                g = determinize(gs, pid, np.random.default_rng(int(sd)))
+        k = len(cands)
+        total = k * self.m                       # playout budget for this decision
+        seeds = self.rng.integers(0, 2**31 - 1, size=total)
+        vals = np.full((k, total), np.nan)
+
+        def run(i, lo, hi):
+            for j in range(lo, hi):
+                g = determinize(gs, pid, np.random.default_rng(int(seeds[j])))
                 ga = next((x for x in g.get_valid_actions(pid)
-                           if repr(x) == repr(a)), None)
+                           if repr(x) == repr(cands[i])), None)
                 if ga is None:
-                    continue
+                    return
                 g.step(ga)
                 vals[i, j] = self._playout(g, pid, gs.round)
+
+        if self.halving and k > 2:
+            # successive halving: a few playouts for every candidate, then the
+            # rest of the same budget on the heuristic's pick + the best rival
+            m1 = max(3, self.m // 3)
+            for i in range(k):
+                run(i, 0, m1)
+            means = np.nanmean(vals[:, :m1], axis=1)
+            rival = 1 + int(np.nanargmax(means[1:]))
+            extra = (total - k * m1) // 2
+            for i in (0, rival):
+                run(i, m1, m1 + extra)
+        else:
+            for i in range(k):
+                run(i, 0, self.m)
         self.stats["searched"] += 1
         self.stats["seconds"] += time.time() - t0
         # paired comparison against the heuristic's choice (cands[0]):
@@ -133,8 +153,10 @@ class RoundSearchAgent:
         if best:
             self.stats["switched"] += 1
         # what the search saw, for search-based self-play training
-        self.last = {"cands": cands, "scores": np.nanmean(np.where(
-            np.isnan(vals), -1.0, vals), axis=1).tolist(), "chosen": best}
+        with np.errstate(all="ignore"):
+            sc = np.nanmean(vals, axis=1)
+        self.last = {"cands": cands, "scores": np.where(np.isnan(sc), -1.0, sc).tolist(),
+                     "chosen": best}
         return cands[best]
 
     def _playout(self, g: GameState, pid: int, start_round: int) -> float:

@@ -1746,6 +1746,8 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 kw["horizon"] = "round"
             elif p == "B":
                 kw["buys"] = True
+            elif p == "SH":
+                kw["halving"] = True
             elif p.startswith("tuned="):
                 import json as _json
                 with open(p[6:], encoding="utf-8") as _f:
