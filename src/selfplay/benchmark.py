@@ -45,6 +45,9 @@ VERSIONS = [
      "weights fitted to your 1,211 video decisions"),
     ("winners' style + fight model", "heuristic:tuned=config/heuristic_winners.json",
      "weights fitted to 2,207 winners' video decisions"),
+    ("RL + AWR policy, retrained on fixed rules",
+     "value:models_rl_fixed/value_v02.npz:models_rl_fixed/policy_v02.npz",
+     "8 iterations of Bloodlines self-play on the corrected engine (best = iteration 2)"),
     ("search, 8 playouts", "search:K5:M8", "round search over the heuristic's top 5 moves"),
     ("search, 24 playouts", "search:K5:M24", "round search, 24 full-game playouts per move"),
 ]

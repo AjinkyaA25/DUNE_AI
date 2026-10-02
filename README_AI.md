@@ -122,7 +122,81 @@ All arenas: 4 players, Bloodlines, neutral leaders. "Fair" share is 25%.
 Arenas are not bit-for-bit repeatable (the same config re-run moves by
 about ±0.5 percentage points).
 
-### 1. Every AI version vs 3× the original heuristic (300 games each)
+### ★ Old rules vs corrected engine (2026-10-02)
+
+The engine had several rules bugs (list under *Rules fixes* below). Every AI
+version was re-benchmarked on the corrected engine against the **same fixed
+opponent** (3× the original heuristic with its original scoring,
+`config/fight_old.json`) on the **same deals**, so the two columns compare
+directly. Fair share 25%; ±5 points is noise at 300 games (±7 at 120).
+
+| AI version | Old rules | Corrected engine | Avg round game ended |
+|---|---|---|---|
+| Random | 0% | 0% | 9.6 |
+| Heuristic, Bloodlines-blind | 18.0% | 25.0% | 9.7 |
+| Heuristic (original) — the opponent itself | 27.0% | 24.0% | 9.7 |
+| Value net v1 (self-play RL) | 28.3% | **36.7%** | 9.7 |
+| Value + AWR policy v2 (self-play RL) | 30.0% | **42.7%** | 9.7 |
+| Value + AWR policy v3 (self-play RL) | 30.0% | **40.0%** | 9.7 |
+| Nets trained on search self-play (s1) | 25.7% | 30.3% | 9.7 |
+| Heuristic tuned to human games (all players) | 32.7% | **38.3%** | 9.7 |
+| **New:** heuristic + fight model | — | 31.0% | 9.7 |
+| **New:** your style (Dinosaur11 fit) + fight model | — | 34.7% | 9.6 |
+| **New:** winners' style + fight model | — | 28.3% | 9.6 |
+| **New:** RL + AWR retrained on the corrected engine | — | 34.3% | 9.7 |
+| Search, 8 playouts (120 games) | 70% * | **77.5%** | 9.6 |
+| Search, 24 playouts (120 games) | 84% * | **90.0%** | 9.3 |
+
+\* old-rules search numbers are from the earlier `search_arena` runs (200 /
+120 games). Raw results: `reports/benchmark.json` (old) and
+`reports/benchmark_current.log`, `reports/benchmark_rl_fixed.log` (new).
+
+**Reading it.** Every trained model gained 8-13 points on the corrected
+engine: their decisions lean on the heuristic, which now has the fight model
+and real intrigue choices. Retraining the RL value net + AWR policy on the
+corrected rules did **not** help: it improved once (iteration 2: 28.5% vs the
+current heuristic) and then plateaued for six iterations; on the same engine
+it is weaker than the old v2 (34.3% vs 42.7%). Search remains far ahead.
+
+**Head-to-head tests of the new decision models** (2 seats each, 1920 games,
+fair 50% / 50%):
+
+| Change | New | Old |
+|---|---|---|
+| Fight model (deploy + combat intrigues by expected reward vs holding value) | **59.0%** | 41.0% |
+| Deck-quality buying | 50.8% | 49.2% |
+| Deck-quality buying + Prepare the Way / Weirding Woman rated D (test only) | **54.6%** | 45.4% |
+| Search 48 vs 24 playouts (old rules, 92 games, one table) | **49 wins** | 37 wins |
+
+**Game length: still the main gap.** Self-play, all four seats the same AI
+(200 games each):
+
+| AI playing itself | Avg round game ends | Games ended by 10 VP |
+|---|---|---|
+| Humans (89 video games) | **7.7** | — |
+| Winners' style + fight model | 9.3 | 84% |
+| Your style + fight model | 9.4 | 82% |
+| Original heuristic | 9.7 | 64% |
+| Heuristic + fight model | 9.8 | 60% |
+| Value + policy v2 / RL retrained | 9.8 | 50% / 61% |
+
+**Final head-to-head** (one table, every game: your style, search 24,
+search 8, RL retrained; 96 games): _see below, filled in when it finishes._
+
+**Open issues found along the way**
+
+- Game tempo: AIs finish ~2 rounds later than humans; nothing so far moves it
+  except the human-fitted weights (slightly).
+- RL self-play + AWR policy plateaus quickly; search and heuristic fixes are
+  where the gains come from.
+- Tier list: Prepare the Way and Weirding Woman are B in
+  `config/consules_tierlist_DRAFT.md`; the user rates them as near-useless and
+  the test above agrees. Awaiting the user's call before changing the list.
+- Spies: the Landsraad post (High Council / Swordmaster) is almost never used
+  by the AI.
+
+
+### 1. Every AI version vs 3× the original heuristic (300 games each, OLD rules)
 
 | Agent | Win share |
 |---|---|
@@ -167,9 +241,9 @@ More playouts = much stronger (8 → 24 playouts: 24% → 67%).
 No gain: against AI opponents, the default heuristic models them at least as
 well. Search keeps the default heuristic.
 
-### 5. Search with 48 vs 24 playouts (one table; 96 games, in progress)
+### 5. Search with 48 vs 24 playouts (one table, old rules)
 
-At 81/96 games: 48 playouts **43 wins (53%)**, 24 playouts 32 (40%),
+Stopped at 92/96 games: 48 playouts **49 wins (53%)**, 24 playouts 37 (40%),
 human-tuned heuristic 3, default heuristic 3.
 
 ### 6. Winners' style vs your style (88 video games)
@@ -254,6 +328,15 @@ winners' style and your style, and still does on fresh deals).
   Unit, Spice is Power) are one-or-the-other; Questionable Methods' influence
   loss is optional; Tenuous Bond (combat) trashes a 1+ card from your discard;
   Call to Arms counts acquisitions made after playing it.
+- Intrigue requirements (2026-10-02): an intrigue can only be played when at
+  least one of its effects can happen (cost payable, condition met, option
+  available); "deploy up to N" includes 0, so Detonation is always playable.
+- Prepare the Way (2026-10-02): agent effect is "2 Bene Gesserit influence:
+  draw a card" (engine had 1 solari).
+- Infiltrate (2026-10-02): an occupied space could be entered with a plain
+  placement that skipped spending the Spy and overwrote the first Agent (a
+  free Infiltrate, ~3 per game in AI play). Now only Infiltrating (which spends
+  the Spy) gets you in, and both Agents stay on the space.
 
 ### 9. Deploying troops and playing combat intrigues (2026-10-02)
 
