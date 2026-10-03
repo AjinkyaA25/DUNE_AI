@@ -74,6 +74,9 @@ def _dump(path: str, write) -> None:
 CARD_DIR = os.path.join(ROOT, "video_scrape", "cards")
 
 OPPONENTS = [
+    {"spec": "search:K5:M24:tuned=config/heuristic_phased_final.json",
+     "name": "Search (24 playouts, tuned) - strongest",
+     "note": "beats plain search 62.5% / 37.5%; ~5 s per decision"},
     {"spec": "search:K5:M24", "name": "Search (24 playouts)",
      "note": "strong; ~5 s per decision"},
     {"spec": "search:K5:M48", "name": "Search (48 playouts)",
@@ -84,6 +87,8 @@ OPPONENTS = [
      "note": "instant; weights fitted to Dinosaur11's own moves"},
     {"spec": "search:K5:M8", "name": "Search (8 playouts)",
      "note": "strong; ~2 s per decision"},
+    {"spec": "heuristic:tuned=config/heuristic_phased_final.json", "name": "Heuristic (tuned to win)",
+     "note": "instant; your-style weights + win-rate tuning"},
     {"spec": "heuristic:tuned=config/heuristic_tuned.json", "name": "Heuristic (human-tuned)",
      "note": "instant; plays most like the humans in your videos"},
     {"spec": "heuristic", "name": "Heuristic (default)", "note": "instant"},

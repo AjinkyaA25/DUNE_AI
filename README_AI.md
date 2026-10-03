@@ -197,6 +197,28 @@ close to each other and far behind search. Both search agents play with the
 heuristic inside their playouts, so the heuristic fixes above also make
 search stronger (search 24 vs 3x original: 84% -> 90%).
 
+**Search + heuristic fixes (2026-10-02/03).**
+
+| Test (24 playouts each) | Result |
+|---|---|
+| Search variants, one table, 192 games: current / buys searched (`:B`) / deck-quality heuristic inside / successive halving (`:SH`) | 28.6% / 27.6% / 25.5% / **18.2%** - no search variant beats the current search |
+| Win-rate tuner, 2 passes (your-style weights + phase knobs) vs a mixed field of heuristics | 25.6% -> **39.8%** (`config/heuristic_phased_final.json`) |
+| **Search + tuned heuristic vs search + current heuristic, 2 seats each, 192 games** | **62.5% vs 37.5%** (avg VP 8.1 vs 7.5) |
+
+Tuned weights vs the current heuristic (everything else is the same code;
+early = rounds 1-3, mid = 4-5, late = 6+): faction influence x1.5 (early
+x2), troops early x1 / mid x0.5 / late x1.5, holding troops x1.5, combat
+x0.25, spice x0.5, solari late x0.75, water late x1.5, contracts x0.5,
+solari toward the Swordmaster 0.5 (default 2). The first group comes from
+fitting your video decisions, the phase changes from the win-rate tuner.
+**Search with the tuned heuristic is now the strongest AI** (UI opponent
+"Search (24 playouts, tuned)").
+
+Early game vs humans (rounds 1-3): the AI underused Assembly Hall (1.9% vs
+8.5%) and bought cheap cards (avg cost 2.9 vs 3.9). Buy planning + deck
+model (knobs `buy_plan`, `deck_model`) bring it to 8.7% / 3.4 but are
+neutral on win rate so far (50.4% vs 49.6%), so they stay off by default.
+
 **Open issues found along the way**
 
 - Game tempo: AIs finish ~2 rounds later than humans; nothing so far moves it
