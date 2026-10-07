@@ -31,12 +31,6 @@ _TYPES = (
 _FACTIONS = ("emperor", "spacing_guild", "bene_gesserit", "fremen")
 
 
-def _tier_anchor(card) -> float:
-    from src.ai.agents import _TIER_ANCHOR
-    a = _TIER_ANCHOR.get(getattr(card, "tier", None))
-    return (a / 9.0) if a is not None else 0.0
-
-
 def encode_action(gs: GameState, pid: int, a: GameAction,
                   h_norm: float = 0.0) -> np.ndarray:
     from src.game.board.board import (UPRISING_BOARD, COMBAT_SPACES,
@@ -93,7 +87,7 @@ def encode_action(gs: GameState, pid: int, a: GameAction,
         getattr(s, "value", s) in _FACTIONS
         for s in getattr(card, "access_symbols", ()))
     f += [
-        _tier_anchor(card) if card else 0.0,
+        0.0,                     # retired slot (was the tier-list grade)
         (card.persuasion / 6.0) if card else 0.0,
         (card.cost / 8.0) if card else 0.0,
         1.0 if has_fac_access else 0.0,

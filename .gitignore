@@ -12,9 +12,9 @@ train_run.log
 .idea/
 
 # Binary reference assets — kept local, not tracked in git
-cards/
-base_cards/
-intrigue_cards/
+/cards/
+/base_cards/
+/intrigue_cards/
 conflicts/
 contracts/
 *.pdf

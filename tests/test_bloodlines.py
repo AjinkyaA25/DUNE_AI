@@ -277,3 +277,34 @@ def test_plasteel_blades_takes_a_row_skill():
     assert not bl.has(p.id, "Plasteel Blades")
     assert "Loyal" not in bl.skill_row[:3] or bl.skill_row.count("Loyal") <= 1
     assert len(bl.skill_row) == 4 and len(bl.skill_deck) == 8
+
+
+def test_board_and_one_supply_recruit_on_the_same_visit():
+    gs, p = _game()
+    p.solari = 10
+    p.commanders_supply = 2
+    gs.bl.skill_row = ["Canny", "Hardy", "Loyal", "Fierce"]
+    gs.bl.on_agent_placed(p.id, "Sardaukar")
+    opts = gs.bl.pending_options(p.id)
+    assert "board:Canny" in opts and "supply" in opts
+    gs.bl.resolve_choice(p.id, "board:Canny")
+    assert gs.bl.pending_options(p.id) == ["supply", "decline"]   # supply may follow
+    gs.bl.resolve_choice(p.id, "supply")
+    assert p.commanders_garrison == 2 and p.commanders_supply == 1 and p.solari == 6
+    assert not gs.bl.pending_options(p.id)                       # no 2nd supply re-recruit
+    # still the same turn: another commander space offers no supply re-recruit
+    gs.bl.on_agent_placed(p.id, "Gather Support")
+    assert "supply" not in gs.bl.pending_options(p.id)
+    gs.bl.end_agent_turn(p.id)                                   # next turn: allowed again
+    gs.bl.pending.clear()
+    gs.bl.on_agent_placed(p.id, "Gather Support")
+    assert "supply" in gs.bl.pending_options(p.id)
+
+
+def test_high_council_tech_discount_floors_at_zero():
+    from src.game.bloodlines.techs import TechDef
+    gs, p = _game()
+    cheap, dear = TechDef("Cheap", 1), TechDef("Dear", 4)
+    assert gs.bl.tech_price(p.id, cheap) == 1 and gs.bl.tech_price(p.id, dear) == 4
+    p.has_councilor = True
+    assert gs.bl.tech_price(p.id, cheap) == 0 and gs.bl.tech_price(p.id, dear) == 3

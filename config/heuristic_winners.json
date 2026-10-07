@@ -6,6 +6,5 @@
  "res_troops": 0.5,
  "combat": 0.25,
  "influence": 1.5,
- "reveal_bias": 2,
- "tier_blend": 0.3
+ "reveal_bias": 2
 }

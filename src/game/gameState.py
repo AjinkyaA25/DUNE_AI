@@ -95,6 +95,7 @@ class ActionType(Enum):
     ACQUIRE_CARD         = "acquire_card"
     ACQUIRE_RESERVE      = "acquire_reserve"
     END_REVEAL           = "end_reveal"
+    END_TURN             = "end_turn"      # close an Agent turn after its Plot window
     PAY_SWORDMASTER      = "pay_swordmaster"     # legacy (CLI helper)
     PAY_HIGH_COUNCIL     = "pay_high_council"    # legacy (CLI helper)
     GATHER_SUPPORT       = "gather_support"      # legacy (CLI helper)
@@ -160,6 +161,23 @@ class GameAction:
             extra += f", intrigue={self.intrigue_card_name}"
         if self.choice:
             extra += f", choice={self.choice}"
+        # every field that tells two legal moves apart must show here: search,
+        # the UI and the replay match moves across game copies by repr
+        if self.use_infiltrate:
+            extra += ", infiltrate"
+        if self.use_gather_intelligence:
+            extra += ", gather"
+        for f in ("spy_post_name", "uplift_space_name", "acquire_card_name",
+                  "reserve_type", "trash_card_name", "influence_faction"):
+            v = getattr(self, f)
+            if v is not None:
+                extra += f", {f.split('_')[0]}={v}"
+        if self.action_type == ActionType.RESOLVE_CONTRACT:
+            extra += f", contract={self.contract_index}"
+        if self.accept_optional:
+            extra += ", accept"
+        if self.spice_cost or self.troop_count:
+            extra += f", spice_cost={self.spice_cost}, troops={self.troop_count}"
         return (f"GameAction({self.action_type.value}, p={self.player_id}, "
                 f"card={self.card_name}, space={self.space_name}{extra})")
 
@@ -381,6 +399,9 @@ class GameState:
         # player_id whose Agent turn is mid-resolution (awaiting follow-up choices);
         # play passes to the next player once it clears.
         self._agent_turn_open: Optional[int] = None
+        # After an Agent is placed, a player holding a playable Plot Intrigue
+        # may still play it before ending the turn (END_TURN).
+        self._post_agent_window: Optional[int] = None
 
         # ===== PERSUASION POOL (per-turn) =====
         # Accumulated from revealed cards; spent to acquire Imperium row cards.
@@ -594,6 +615,17 @@ class GameState:
             p = self.players[player_id]
             not_revealed = player_id not in self.players_revealed
 
+            # Agent already placed: only Plot Intrigues, or end the turn.
+            if self._post_agent_window == player_id:
+                if not self.is_in_atomic_block():
+                    for ic in p.intrigue_cards:
+                        ts = ic.timing if isinstance(ic.timing, (set, frozenset, tuple, list))                             else (ic.timing,)
+                        if any(t.value == "plot" for t in ts) and                                 ic.can_play(p, self, is_agent_turn=True)[0]:
+                            actions.append(GameAction(ActionType.PLAY_INTRIGUE, player_id,
+                                                      intrigue_card_name=ic.name))
+                actions.append(GameAction(ActionType.END_TURN, player_id))
+                return actions
+
             # Agent turn: one action per valid (card, space, option, spy-mod) combo
             if p.agents_available > 0 and not_revealed:
                 seen_cards = set()
@@ -698,6 +730,8 @@ class GameState:
         if self._agent_turn_open is not None:
             self._prune_dead_pendings(self._agent_turn_open)
         self._maybe_end_agent_turn()
+        if action.action_type != ActionType.END_TURN:
+            self._maybe_close_post_agent_window()
 
         # A Combat intrigue that queued a choice defers the combat-turn advance
         # until that player has resolved it.
@@ -741,7 +775,38 @@ class GameState:
         pid = self._agent_turn_open
         if self._has_mandatory_pending_for(pid):
             return
+        if self.use_choam:
+            self.check_turn_harvest_contracts(pid)
         self._agent_turn_open = None
+        if self.phase == Phase.PLAYER_TURNS and self._has_playable_plot(pid):
+            self._post_agent_window = pid
+            return
+        if self.phase == Phase.PLAYER_TURNS and self.player_in_reveal_buy is None:
+            self.advance_to_next_player_turn()
+
+    def _has_playable_plot(self, pid: int) -> bool:
+        from src.game.intrigue.intrigue import IntrigueTiming
+        p = self.players[pid]
+        for ic in p.intrigue_cards:
+            ts = ic.timing if isinstance(ic.timing, (set, frozenset, tuple, list))                 else (ic.timing,)
+            if IntrigueTiming.PLOT in ts and ic.can_play(p, self, is_agent_turn=True)[0]:
+                return True
+        return False
+
+    def _maybe_close_post_agent_window(self, force: bool = False) -> None:
+        """End the Plot window once the player ends the turn (or has no
+        playable Plot Intrigue left) and has no pending choices."""
+        pid = self._post_agent_window
+        if pid is None:
+            return
+        self._prune_dead_pendings(pid)
+        if self._has_mandatory_pending_for(pid):
+            return
+        if self.use_choam:
+            self.check_turn_harvest_contracts(pid)
+        if not force and self.phase == Phase.PLAYER_TURNS and self._has_playable_plot(pid):
+            return
+        self._post_agent_window = None
         if self.phase == Phase.PLAYER_TURNS and self.player_in_reveal_buy is None:
             self.advance_to_next_player_turn()
 
@@ -760,6 +825,8 @@ class GameState:
             self._step_acquire_reserve(action)
         elif at == ActionType.END_REVEAL:
             self._step_end_reveal(action)
+        elif at == ActionType.END_TURN:
+            self._maybe_close_post_agent_window(force=True)
         elif at == ActionType.PAY_SWORDMASTER:
             self.pay_for_swordmaster(pid)
         elif at == ActionType.PAY_HIGH_COUNCIL:
@@ -1420,6 +1487,7 @@ class GameState:
 
         self.phase                = Phase.PLAYER_TURNS
         self.current_turn_idx     = 0
+        self._reset_harvest_turn()
         self.players_revealed     = set()
         self.player_in_reveal_buy = None
         self.swords_this_reveal   = {i: 0 for i in range(self.num_players)}
@@ -1444,7 +1512,15 @@ class GameState:
     def get_player(self, player_id: int) -> Player:
         return self.players[player_id]
 
+    def _reset_harvest_turn(self) -> None:
+        """A new player turn starts: Harvest contracts count only the spice
+        gained during the turn in which the Agent visits a maker space."""
+        for p in self.players:
+            p.harvest_spice_this_turn = 0
+            p.visited_maker_this_turn = False
+
     def advance_to_next_player_turn(self) -> None:
+        self._reset_harvest_turn()
         if len(self.players_revealed) == self.num_players:
             self._begin_combat_phase()
             return
@@ -1610,8 +1686,9 @@ class GameState:
         player.deployed_this_turn = 0
         player.maker_bonus_this_turn = 0
         player.agent_to_maker_this_turn = space_name in MAKER_SPACES
+        if space_name in MAKER_SPACES:
+            player.visited_maker_this_turn = True
         player.agent_to_faction_this_turn = self._faction_for_space(space_name) is not None
-        spice_before = player.spice
         if player.leader is not None:
             player.leader.reset_per_turn()
             player.leader.trigger("on_agent_turn_start", player, self)
@@ -1660,9 +1737,7 @@ class GameState:
             # 8. CHOAM contract checks
             if self.use_choam:
                 self.check_board_space_contracts(player_id, space_name)
-                if space_name in MAKER_SPACES:
-                    self.check_harvest_contracts(
-                        player_id, space_name, player.spice - spice_before)
+                self.check_turn_harvest_contracts(player_id)
 
             # 8b. Leader: on_agent_placed
             if player.leader is not None:
@@ -2564,6 +2639,19 @@ class GameState:
         player = self.players[player_id]
         for contract in list(player.contracts_active):
             if contract.check_completion_on_harvest(space_name, spice_gained, player, self):
+                self.complete_contract(player_id, contract)
+
+    def check_turn_harvest_contracts(self, player_id: int) -> None:
+        """Harvest 3+/4+: the Agent visited a maker space this turn and the
+        player has gained that much spice this turn by ANY means (board space,
+        card, Intrigue, ...). Spice spent this turn does not reduce it."""
+        player = self.players[player_id]
+        if not getattr(player, "visited_maker_this_turn", False):
+            return
+        gained = getattr(player, "harvest_spice_this_turn", 0)
+        for contract in list(player.contracts_active):
+            if (contract.contract_type == ContractType.HARVEST
+                    and gained >= contract.trigger_condition.get("min_spice", 3)):
                 self.complete_contract(player_id, contract)
 
     def check_acquire_contracts(self, player_id: int, card_name: str) -> None:

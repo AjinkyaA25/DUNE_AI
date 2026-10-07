@@ -302,6 +302,8 @@ def label(gs: GameState, a: GameAction) -> str:
         return "Reveal turn"
     if t == ActionType.END_REVEAL:
         return "Done buying — end turn"
+    if t == ActionType.END_TURN:
+        return "End turn"
     return PG.action_label(a)
 
 

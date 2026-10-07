@@ -4,6 +4,5 @@
  "res_spice": 0.5,
  "res_water": 1.5,
  "res_troops": 0.5,
- "combat": 0.25,
- "tier_blend": 0.3
+ "combat": 0.25
 }

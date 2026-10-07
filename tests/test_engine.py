@@ -1218,3 +1218,131 @@ def test_trash_a_card_in_play_and_assembly_hall_persuasion():
     assert dagger in p.trash and dagger not in p.in_play
     prev = gs.get_space_effects_preview("Assembly Hall")
     assert {"persuasion": 1} in prev
+
+
+def _contract_game():
+    import copy
+    gs = setup_game(4, seed=11)
+    gs.contracts_on_board = []                     # keep the board out of it
+    gs._reset_harvest_turn()
+    p = gs.players[0]
+    p.contracts_active = []
+    p.contracts_completed = []
+    p.water = p.spice = 5
+    card = copy.copy(p.hand[0])
+    card.agent_effects = []
+    p.hand.append(card)
+    for s in gs.maker_bonus_spice:
+        gs.maker_bonus_spice[s] = 0
+    return gs, p, card
+
+
+def _contract(kind, **trig):
+    from src.game.contract.contract import Contract, ContractType
+    return Contract(kind, ContractType[kind], {"solari": 3}, trig)
+
+
+def test_contract_deck_composition():
+    from collections import Counter
+    from src.game.contract.contract_definitions import create_uprising_contracts
+    cs = create_uprising_contracts()
+    kinds = Counter(c.contract_type.name for c in cs)
+    ally = [c for c in cs if c.contract_type.name == "ALLIANCE"]
+    assert len(ally) == 1 and ally[0].rewards == {"troops": 2, "solari": 2}
+    assert kinds["IMMEDIATE"] == 2 and kinds["HARVEST"] == 4
+    acq = [c for c in cs if c.contract_type.name == "ACQUIRE_CARD"]
+    assert [c.trigger_condition["card_name"] for c in acq] == ["The Spice Must Flow"]
+
+
+def test_board_space_contract_needs_that_space():
+    gs, p, card = _contract_game()
+    ct = _contract("BOARD_SPACE", board_space="Secrets")
+    p.contracts_active.append(ct)
+    gs.apply_agent_turn(0, card, "Arrakeen")
+    assert ct in p.contracts_active
+    gs._reset_harvest_turn()
+    p.hand.append(card)
+    gs.apply_agent_turn(0, card, "Secrets")
+    assert ct in p.contracts_completed
+
+
+def test_harvest_counts_all_spice_gained_this_turn():
+    # Hagga Basin (2) + the played card (1) + an Intrigue earlier this turn (1)
+    gs, p, card = _contract_game()
+    h4 = _contract("HARVEST", min_spice=4)
+    p.contracts_active.append(h4)
+    p.gain_spice(1)                                # e.g. a Plot Intrigue
+    p.spice -= 3                                   # spending doesn't reduce it
+    card.agent_effects = [{"spice": 1}]
+    gs.apply_agent_turn(0, card, "Hagga Basin", space_option="spice")
+    assert h4 in p.contracts_completed
+
+
+def test_harvest_needs_enough_spice_and_a_maker_visit():
+    gs, p, card = _contract_game()
+    h4 = _contract("HARVEST", min_spice=4)
+    h3 = _contract("HARVEST", min_spice=3)
+    p.contracts_active += [h4, h3]
+    card.agent_effects = [{"spice": 1}]
+    gs.apply_agent_turn(0, card, "Hagga Basin", space_option="spice")   # 2 + 1
+    assert h3 in p.contracts_completed and h4 in p.contracts_active
+
+    gs, p, card = _contract_game()                 # 4 spice but no maker space
+    h3 = _contract("HARVEST", min_spice=3)
+    p.contracts_active.append(h3)
+    p.gain_spice(4)
+    gs.apply_agent_turn(0, card, "Arrakeen")
+    assert h3 in p.contracts_active
+
+
+def test_alliance_contract_completes_on_anyones_turn():
+    from src.game.contract.contract_definitions import create_uprising_contracts
+    gs, p, card = _contract_game()
+    ct = next(c for c in create_uprising_contracts() if c.contract_type.name == "ALLIANCE")
+    p.contracts_active.append(ct)
+    q = gs.players[1]
+    q.influence["fremen"] = 4
+    gs._check_and_update_alliance("fremen")
+    p.influence["fremen"] = 4                      # tied: holder keeps it
+    gs._check_and_update_alliance("fremen")
+    assert ct in p.contracts_active
+    tr, so = p.troops_garrison, p.solari
+    gs.lose_influence_with_check(1, "fremen", 1)    # rival drops -> p takes it
+    assert ct in p.contracts_completed
+    assert p.troops_garrison == tr + 2 and p.solari == so + 2
+
+
+def test_harvest_counts_maker_bonus_spice():
+    gs, p, card = _contract_game()
+    h4 = _contract("HARVEST", min_spice=4)
+    p.contracts_active.append(h4)
+    gs.maker_bonus_spice["Hagga Basin"] = 2
+    gs.apply_agent_turn(0, card, "Hagga Basin", space_option="spice")   # 2 + 2
+    assert h4 in p.contracts_completed
+
+
+def test_plot_intrigue_after_placing_agent():
+    from src.game.gameState import ActionType
+    from src.game.intrigue.intrigue import IntrigueCard, IntrigueTiming
+    gs = setup_game(4, seed=5)
+    pid = gs.get_current_player_id()
+    p = gs.players[pid]
+    p.intrigue_cards = [IntrigueCard("Test Plot", IntrigueTiming.PLOT, [{"spice": 1}])]
+    for _ in range(20):                            # place an agent (resolve follow-ups)
+        acts = gs.get_valid_actions(pid)
+        a = next((x for x in acts if x.action_type == ActionType.AGENT_TURN), None)             or next(x for x in acts if x.action_type not in (ActionType.PLAY_INTRIGUE,
+                                                              ActionType.REVEAL_TURN))
+        gs.step(a)
+        if a.action_type == ActionType.AGENT_TURN:
+            break
+    while gs._has_mandatory_pending_for(pid):
+        gs.step(gs.get_valid_actions(pid)[0])
+    assert gs.get_current_player_id() == pid       # turn still open
+    kinds = {a.action_type for a in gs.get_valid_actions(pid)}
+    assert kinds == {ActionType.PLAY_INTRIGUE, ActionType.END_TURN}
+    sp = p.spice
+    gs.step(next(a for a in gs.get_valid_actions(pid)
+                 if a.action_type == ActionType.PLAY_INTRIGUE))
+    assert p.spice == sp + 1
+    assert not any(ic.name == "Test Plot" for ic in p.intrigue_cards)
+    assert gs.get_current_player_id() != pid       # nothing left to play: turn passes

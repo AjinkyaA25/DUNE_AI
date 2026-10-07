@@ -115,7 +115,8 @@ class Bloodlines:
             p.commanders_supply = 0
             p.bl_reveal_persuasion = None   # None = not in a reveal window
             p.bl_command_fired = False
-            p.bl_recruited_this_turn = False
+            p.bl_recruited_this_turn = False      # board commander taken this turn
+            p.bl_supply_recruited_this_turn = False
             p.bl_flags = set()              # per-turn tech flags
             p.bl_card_commands = []         # Command effects of revealed cards
             p.bl_after_turn = []            # effects resolved at end of turn
@@ -271,7 +272,7 @@ class Bloodlines:
             if stacks:
                 self.pending.append(PendingBLChoice(
                     pid, "tech_buy", [f"stack:{i}" for i in stacks] + ["decline"]))
-        if space in COMMANDER_SPACES and not p.bl_recruited_this_turn:
+        if space in COMMANDER_SPACES:
             opts = self.recruit_options(pid, space)
             if opts:
                 self.pending.append(PendingBLChoice(
@@ -283,13 +284,16 @@ class Bloodlines:
                    - self._p(pid).bl_commander_discount)
 
     def recruit_options(self, pid: int, space: str) -> List[str]:
+        """On a commander space you may recruit the board commander AND
+        re-recruit one from your supply (2 solari each); never more than one
+        supply re-recruit per turn."""
         p = self._p(pid)
         if p.solari < self.commander_cost(pid):
             return []
         opts = []
-        if self.commander_on_space.get(space):
+        if self.commander_on_space.get(space) and not p.bl_recruited_this_turn:
             opts += [f"board:{s}" for s in self.row_skills(pid)] or ["board:"]
-        if p.commanders_supply > 0:
+        if p.commanders_supply > 0 and not getattr(p, "bl_supply_recruited_this_turn", False):
             opts.append("supply")
         return opts
 
@@ -314,14 +318,19 @@ class Bloodlines:
         p.solari -= self.commander_cost(pid)
         if choice == "supply":
             p.commanders_supply -= 1
+            p.bl_supply_recruited_this_turn = True
         else:
+            p.bl_recruited_this_turn = True
             self.commander_on_space[space] = False
             skill = choice.split(":", 1)[1]
             if skill:
                 self.take_skill(pid, skill)
         p.commanders_garrison += 1
         p.troops_garrison += 1
-        p.bl_recruited_this_turn = True
+        # the other kind of recruit (board / supply) may still follow
+        more = self.recruit_options(pid, space) if space in COMMANDER_SPACES else []
+        if more:
+            self.pending.append(PendingBLChoice(pid, "commander", more + ["decline"], space=space))
         # Plasteel Blades: may trash it -> an additional skill from the row
         if self.has(pid, "Plasteel Blades") and self.row_skills(pid):
             self.pending.append(PendingBLChoice(
@@ -352,6 +361,7 @@ class Bloodlines:
         p.bl_commander_discount = 0
         p.bl_envoy = False
         p.bl_recruited_this_turn = False
+        p.bl_supply_recruited_this_turn = False
         p.bl_flags.discard("ignore_blocking")
         p.bl_flags.discard("dropships")
 

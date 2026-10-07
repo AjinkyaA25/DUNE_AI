@@ -118,5 +118,423 @@
     "minutes": 0.0
    }
   ]
+ },
+ {
+  "date": "2026-10-02 00:22",
+  "games_per_version": 300,
+  "opponent": "3x original heuristic",
+  "bloodlines": true,
+  "results": [
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.003,
+    "ci95": [
+     -0.003,
+     0.01
+    ],
+    "avg_rounds": 9.61,
+    "name": "random",
+    "spec": "random",
+    "what": "picks a random legal move",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.313,
+    "ci95": [
+     0.261,
+     0.366
+    ],
+    "avg_rounds": 9.73,
+    "name": "heuristic, Bloodlines-blind",
+    "spec": "heuristic:nobl",
+    "what": "hand-written rules, ignores techs/commanders (the AI before Bloodlines support)",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.26,
+    "ci95": [
+     0.21,
+     0.31
+    ],
+    "avg_rounds": 9.7,
+    "name": "heuristic (original)",
+    "spec": "heuristic",
+    "what": "hand-written rules incl. Bloodlines scoring - the benchmark opponent itself",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.377,
+    "ci95": [
+     0.322,
+     0.431
+    ],
+    "avg_rounds": 9.72,
+    "name": "value net v1 (models/)",
+    "spec": "value:models/value_best.npz",
+    "what": "1-ply lookahead + value net, self-play training run 1 (base Uprising)",
+    "minutes": 0.3
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.427,
+    "ci95": [
+     0.371,
+     0.483
+    ],
+    "avg_rounds": 9.72,
+    "name": "value+policy v2 (models_policy/)",
+    "spec": "value:models_policy/value_best.npz:models_policy/policy_best.npz",
+    "what": "adds the AWR policy head (base Uprising self-play)",
+    "minutes": 0.3
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.39,
+    "ci95": [
+     0.335,
+     0.445
+    ],
+    "avg_rounds": 9.67,
+    "name": "value+policy v3 (models_policy2/)",
+    "spec": "value:models_policy2/value_best.npz:models_policy2/policy_best.npz",
+    "what": "policy head, warm-started run - previous 'current best'",
+    "minutes": 0.3
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.263,
+    "ci95": [
+     0.213,
+     0.313
+    ],
+    "avg_rounds": 9.68,
+    "name": "search-trained nets s1 (models_search/)",
+    "spec": "value:models_search/value_s1.npz:models_search/policy_s1.npz",
+    "what": "nets trained on 192 search self-play games + 16 human video games",
+    "minutes": 0.3
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.35,
+    "ci95": [
+     0.296,
+     0.404
+    ],
+    "avg_rounds": 9.59,
+    "name": "heuristic, tuned to human games",
+    "spec": "heuristic:tuned=config/heuristic_tuned.json",
+    "what": "11 heuristic weights fitted to 1,617 human decisions",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.28,
+    "ci95": [
+     0.229,
+     0.331
+    ],
+    "avg_rounds": 9.73,
+    "name": "heuristic + fight model (new default)",
+    "spec": "heuristic",
+    "what": "deploy / combat intrigues from expected Conflict reward vs holding value",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.327,
+    "ci95": [
+     0.274,
+     0.38
+    ],
+    "avg_rounds": 9.63,
+    "name": "your style (Dinosaur11 fit) + fight model",
+    "spec": "heuristic:tuned=config/heuristic_me.json",
+    "what": "weights fitted to your 1,211 video decisions",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.267,
+    "ci95": [
+     0.217,
+     0.317
+    ],
+    "avg_rounds": 9.65,
+    "name": "winners' style + fight model",
+    "spec": "heuristic:tuned=config/heuristic_winners.json",
+    "what": "weights fitted to 2,207 winners' video decisions",
+    "minutes": 0.0
+   }
+  ]
+ },
+ {
+  "date": "2026-10-02 00:22",
+  "games_per_version": 8,
+  "opponent": "3x original heuristic",
+  "bloodlines": true,
+  "results": [
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 8,
+    "win_share": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "avg_rounds": 9.5,
+    "name": "random",
+    "spec": "random",
+    "what": "picks a random legal move",
+    "minutes": 0.0
+   }
+  ]
+ },
+ {
+  "date": "2026-10-02 07:05",
+  "games_per_version": 300,
+  "opponent": "3x original heuristic",
+  "bloodlines": true,
+  "results": [
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "avg_rounds": 9.61,
+    "name": "random",
+    "spec": "random",
+    "what": "picks a random legal move",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.25,
+    "ci95": [
+     0.201,
+     0.299
+    ],
+    "avg_rounds": 9.71,
+    "name": "heuristic, Bloodlines-blind",
+    "spec": "heuristic:nobl",
+    "what": "hand-written rules, ignores techs/commanders (the AI before Bloodlines support)",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.24,
+    "ci95": [
+     0.192,
+     0.288
+    ],
+    "avg_rounds": 9.72,
+    "name": "heuristic (original)",
+    "spec": "heuristic",
+    "what": "hand-written rules incl. Bloodlines scoring - the benchmark opponent itself",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.367,
+    "ci95": [
+     0.312,
+     0.421
+    ],
+    "avg_rounds": 9.74,
+    "name": "value net v1 (models/)",
+    "spec": "value:models/value_best.npz",
+    "what": "1-ply lookahead + value net, self-play training run 1 (base Uprising)",
+    "minutes": 0.4
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.427,
+    "ci95": [
+     0.371,
+     0.483
+    ],
+    "avg_rounds": 9.71,
+    "name": "value+policy v2 (models_policy/)",
+    "spec": "value:models_policy/value_best.npz:models_policy/policy_best.npz",
+    "what": "adds the AWR policy head (base Uprising self-play)",
+    "minutes": 0.7
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.4,
+    "ci95": [
+     0.345,
+     0.455
+    ],
+    "avg_rounds": 9.69,
+    "name": "value+policy v3 (models_policy2/)",
+    "spec": "value:models_policy2/value_best.npz:models_policy2/policy_best.npz",
+    "what": "policy head, warm-started run - previous 'current best'",
+    "minutes": 15.7
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.303,
+    "ci95": [
+     0.251,
+     0.355
+    ],
+    "avg_rounds": 9.72,
+    "name": "search-trained nets s1 (models_search/)",
+    "spec": "value:models_search/value_s1.npz:models_search/policy_s1.npz",
+    "what": "nets trained on 192 search self-play games + 16 human video games",
+    "minutes": 127.4
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.383,
+    "ci95": [
+     0.328,
+     0.438
+    ],
+    "avg_rounds": 9.66,
+    "name": "heuristic, tuned to human games",
+    "spec": "heuristic:tuned=config/heuristic_tuned.json",
+    "what": "11 heuristic weights fitted to 1,617 human decisions",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.31,
+    "ci95": [
+     0.258,
+     0.362
+    ],
+    "avg_rounds": 9.7,
+    "name": "heuristic + fight model (new default)",
+    "spec": "heuristic",
+    "what": "deploy / combat intrigues from expected Conflict reward vs holding value",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.347,
+    "ci95": [
+     0.293,
+     0.401
+    ],
+    "avg_rounds": 9.64,
+    "name": "your style (Dinosaur11 fit) + fight model",
+    "spec": "heuristic:tuned=config/heuristic_me.json",
+    "what": "weights fitted to your 1,211 video decisions",
+    "minutes": 0.0
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.283,
+    "ci95": [
+     0.232,
+     0.334
+    ],
+    "avg_rounds": 9.64,
+    "name": "winners' style + fight model",
+    "spec": "heuristic:tuned=config/heuristic_winners.json",
+    "what": "weights fitted to 2,207 winners' video decisions",
+    "minutes": 0.0
+   }
+  ]
+ },
+ {
+  "date": "2026-10-02 07:07",
+  "games_per_version": 300,
+  "opponent": "3x original heuristic",
+  "bloodlines": true,
+  "results": [
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 300,
+    "win_share": 0.343,
+    "ci95": [
+     0.29,
+     0.397
+    ],
+    "avg_rounds": 9.67,
+    "name": "RL + AWR policy, retrained on fixed rules",
+    "spec": "value:models_rl_fixed/value_v02.npz:models_rl_fixed/policy_v02.npz",
+    "what": "8 iterations of Bloodlines self-play on the corrected engine (best = iteration 2)",
+    "minutes": 1.2
+   }
+  ]
+ },
+ {
+  "date": "2026-10-02 07:49",
+  "games_per_version": 120,
+  "opponent": "3x original heuristic",
+  "bloodlines": true,
+  "results": [
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 120,
+    "win_share": 0.25,
+    "ci95": [
+     0.173,
+     0.327
+    ],
+    "avg_rounds": 9.72,
+    "name": "search-trained nets s1 (models_search/)",
+    "spec": "value:models_search/value_s1.npz:models_search/policy_s1.npz",
+    "what": "nets trained on 192 search self-play games + 16 human video games",
+    "minutes": 0.3
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 120,
+    "win_share": 0.775,
+    "ci95": [
+     0.7,
+     0.85
+    ],
+    "avg_rounds": 9.59,
+    "name": "search, 8 playouts",
+    "spec": "search:K5:M8",
+    "what": "round search over the heuristic's top 5 moves",
+    "minutes": 14.8
+   },
+   {
+    "vs": "heuristic:tuned=config/fight_old.json",
+    "games": 120,
+    "win_share": 0.9,
+    "ci95": [
+     0.846,
+     0.954
+    ],
+    "avg_rounds": 9.3,
+    "name": "search, 24 playouts",
+    "spec": "search:K5:M24",
+    "what": "round search, 24 full-game playouts per move",
+    "minutes": 29.0
+   }
+  ]
  }
 ]

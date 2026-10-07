@@ -19,7 +19,10 @@ was built on. This agent is a policy-improvement step instead:
   - The heuristic's own choice is kept unless another candidate beats it by
     `margin` on average, so noise can't make it worse than the heuristic.
 
-spec: search[:K<k>][:M<m>][:MG<margin>][:round]   e.g. search:K5:M24
+spec: search[:K<k>][:M<m>][:MG<margin>][:round][:B][:KB<n>]   e.g. search:K5:M24
+  B     also search buys (Row / reserve cards and stopping)
+  KB<n> buy decisions try the heuristic's pick + up to n buy options in any
+        order (KB0 = every affordable card), not just the heuristic's top k
 """
 from __future__ import annotations
 
@@ -75,7 +78,7 @@ class RoundSearchAgent:
                  seed: Optional[int] = None, opening_book=None,
                  move_cap: int = 3000, horizon: str = "end",
                  tuning: Optional[dict] = None, buys: bool = False,
-                 halving: bool = False):
+                 halving: bool = False, kb: Optional[int] = None):
         from src.ai.agents import HeuristicAgent
         # the heuristic both shortlists the candidates and plays every seat in
         # the playouts; `tuning` (e.g. the human-fitted knobs) changes both
@@ -83,6 +86,7 @@ class RoundSearchAgent:
         self.k, self.m, self.margin = k, m, margin
         self.searched = SEARCHED + (BUY_TYPES if buys else ())
         self.halving = halving
+        self.kb = kb
         self.rng = np.random.default_rng(seed)
         self.move_cap = move_cap
         # "end": play every sample to the end of the game and score the real
@@ -102,7 +106,14 @@ class RoundSearchAgent:
             return self.h.select_action(gs, pid, valid)
         t0 = time.time()
         scores = [self.h.score(gs, pid, a) for a in acts]
-        order = sorted(range(len(acts)), key=lambda i: -scores[i])[: self.k]
+        ranked = sorted(range(len(acts)), key=lambda i: -scores[i])
+        order = ranked[: self.k]
+        if self.kb is not None and any(acts[i].action_type in BUY_TYPES for i in order):
+            # let the playouts judge every card on offer, not only the ones
+            # the heuristic already likes (the heuristic's pick stays first:
+            # it is the baseline the others must beat)
+            buys = [i for i in ranked[1:] if acts[i].action_type in BUY_TYPES]
+            order = [ranked[0]] + buys[: self.kb or len(buys)]
         cands = [acts[i] for i in order]
         from src.ai.determinize import determinize
         # common random numbers: sample j uses the same hidden-information
@@ -136,6 +147,7 @@ class RoundSearchAgent:
         else:
             for i in range(k):
                 run(i, 0, self.m)
+        self.last_vals = vals
         self.stats["searched"] += 1
         self.stats["seconds"] += time.time() - t0
         # paired comparison against the heuristic's choice (cands[0]):

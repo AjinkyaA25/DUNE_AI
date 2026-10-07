@@ -147,8 +147,92 @@ def best_tech_buy(gs, pid: int, discount: int = 0) -> float:
 # ---------------------------------------------------------------------------
 # commanders + skills
 # ---------------------------------------------------------------------------
+def _skills_on() -> float:
+    """The `skills` knob: 0 = old scoring, else a multiplier on skill value."""
+    from src.ai import agents
+    return float(agents._TUNE.get("skills", 0))
+
+
+def _p_fight(gs, pid: int) -> float:
+    """Chance this player has units in a given round's Conflict."""
+    from src.ai.agents import _combat_build_strength
+    p = gs.players[pid]
+    return max(0.35, min(0.85, 0.45 + 0.06 * min(p.troops_garrison, 5)
+                         + 0.3 * _combat_build_strength(gs, pid)))
+
+
+P_COMMANDER_READY = 0.6   # a commander re-recruited (or still home) for a combat
+
+
+def _p_green(gs, pid: int) -> float:
+    """Chance an Agent of this player is on a green (Landsraad) space when
+    combat comes — Canny's condition — from the deck's Landsraad access."""
+    from src.ai.agents import _deck_total
+    p = gs.players[pid]
+    n = sum(1 for z in (p.deck, p.discard, p.hand, p.in_play) for c in z
+            if any(getattr(s, "value", s) == "landsraad"
+                   for s in getattr(c, "access_symbols", ())))
+    return min(0.9, 0.15 + 2.0 * n / max(1, _deck_total(p)))
+
+
+def _p_loyal(gs, pid: int) -> float:
+    e = gs.players[pid].influence.get("emperor", 0)
+    return 1.0 if e >= 3 else 0.6 if e == 2 else 0.3 if e == 1 else 0.15
+
+
+def skill_per_combat(gs, pid: int, skill: str) -> float:
+    """What a skill adds in one combat where a commander is present."""
+    sw = SKILL_SWORD
+    return {
+        "Hardy": 0.8,                                 # +1 troop on Reveal
+        "Driven": 0.65,                               # +1 spice
+        "Charismatic": 0.8 + 0.3 * P_COMMAND,         # +1 persuasion (Command)
+        "Canny": 2 * sw * _p_green(gs, pid),
+        "Fierce": 1.15 * sw,
+        "Loyal": 2 * sw * _p_loyal(gs, pid),
+    }.get(skill, 0.0)
+
+
+def skills_active_now(gs, pid: int, extra_skill: str = "") -> float:
+    """Value of switching the held skills (+ `extra_skill`) on for THIS
+    round's combat by getting a commander into play now: sword skills priced
+    by how they change the expected Conflict reward, the others at face."""
+    from src.ai.agents import fight_ev, _my_strength
+    bl, p = gs.bl, gs.players[pid]
+    if gs.current_conflict is None:
+        return 0.0
+    if p.commanders_garrison > 0 or bl.commanders_in_conflict.get(pid, 0) > 0:
+        return 0.0                                    # already switched on
+    skills = set(p.skills) | ({extra_skill} if extra_skill else set())
+    if not skills:
+        return 0.0
+    pf = _p_fight(gs, pid)
+    v = sum(skill_per_combat(gs, pid, k) for k in skills
+            if k in ("Hardy", "Driven", "Charismatic"))
+    held = set(p.skills)
+    if extra_skill:
+        p.skills.add(extra_skill)
+    try:
+        bl.commanders_in_conflict[pid] = 1
+        bonus = float(bl.strength_bonus(pid))
+    finally:
+        bl.commanders_in_conflict[pid] = 0
+        p.skills.clear(); p.skills.update(held)
+    if bonus:
+        mine, units = _my_strength(gs, pid)
+        units = max(1, units)
+        mine = max(mine, 4.0)                         # roughly: you'll send some troops
+        v += max(0.0, fight_ev(gs, pid, mine + bonus, units) - fight_ev(gs, pid, mine, units))
+    return pf * v
+
+
 def skill_value(gs, pid: int, skill: str) -> float:
     p = gs.players[pid]
+    if _skills_on():
+        R = rounds_left(gs)
+        if skill == "Desperate":
+            return _skills_on() * 3 * SWORD * 0.7     # one-shot
+        return _skills_on() * skill_per_combat(gs, pid, skill) * R             * _p_fight(gs, pid) * P_COMMANDER_READY
     R = rounds_left(gs)
     f = R * P_IN_CONFLICT
     # sword skills add strength every round a commander fights (and stack),
@@ -170,20 +254,31 @@ def commander_value(gs, pid: int, option: str) -> float:
     from src.ai.agents import _RES_VALUE
     cost = gs.bl.commander_cost(pid)
     unit = 1.6          # a 2-strength unit in the garrison (a troop is 0.8)
-    v = unit - _RES_VALUE["solari"] * cost
-    if option.startswith("board:"):
-        skill = option.split(":", 1)[1]
-        if skill:
-            v += skill_value(gs, pid, skill)
+    per_solari = _RES_VALUE["solari"]
+    from src.ai import agents
+    p = gs.players[pid]
+    if agents._TUNE.get("sm_first", 0) and not p.has_swordmaster             and MAX_ROUNDS - gs.round >= 4:
+        per_solari = max(per_solari, agents._TUNE.get("sm_solari", 2.0))
+    v = unit - per_solari * cost
+    skill = option.split(":", 1)[1] if option.startswith("board:") else ""
+    if skill:
+        v += skill_value(gs, pid, skill)
+    if _skills_on():
+        # commanders return to supply after every combat: a recruit now is
+        # what switches the held skills on for this round's Conflict
+        v += _skills_on() * skills_active_now(gs, pid, skill)
     return v
 
 
 def best_commander(gs, pid: int, space: str) -> float:
     bl = gs.bl
-    if gs.players[pid].bl_recruited_this_turn:
-        return 0.0
     opts = bl.recruit_options(pid, space)
-    return max((commander_value(gs, pid, o) for o in opts), default=0.0)
+    board = max((commander_value(gs, pid, o) for o in opts if o.startswith("board")), default=0.0)
+    supply = commander_value(gs, pid, "supply") if "supply" in opts else 0.0
+    # both may be taken on one visit (2 solari each) when affordable
+    if board > 0 and supply > 0 and gs.players[pid].solari >= 2 * bl.commander_cost(pid):
+        return board + max(0.0, supply)
+    return max(board, supply)
 
 
 # ---------------------------------------------------------------------------
@@ -275,3 +370,23 @@ def state_bonus(gs, pid: int) -> float:
     units = p.commanders_garrison + p.commanders_supply \
         + gs.bl.commanders_in_conflict.get(pid, 0)
     return 0.9 * len(p.techs) + 0.5 * units + 0.6 * len(p.skills)
+
+
+def high_council_bl_value(gs, pid: int) -> float:
+    """Bloodlines extras of a High Council seat: 1 spice off every future tech,
+    and +2 persuasion per reveal pushing Command (6+) from ~P_COMMAND to ~0.8
+    for the Command cards / techs this player owns."""
+    from src.ai.agents import _RES_VALUE, _card_effect_value, _deck_total
+    p = gs.players[pid]
+    R = rounds_left(gs)
+    v = _RES_VALUE["spice"] * 0.35 * R                 # ~1 tech per 3 rounds
+    cmd = 0.0
+    n = max(1, _deck_total(p))
+    for z in (p.deck, p.discard, p.hand, p.in_play):
+        for c in z:
+            for e in getattr(c, "reveal_effects", []) or []:
+                if isinstance(e, dict) and isinstance(e.get("command"), dict):
+                    cmd += _card_effect_value(gs, pid, e["command"]) * min(1.0, 5.0 / n)
+    for t in getattr(p, "techs", []):
+        cmd += _effects_value(gs, pid, t.d.command)
+    return v + (0.8 - P_COMMAND) * R * cmd

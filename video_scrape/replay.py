@@ -383,9 +383,15 @@ class Replay:
                     self._step(pid, self.h.select_action(gs, pid, gs.get_valid_actions(pid)))
                 continue
 
+            # agent placed, Plot window open: the log doesn't record Intrigues
+            if gs._post_agent_window == pid and not pending:
+                self._step(pid, next(a for a in valid
+                                     if a.action_type == ActionType.END_TURN))
+                continue
+
             if gs.phase.value == "player_turns" and not pending \
                     and gs.get_current_player_id() == pid:
-                queue = self.agents.get((seat, gs.round), [])
+                queue =self.agents.get((seat, gs.round), [])
                 if queue and gs.players[pid].agents_available > 0:
                     rec = queue[0]
                     act = self._match_agent(valid, rec)

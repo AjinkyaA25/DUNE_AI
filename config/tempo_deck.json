@@ -10,9 +10,5 @@
  "late.res_solari": 0.75,
  "late.res_troops": 1.5,
  "early.influence": 2.0,
- "deck_model": 1,
- "tier_overrides": {
-  "Prepare the Way": "D",
-  "Weirding Woman": "D"
- }
+ "deck_model": 1
 }

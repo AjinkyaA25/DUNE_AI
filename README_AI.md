@@ -225,9 +225,6 @@ neutral on win rate so far (50.4% vs 49.6%), so they stay off by default.
   except the human-fitted weights (slightly).
 - RL self-play + AWR policy plateaus quickly; search and heuristic fixes are
   where the gains come from.
-- Tier list: Prepare the Way and Weirding Woman are B in
-  `config/consules_tierlist_DRAFT.md`; the user rates them as near-useless and
-  the test above agrees. Awaiting the user's call before changing the list.
 - Spies: the Landsraad post (High Council / Swordmaster) is almost never used
   by the AI.
 
@@ -304,7 +301,6 @@ Weights that came out the same in at least 4 of 5 folds (×1 = default):
 | Spies | ×3 | ×1 |
 | Water | ×1.5 | ×0.5 |
 | Faction influence | ×1 | ×2 |
-| Card choice | situational (tier list 30%) | tier list 70% |
 | Revealing early | yes (+2 to +3) | no |
 | Solari | ×0.5 | mixed |
 | Combat / troops | ×0.25 / ×0.5 | ×0.25 / ×0.5 |

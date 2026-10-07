@@ -58,23 +58,16 @@ _N_IMPERIUM = 0
 _RESERVE_NAMES = ("The Spice Must Flow", "Prepare the Way")
 
 
-_CARD_ANCHOR: Dict[str, float] = {}
-
 
 def _ensure_card_index() -> None:
-    global _CARD_LIST, _CARD_INDEX, _N_IMPERIUM, _CARD_ANCHOR
+    global _CARD_LIST, _CARD_INDEX, _N_IMPERIUM
     if _CARD_INDEX:
         return
-    from src.data.card_definitions import (create_imperium_cards, TIER_ANCHOR,
-                                           create_reserve_prepare_the_way)
+    from src.data.card_definitions import create_imperium_cards
     imp = create_imperium_cards()
     _N_IMPERIUM = len(imp)
     _CARD_LIST = tuple(c.name for c in imp) + _RESERVE_NAMES
     _CARD_INDEX = {n: i for i, n in enumerate(_CARD_LIST)}
-    ptw = create_reserve_prepare_the_way(1)[0]
-    _CARD_ANCHOR = {c.name: TIER_ANCHOR[c.tier] for c in imp if c.tier}
-    if ptw.tier:
-        _CARD_ANCHOR[ptw.name] = TIER_ANCHOR[ptw.tier]
 
 
 def _deck_feats_dim() -> int:
@@ -303,15 +296,9 @@ def _global_block(gs, pid: int) -> List[float]:
         len(gs.contracts_on_board) / 2.0,
         1.0 if gs.game_over else 0.0,
     ]
-    # tier-list "quality" signals: how good (by the Consules anchor) is the
-    # perspective player's own deck, and is a premium card sitting in the Row
-    _ensure_card_index()
-    owned = _owned_card_names(gs.players[pid])
-    q = [_CARD_ANCHOR[n] for n in owned if n in _CARD_ANCHOR]
-    feats += [
-        (sum(q) / len(q) / 9.0) if q else 0.0,
-        (max((_CARD_ANCHOR.get(c.name, 0.0) for c in row), default=0.0) / 9.0),
-    ]
+    # two retired slots (were tier-list deck/Row quality); kept as zeros so
+    # saved models keep their input width
+    feats += [0.0, 0.0]
     while len(feats) < _GLOBAL_FEATS:
         feats.append(0.0)
     return feats[:_GLOBAL_FEATS]
