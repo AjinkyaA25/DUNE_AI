@@ -421,8 +421,36 @@ class Replay:
 
     # -- output ----------------------------------------------------------------
     def winner(self):
-        """Engine pid of the winner: the chat's final standings when the
-        game has them, else the last VP readings of the board."""
+        """Engine pid of the winner, from the end-screen VP track when it was
+        read (end_frames.py / end_vp.py), else the chat's final standings,
+        else the last VP readings of the board.
+
+        end_vp: when all four discs were seen, its top disc is the winner (the
+        chat's standings are mapped to colours through OCR'd lobby lines and
+        were wrong in 3 of 12 checked games). A disc hidden under another
+        shares its height, so otherwise the winner is the top visible colour
+        or a hidden one: a pick outside that set is replaced."""
+        w = self._winner_unchecked()
+        ev = self.game.get("end_vp")
+        if not ev or not ev.get("vp"):
+            return w
+        pid_of_colour = {c: self.pid_of[s] for s, c in self.colour_of.items()
+                         if s in self.pid_of}
+        vp = ev["vp"]
+        top = max(vp.values())
+        best = [c for c, v in vp.items() if v == top]
+        if not ev.get("hidden") and len(best) == 1 and best[0] in pid_of_colour:
+            if pid_of_colour[best[0]] != w:
+                self.stats["winner_from_end_vp"] += 1
+            return pid_of_colour[best[0]]
+        possible = {pid_of_colour[c] for c in best + list(ev.get("hidden") or [])
+                    if c in pid_of_colour}
+        if w not in possible and len(best) == 1 and best[0] in pid_of_colour:
+            self.stats["winner_from_end_vp"] += 1
+            return pid_of_colour[best[0]]
+        return w
+
+    def _winner_unchecked(self):
         res = self.game.get("result") or []
         first = [r["player"] for r in res if r.get("place") == 1]
         if len(first) == 1:
@@ -479,7 +507,7 @@ def immortality_evidence(game: dict) -> dict:
     t0, t1 = min(ts_) - 300, max(ts_) + 120
     seen = collections.Counter()
     chat_hits = 0
-    for d in ("raw_streams", "raw_streams2", "raw_tournament", "raw"):
+    for d in ("raw_streams", "raw_streams2", "raw_streams3", "raw_tournament", "raw"):
         tl = os.path.join(HERE, d, f"{base}.timeline.json")
         if os.path.exists(tl):
             for e in json.load(open(tl, encoding="utf-8")):

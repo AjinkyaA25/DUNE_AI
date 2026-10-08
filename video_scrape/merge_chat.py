@@ -47,7 +47,7 @@ import parse_log as P  # noqa: E402
 
 GAMES = os.path.join(HERE, "games")
 VISION = os.path.join(GAMES, ".vision")
-CHAT_DIRS = [os.path.join(HERE, d) for d in ("raw_streams", "raw_streams2", "raw")]
+CHAT_DIRS = [os.path.join(HERE, d) for d in ("raw_streams", "raw_streams2", "raw_streams3", "raw")]
 LOBBY_S = 900.0           # s of lobby (colour picks) before a game start
 REAPPEAR_S = 90.0        # s: a "bought" card back in the Row = flicker
 MATCH_S = 20.0            # agent turn in chat vs video: same space within
