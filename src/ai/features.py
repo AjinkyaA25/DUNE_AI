@@ -15,6 +15,12 @@ Layout (2026-09-07 card-identity expansion):
       _BL_FEATS           Bloodlines (2026-09-28): techs, Sardaukar
                           Commanders + skills, tech market, Bloodlines cards
                           owned / in the Row. All zero in non-Bloodlines games.
+      _COMM_FEATS         community cards owned / in the Row
+      _STYLE_FEATS        playstyle position (2026-10-08): the face-up
+                          Sardaukar skill row + the perspective player's
+                          objective state (Swordmaster / High Council /
+                          commanders / techs held and affordable), see
+                          src/ai/playstyle.py
 
 The Bloodlines block is appended LAST so models trained before it existed
 keep working: ValueModel / PolicyModel use only the first `dim` features.
@@ -87,7 +93,25 @@ _OPP_DECK_FEATS = _OPP_DECK_PER * (MAX_PLAYERS - 1)
 def _feature_dim() -> int:
     return (MAX_PLAYERS * _PLAYER_FEATS + _GLOBAL_FEATS
             + _deck_feats_dim() + _row_feats_dim() + _OPP_DECK_FEATS
-            + _bl_feats_dim() + _comm_feats_dim())
+            + _bl_feats_dim() + _comm_feats_dim() + _style_feats_dim())
+
+
+def _style_feats_dim() -> int:
+    from src.ai.playstyle import SKILLS, STYLE_STATE_DIM
+    return len(SKILLS) + STYLE_STATE_DIM
+
+
+def _style_block(gs, pid: int) -> np.ndarray:
+    from src.ai.playstyle import SKILLS, style_state
+    v = np.zeros(_style_feats_dim(), dtype=np.float32)
+    bl = getattr(gs, "bl", None)
+    if bl is None:
+        return v
+    row = getattr(bl, "skill_row", None) or []
+    for k, sk in enumerate(SKILLS):          # face-up skill tiles (0-2 copies)
+        v[k] = row.count(sk) / 2.0
+    v[len(SKILLS):] = style_state(gs, pid)
+    return v
 
 
 def _comm_feats_dim() -> int:
@@ -372,6 +396,7 @@ def encode_state(gs, perspective_pid: int) -> np.ndarray:
         np.asarray(_opp_deck_block(gs, order), dtype=np.float32),
         _bl_block(gs, perspective_pid, order),
         _comm_block(gs, perspective_pid),
+        _style_block(gs, perspective_pid),
     ])
     assert arr.shape[0] == FEATURE_DIM, (arr.shape, FEATURE_DIM)
     return arr

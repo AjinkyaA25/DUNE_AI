@@ -58,13 +58,43 @@ from src.data.card_definitions import (  # noqa: E402
 from src.game.bloodlines.cards import (  # noqa: E402
     create_bloodlines_imperium_cards, create_community_imperium_cards,
     create_foldspace, create_replay_only_cards)
-from src.game.gameState import ActionType  # noqa: E402
+from src.game.gameState import ActionType, GameAction  # noqa: E402
 
 FACE_DOWN = "facedowncard"   # vision's name for a card seen from the back
 GAMMA = 0.90            # same discounted win target as self-play
 POLICY_KMAX = 20
 MOVE_CAP = 4000
 FACTIONS = ("emperor", "spacing_guild", "bene_gesserit", "fremen")
+
+
+_BL_SKILLS = ("Hardy", "Driven", "Charismatic", "Canny", "Fierce", "Loyal", "Desperate")
+
+
+def _bl_skill(raw):
+    """An OCR'd skill name snapped to the 7 Sardaukar skills."""
+    if not raw:
+        return None
+    import difflib
+    m = difflib.get_close_matches(raw.strip(' "\'').title(), _BL_SKILLS, n=1, cutoff=0.5)
+    return m[0] if m else None
+
+
+def _bl_skill_from_raw(lines):
+    """The skill from a raw chat line ('Acquired Sardaukar Commander skill: X')."""
+    for ln in lines:
+        m = re.search(r"s[hk]?[il1]{1,2}[l1]?s?\s*[:;]\s*\"?([A-Za-z]+)", ln)
+        if m and _bl_skill(m.group(1)):
+            return _bl_skill(m.group(1))
+    return None
+
+
+def _bl_tech(raw):
+    """An OCR'd tech name snapped to the engine's tech tiles."""
+    import difflib
+    from src.game.bloodlines.techs import TECHS
+    m = difflib.get_close_matches(raw.strip(' "\''), [d.name for d in TECHS],
+                                  n=1, cutoff=0.6)
+    return m[0] if m else None
 
 
 def norm(s: str) -> str:
@@ -127,6 +157,8 @@ class Replay:
         # recorded moves per (seat, round)
         self.agents = collections.defaultdict(list)
         self.buys = collections.defaultdict(list)
+        self.recruits = collections.defaultdict(list)    # {"space", "skill"}
+        self.techs = collections.defaultdict(list)       # engine tech names
         for a in sorted(game["actions"], key=lambda a: a["t"]):
             seat = next((p["seat"] for p in game["players"]
                          if p["name"] == a["player"]), None)
@@ -140,6 +172,23 @@ class Replay:
                 self.agents[seat, a["round"]].append(a)
             elif a["kind"] == "buy" and a.get("card") and norm(a["card"]) != FACE_DOWN:
                 self.buys[seat, a["round"]].append(a)
+            elif a["kind"] == "sardaukar":
+                # the chat prints a recruit on 2-3 lines: one per space/round
+                q = self.recruits[seat, a["round"]]
+                sk = _bl_skill(a.get("skill")) or _bl_skill_from_raw(a.get("raw", []))
+                same = next((r for r in q if r["space"] == a.get("space")), None)
+                if same is None:
+                    q.append({"space": a.get("space"), "skill": sk})
+                elif same["skill"] is None:
+                    same["skill"] = sk
+            elif a["kind"] == "tech" and a.get("name"):
+                name = _bl_tech(a["name"])
+                if name and name not in self.techs[seat, a["round"]]:
+                    self.techs[seat, a["round"]].append(name)
+        # exact Bloodlines choices (commander recruits + skills, techs) are
+        # only known when the chat log was merged
+        self.exact_bl = any(a["kind"] in ("tech", "sardaukar", "swordmaster")
+                            for a in game["actions"])
         self.round_t = {r["round"]: r["t"] for r in game["rounds"]}
         self.round_conflict = {r["round"]: r.get("conflict") for r in game["rounds"]}
         self.synced_round = 0
@@ -318,6 +367,117 @@ class Replay:
         return act is not None and self._step(pid, act, record=True)
 
     # -- stepping ------------------------------------------------------------
+    def _bl_prepare(self, pid: int, seat: str, space: str) -> None:
+        """Before a recorded agent lands where the chat says this player then
+        recruited a commander / bought a tech: make the engine offer it. Its
+        resources are only resynced once a round, and its tech market and
+        skill row are random, so the offer could otherwise be missing."""
+        from src.game.bloodlines.rules import COMMANDER_SPACES, GREEN_SPACES
+        gs, bl = self.gs, self.gs.bl
+        p = gs.players[pid]
+        rnd = gs.round
+        if space in COMMANDER_SPACES and self.recruits.get((seat, rnd)):
+            need = bl.commander_cost(pid)
+            if p.solari < need:
+                self.stats["bl_recruit_solari_topped_up"] += 1
+                p.solari = need
+        if space in GREEN_SPACES and self.techs.get((seat, rnd)):
+            name = self.techs[seat, rnd][0]
+            st = next((st for st in bl.tech_stacks
+                       if any(d.name == name for d in st)), None)
+            if st is not None and not bl.has(pid, name):
+                if st[0].name != name:
+                    d = next(d for d in st if d.name == name)
+                    st.remove(d)
+                    st.insert(0, d)
+                    self.stats["bl_tech_market_forced"] += 1
+                price = bl.tech_price(pid, st[0])
+                if p.spice < price:
+                    self.stats["bl_tech_spice_topped_up"] += 1
+                    p.spice = price
+
+    def _bl_choice(self, pid: int, seat: str) -> bool:
+        """Resolve a pending Bloodlines choice the way the chat log says.
+
+        Recorded recruits / techs are forced (putting the recorded skill into
+        the skill row, or the recorded tech on top of its market stack, when
+        the engine's random setup differs) and kept as policy samples. With
+        nothing recorded the human didn't recruit / buy: decline, but don't
+        keep that as a sample (the chat may just have missed the line)."""
+        gs, bl = self.gs, self.gs.bl
+        c = next((c for c in bl.pending if c.player_id == pid), None)
+        if c is None or c.kind not in ("commander", "tech_buy", "tech_offer"):
+            return False
+        rnd = gs.round
+
+        def act(choice):
+            return GameAction(ActionType.RESOLVE_BL_CHOICE, pid, choice=choice)
+
+        if c.kind == "commander":
+            q = self.recruits.get((seat, rnd), [])
+            rec = next((r for r in q if r["space"] == c.space), q[0] if q else None)
+            if rec is None:
+                self._step(pid, act("decline"))
+                self.stats["bl_recruit_declined"] += 1
+                return True
+            opts = bl.pending_options(pid)
+            board = [o for o in opts if o.startswith("board:")]
+            sk = rec["skill"]
+            if board and sk and f"board:{sk}" not in board \
+                    and sk not in gs.players[pid].skills and sk in bl.skill_deck:
+                # the video's skill row differs from the engine's random one
+                bl.skill_deck.remove(sk)
+                bl.skill_deck.append(bl.skill_row.pop(0))
+                bl.skill_row.append(sk)
+                opts = bl.pending_options(pid)
+                board = [o for o in opts if o.startswith("board:")]
+                self.stats["bl_skill_row_forced"] += 1
+            if board:
+                choice = f"board:{sk}" if sk and f"board:{sk}" in board else None
+                if choice is None:      # skill unreadable: the heuristic picks one
+                    cands = [a for a in gs.get_valid_actions(pid)
+                             if a.action_type == ActionType.RESOLVE_BL_CHOICE
+                             and a.choice in board]
+                    choice = self.h.select_action(gs, pid, cands).choice
+                    self.stats["bl_skill_by_heuristic"] += 1
+            elif "supply" in opts:
+                choice = "supply"
+            else:
+                return False
+            q.remove(rec)
+            self.stats["bl_recruit_forced"] += 1
+            self._step(pid, act(choice), record=True)
+            return True
+
+        q = self.techs.get((seat, rnd), [])
+        if not q:
+            self._step(pid, act("decline"))
+            self.stats["bl_tech_declined"] += 1
+            return True
+        name = q[0]
+        si = next((i for i, st in enumerate(bl.tech_stacks)
+                   if any(d.name == name for d in st)), None)
+        if si is None or bl.has(pid, name):
+            q.pop(0)
+            self._step(pid, act("decline"))
+            self.stats["bl_tech_missing"] += 1
+            return True
+        st = bl.tech_stacks[si]
+        if st[0].name != name:          # the video's market differs
+            d = next(d for d in st if d.name == name)
+            st.remove(d)
+            st.insert(0, d)
+            self.stats["bl_tech_market_forced"] += 1
+        p = gs.players[pid]
+        price = bl.tech_price(pid, st[0], c.discount)
+        if p.spice < price:
+            self.stats["bl_tech_spice_topped_up"] += 1
+            p.spice = price
+        q.pop(0)
+        self.stats["bl_tech_forced"] += 1
+        self._step(pid, act(f"stack:{si}"), record=True)
+        return True
+
     def _record(self, pid: int, chosen, valid) -> None:
         gs = self.gs
         feats = encode_state(gs, pid)
@@ -404,6 +564,8 @@ class Replay:
                     queue.pop(0)
                     if act is not None:
                         self.stats["agent_ok"] += 1
+                        if self.exact_bl and gs.bl is not None:
+                            self._bl_prepare(pid, seat, act.space_name)
                         self._step(pid, act, record=True)
                         continue
                     self.stats["agent_unmatched"] += 1
@@ -415,6 +577,12 @@ class Replay:
                         self.stats["reveal"] += 1
                         self._step(pid, rev, record=True)
                         continue
+            # a recorded commander recruit / skill / tech purchase
+            if self.exact_bl and gs.bl is not None and any(
+                    a.action_type == ActionType.RESOLVE_BL_CHOICE for a in valid):
+                if self._bl_choice(pid, seat):
+                    continue
+                valid = gs.get_valid_actions(pid)
             # anything the video doesn't show: the heuristic decides
             self.stats["heuristic_moves"] += 1
             self._step(pid, self.h.select_action(gs, pid, valid))

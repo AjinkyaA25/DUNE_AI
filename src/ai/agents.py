@@ -107,6 +107,13 @@ TUNE_DEFAULTS = {
     # opp_cmdr: an opponent's solari is hidden combat strength (2 solari + an
     # agent at a commander space = a 2-strength unit plus their skill swords).
     "hc_bl": 0.0, "opp_cmdr": 0.0,
+    # style (2026-10-08): lean toward the Bloodlines objective (Swordmaster /
+    # High Council / commanders / techs) that human players - winners
+    # weighted up - pursue from this position (config/objective_model.npz,
+    # src/ai/playstyle.py). A purchase of objective o gets style * P(o); an
+    # agent move that opens that purchase (commander space with a recruit
+    # affordable, green space with a tech affordable) gets half. 0 = off.
+    "style": 0.0,
 }
 # Situational tuning: a key "<phase>.<knob>" overrides <knob> in that phase
 # only. Phases follow how the game is played: early = rounds 1-3 (build
@@ -1294,6 +1301,28 @@ class Agent:
         raise NotImplementedError
 
 
+def _style_bonus(gs: GameState, pid: int, a: GameAction) -> float:
+    """P(objective | position) for the objective this action buys (or half
+    of it for an agent move that opens the purchase); see the style knob."""
+    from src.ai.playstyle import action_objective, objective_probs
+    probs = objective_probs(gs, pid)
+    if probs is None:
+        return 0.0
+    obj = action_objective(gs, pid, a)
+    if obj is not None:
+        return probs[obj]
+    if a.action_type != ActionType.AGENT_TURN or not a.space_name:
+        return 0.0
+    from src.game.bloodlines.rules import COMMANDER_SPACES, GREEN_SPACES
+    bl = gs.bl
+    b = 0.0
+    if a.space_name in COMMANDER_SPACES and bl.recruit_options(pid, a.space_name):
+        b += 0.5 * probs["commanders"]
+    if a.space_name in GREEN_SPACES and bl.buyable_stacks(pid):
+        b += 0.5 * probs["techs"]
+    return b
+
+
 class RandomAgent(Agent):
     name = "random"
 
@@ -1345,6 +1374,13 @@ class HeuristicAgent(Agent):
     # -- per-action score ----------------------------------------------
 
     def score(self, gs: GameState, pid: int, a: GameAction) -> float:
+        s = self._score_core(gs, pid, a)
+        k = _TUNE.get("style", 0.0)
+        if k and getattr(gs, "bl", None) is not None:
+            s += k * _style_bonus(gs, pid, a)
+        return s
+
+    def _score_core(self, gs: GameState, pid: int, a: GameAction) -> float:
         global _FACTION_FOCUS
         _FACTION_FOCUS = self.faction_focus
         t = self._phase_tuning[phase_of(gs.round)]

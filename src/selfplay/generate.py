@@ -191,6 +191,16 @@ def load_shards(out_dir: str, last_k: int = 0):
     return (np.concatenate(Xs), np.concatenate(ys), np.concatenate(ws))
 
 
+def _pad_actions(PA: np.ndarray) -> np.ndarray:
+    """Candidate-action features from shards written before later action
+    blocks (e.g. the Bloodlines purchase block) were appended: zero-pad."""
+    from src.ai.action_features import ACTION_FEATURE_DIM
+    if PA.shape[-1] >= ACTION_FEATURE_DIM:
+        return PA
+    pad = np.zeros(PA.shape[:-1] + (ACTION_FEATURE_DIM - PA.shape[-1],), PA.dtype)
+    return np.concatenate([PA, pad], axis=-1)
+
+
 def load_policy_shards(out_dir: str, last_k: int = 0):
     """Concatenate the policy-head arrays (state X, return y, weight w, padded
     candidate feats PA, mask PM, chosen index PCI) from shards that carry them.
@@ -204,7 +214,7 @@ def load_policy_shards(out_dir: str, last_k: int = 0):
         if "PA" not in z.files:
             continue
         Xs.append(_pad_features(z["X"])); ys.append(z["y"]); ws.append(z["w"])
-        PAs.append(z["PA"]); PMs.append(z["PM"]); PCIs.append(z["PCI"])
+        PAs.append(_pad_actions(z["PA"])); PMs.append(z["PM"]); PCIs.append(z["PCI"])
     if not PAs:
         raise FileNotFoundError(f"no policy shards (PA arrays) in {out_dir}")
     return (np.concatenate(Xs), np.concatenate(ys), np.concatenate(ws),
