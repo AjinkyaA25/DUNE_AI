@@ -114,6 +114,13 @@ TUNE_DEFAULTS = {
     # agent move that opens that purchase (commander space with a recruit
     # affordable, green space with a tech affordable) gets half. 0 = off.
     "style": 0.0,
+    # fixated playstyles (2026-10-09): a flat bonus for buying one objective
+    # outright (half for an agent move that opens the purchase), for the
+    # style league (src/selfplay/style_league.py). buy_mult scales every card
+    # purchase; tsmf adds to The Spice Must Flow.
+    "fix_swordmaster": 0.0, "fix_high_council": 0.0,
+    "fix_commanders": 0.0, "fix_techs": 0.0,
+    "buy_mult": 1.0, "tsmf": 0.0,
 }
 # Situational tuning: a key "<phase>.<knob>" overrides <knob> in that phase
 # only. Phases follow how the game is played: early = rounds 1-3 (build
@@ -1301,11 +1308,14 @@ class Agent:
         raise NotImplementedError
 
 
-def _style_bonus(gs: GameState, pid: int, a: GameAction) -> float:
+def _style_bonus(gs: GameState, pid: int, a: GameAction,
+                 fixed: Optional[dict] = None) -> float:
     """P(objective | position) for the objective this action buys (or half
-    of it for an agent move that opens the purchase); see the style knob."""
+    of it for an agent move that opens the purchase); see the style knob.
+    `fixed` replaces the probabilities with a fixed weight per objective
+    (the fixated playstyles)."""
     from src.ai.playstyle import action_objective, objective_probs
-    probs = objective_probs(gs, pid)
+    probs = fixed if fixed is not None else objective_probs(gs, pid)
     if probs is None:
         return 0.0
     obj = action_objective(gs, pid, a)
@@ -1375,9 +1385,22 @@ class HeuristicAgent(Agent):
 
     def score(self, gs: GameState, pid: int, a: GameAction) -> float:
         s = self._score_core(gs, pid, a)
-        k = _TUNE.get("style", 0.0)
-        if k and getattr(gs, "bl", None) is not None:
-            s += k * _style_bonus(gs, pid, a)
+        if getattr(gs, "bl", None) is not None:
+            k = _TUNE.get("style", 0.0)
+            if k:
+                s += k * _style_bonus(gs, pid, a)
+            fix = {o: _TUNE.get("fix_" + o, 0.0) for o in
+                   ("swordmaster", "high_council", "commanders", "techs")}
+            if any(fix.values()):
+                s += _style_bonus(gs, pid, a, fixed=fix)
+        if a.action_type in (ActionType.ACQUIRE_CARD, ActionType.ACQUIRE_RESERVE):
+            m = _TUNE.get("buy_mult", 1.0)
+            if m != 1.0 and s > 0:
+                s *= m
+            if _TUNE.get("tsmf", 0.0) and (
+                    a.acquire_card_name == "The Spice Must Flow"
+                    or a.reserve_type == "spice_must_flow"):
+                s += _TUNE["tsmf"]
         return s
 
     def _score_core(self, gs: GameState, pid: int, a: GameAction) -> float:
@@ -2042,6 +2065,24 @@ def make_agent(spec: str, seed: Optional[int] = None,
                               temperature=temp, lean_deck=lean, sm_boost=sm_boost,
                               faction_focus=faction_focus, bloodlines=bloodlines,
                               tuning=tuning)
+    if kind == "styleselect":
+        from src.ai.style_select import StyleSelectAgent
+        return StyleSelectAgent(seed=seed)
+    if kind == "stylesearch":
+        # stylesearch[:M<playouts per style>][:MG<margin>][:search]: picks a
+        # playstyle (config/styles/) each round by playing the game out
+        from src.ai.style_search import StyleSearchAgent
+        kw = {"m": 16, "margin": 0.05}
+        base = "heuristic"
+        for p in parts[1:]:
+            if p.startswith("MG"):
+                kw["margin"] = float(p[2:])
+            elif p.startswith("M"):
+                kw["m"] = int(p[1:])
+            elif p == "search":
+                base = "search"
+        return StyleSearchAgent(seed=seed, base=base,
+                                search_kw={"k": 5, "m": 24, "margin": 0.02}, **kw)
     if kind == "search":
         from src.ai.search import RoundSearchAgent
         kw = {"k": 5, "m": 24, "margin": 0.02, "horizon": "end"}
