@@ -15,6 +15,12 @@ Layout (2026-09-07 card-identity expansion):
       _BL_FEATS           Bloodlines (2026-09-28): techs, Sardaukar
                           Commanders + skills, tech market, Bloodlines cards
                           owned / in the Row. All zero in non-Bloodlines games.
+      _COMM_FEATS         community cards owned / in the Row
+      _STYLE_FEATS        playstyle position (2026-10-08): the face-up
+                          Sardaukar skill row + the perspective player's
+                          objective state (Swordmaster / High Council /
+                          commanders / techs held and affordable), see
+                          src/ai/playstyle.py
 
 The Bloodlines block is appended LAST so models trained before it existed
 keep working: ValueModel / PolicyModel use only the first `dim` features.
@@ -58,23 +64,16 @@ _N_IMPERIUM = 0
 _RESERVE_NAMES = ("The Spice Must Flow", "Prepare the Way")
 
 
-_CARD_ANCHOR: Dict[str, float] = {}
-
 
 def _ensure_card_index() -> None:
-    global _CARD_LIST, _CARD_INDEX, _N_IMPERIUM, _CARD_ANCHOR
+    global _CARD_LIST, _CARD_INDEX, _N_IMPERIUM
     if _CARD_INDEX:
         return
-    from src.data.card_definitions import (create_imperium_cards, TIER_ANCHOR,
-                                           create_reserve_prepare_the_way)
+    from src.data.card_definitions import create_imperium_cards
     imp = create_imperium_cards()
     _N_IMPERIUM = len(imp)
     _CARD_LIST = tuple(c.name for c in imp) + _RESERVE_NAMES
     _CARD_INDEX = {n: i for i, n in enumerate(_CARD_LIST)}
-    ptw = create_reserve_prepare_the_way(1)[0]
-    _CARD_ANCHOR = {c.name: TIER_ANCHOR[c.tier] for c in imp if c.tier}
-    if ptw.tier:
-        _CARD_ANCHOR[ptw.name] = TIER_ANCHOR[ptw.tier]
 
 
 def _deck_feats_dim() -> int:
@@ -94,7 +93,46 @@ _OPP_DECK_FEATS = _OPP_DECK_PER * (MAX_PLAYERS - 1)
 def _feature_dim() -> int:
     return (MAX_PLAYERS * _PLAYER_FEATS + _GLOBAL_FEATS
             + _deck_feats_dim() + _row_feats_dim() + _OPP_DECK_FEATS
-            + _bl_feats_dim())
+            + _bl_feats_dim() + _comm_feats_dim() + _style_feats_dim())
+
+
+def _style_feats_dim() -> int:
+    from src.ai.playstyle import SKILLS, STYLE_STATE_DIM
+    return len(SKILLS) + STYLE_STATE_DIM
+
+
+def _style_block(gs, pid: int) -> np.ndarray:
+    from src.ai.playstyle import SKILLS, style_state
+    v = np.zeros(_style_feats_dim(), dtype=np.float32)
+    bl = getattr(gs, "bl", None)
+    if bl is None:
+        return v
+    row = getattr(bl, "skill_row", None) or []
+    for k, sk in enumerate(SKILLS):          # face-up skill tiles (0-2 copies)
+        v[k] = row.count(sk) / 2.0
+    v[len(SKILLS):] = style_state(gs, pid)
+    return v
+
+
+def _comm_feats_dim() -> int:
+    _ensure_bl_index()
+    return 2 * len(_COMM_CARDS)
+
+
+def _comm_block(gs, pid: int) -> np.ndarray:
+    """Community-pool cards owned / in the Row (zeros outside Bloodlines)."""
+    _ensure_bl_index()
+    v = np.zeros(_comm_feats_dim(), dtype=np.float32)
+    if getattr(gs, "bl", None) is None:
+        return v
+    ix = {n: k for k, n in enumerate(_COMM_CARDS)}
+    for name in _owned_card_names(gs.players[pid]):
+        if name in ix:
+            v[ix[name]] = min(3.0, v[ix[name]] + 0.5)
+    for c in gs.imperium_row:
+        if c.name in ix:
+            v[len(_COMM_CARDS) + ix[c.name]] = 1.0
+    return v
 
 
 # --- Bloodlines block --------------------------------------------------------
@@ -103,6 +141,7 @@ _BL_SKILLS = ("Canny", "Charismatic", "Desperate", "Driven", "Fierce", "Hardy",
 _BL_PER_SEAT = 4 + len(_BL_SKILLS)
 _BL_TECHS: Tuple[str, ...] = ()
 _BL_CARDS: Tuple[str, ...] = ()
+_COMM_CARDS: Tuple[str, ...] = ()   # community-pool cards (appended block)
 
 
 def _ensure_bl_index() -> None:
@@ -113,6 +152,9 @@ def _ensure_bl_index() -> None:
     from src.game.bloodlines.cards import create_bloodlines_imperium_cards
     _BL_TECHS = tuple(t.name for t in TECHS)
     _BL_CARDS = tuple(c.name for c in create_bloodlines_imperium_cards())
+    from src.game.bloodlines.cards import create_community_imperium_cards
+    global _COMM_CARDS
+    _COMM_CARDS = tuple(c.name for c in create_community_imperium_cards())
 
 
 def _bl_feats_dim() -> int:
@@ -278,15 +320,9 @@ def _global_block(gs, pid: int) -> List[float]:
         len(gs.contracts_on_board) / 2.0,
         1.0 if gs.game_over else 0.0,
     ]
-    # tier-list "quality" signals: how good (by the Consules anchor) is the
-    # perspective player's own deck, and is a premium card sitting in the Row
-    _ensure_card_index()
-    owned = _owned_card_names(gs.players[pid])
-    q = [_CARD_ANCHOR[n] for n in owned if n in _CARD_ANCHOR]
-    feats += [
-        (sum(q) / len(q) / 9.0) if q else 0.0,
-        (max((_CARD_ANCHOR.get(c.name, 0.0) for c in row), default=0.0) / 9.0),
-    ]
+    # two retired slots (were tier-list deck/Row quality); kept as zeros so
+    # saved models keep their input width
+    feats += [0.0, 0.0]
     while len(feats) < _GLOBAL_FEATS:
         feats.append(0.0)
     return feats[:_GLOBAL_FEATS]
@@ -359,6 +395,8 @@ def encode_state(gs, perspective_pid: int) -> np.ndarray:
         _row_block(gs),
         np.asarray(_opp_deck_block(gs, order), dtype=np.float32),
         _bl_block(gs, perspective_pid, order),
+        _comm_block(gs, perspective_pid),
+        _style_block(gs, perspective_pid),
     ])
     assert arr.shape[0] == FEATURE_DIM, (arr.shape, FEATURE_DIM)
     return arr

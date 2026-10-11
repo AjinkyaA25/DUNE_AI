@@ -254,15 +254,14 @@ def create_uprising_contracts() -> list:
     )
     contracts.append(smf)
 
-    # ===== ALLIANCE CONTRACTS =====
-    # Complete when gaining any alliance (reaching influence 4)
-
-    # Earn Any Alliance
-    # Gain any alliance → Gain 2 troops, complete
+    # ===== ALLIANCE CONTRACT =====
+    # Completes the moment its holder gains ANY Alliance, on anyone's turn:
+    # reaching 4 influence, stealing an alliance, or regaining one after
+    # dropping below 4 (all routed through _check_and_update_alliance).
     alliance = Contract(
         name="Earn Any Alliance",
         contract_type=ContractType.ALLIANCE,
-        rewards={"troops": 2},
+        rewards={"troops": 2, "solari": 2},
         trigger_condition={}
     )
     contracts.append(alliance)

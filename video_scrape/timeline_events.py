@@ -91,6 +91,29 @@ def seat_colours(frame: np.ndarray) -> dict[str, str]:
     return out
 
 
+def vote_seat_colours(frames, tl: list[dict]) -> dict[str, str]:
+    """Seat colours by majority over frames spread across the game (one
+    early frame can be a zoomed-out lobby view), made distinct: a seat whose
+    vote collides takes the best colour nobody else has."""
+    ts = [e["t"] for e in tl] or [300.0]
+    lo, hi = min(ts), max(ts)
+    votes = {s: collections.Counter() for s in SEATS}
+    for k in range(1, 8):
+        f = frames.at(lo + (hi - lo) * k / 8)
+        if f is None:
+            continue
+        for seat, c in seat_colours(f).items():
+            votes[seat][c] += 1
+    out, used = {}, set()
+    for seat in sorted(SEATS, key=lambda s: -max(votes[s].values(), default=0)):
+        pick = next((c for c, _ in votes[seat].most_common() if c not in used), None)
+        if pick is None:
+            pick = next(c for c in HUES if c not in used)
+        out[seat] = pick
+        used.add(pick)
+    return out
+
+
 def placed_space(before: np.ndarray, after: np.ndarray, colour: str
                  ) -> tuple[str | None, int]:
     """Which space's agent slot gained the most `colour` pixels between two
@@ -219,11 +242,7 @@ def build(video: str, tl: list[dict], names: dict[str, str]) -> dict:
         if k[1] in ("agent", "reveal", "discard") and seq and seq[0][1]:
             seq.insert(0, (t_first - 1, []))
 
-    # seat colours from a frame a few minutes in
-    t_probe = min(e["t"] for e in tl) + 120 if tl else 300
-    probe = frames.at(t_probe)
-    colours = seat_colours(probe) if probe is not None else \
-        dict(zip(SEATS, ("Red", "Green", "Blue", "Yellow")))
+    colours = vote_seat_colours(frames, tl)
     player = {s: names.get(s) or f"{colours[s]} ({s})" for s in SEATS}
 
     # --- round ends: moments when the agent/reveal rows of all seats empty

@@ -31,12 +31,6 @@ _TYPES = (
 _FACTIONS = ("emperor", "spacing_guild", "bene_gesserit", "fremen")
 
 
-def _tier_anchor(card) -> float:
-    from src.ai.agents import _TIER_ANCHOR
-    a = _TIER_ANCHOR.get(getattr(card, "tier", None))
-    return (a / 9.0) if a is not None else 0.0
-
-
 def encode_action(gs: GameState, pid: int, a: GameAction,
                   h_norm: float = 0.0) -> np.ndarray:
     from src.game.board.board import (UPRISING_BOARD, COMBAT_SPACES,
@@ -93,7 +87,7 @@ def encode_action(gs: GameState, pid: int, a: GameAction,
         getattr(s, "value", s) in _FACTIONS
         for s in getattr(card, "access_symbols", ()))
     f += [
-        _tier_anchor(card) if card else 0.0,
+        0.0,                     # retired slot (was the tier-list grade)
         (card.persuasion / 6.0) if card else 0.0,
         (card.cost / 8.0) if card else 0.0,
         1.0 if has_fac_access else 0.0,
@@ -112,8 +106,56 @@ def encode_action(gs: GameState, pid: int, a: GameAction,
         gs.round / 10.0,
     ]
 
+    f += _bloodlines_action(gs, pid, a)
     return np.asarray(f, dtype=np.float32)
 
 
+def _bloodlines_action(gs: GameState, pid: int, a: GameAction) -> list:
+    """Which Bloodlines purchase a choice makes (2026-10-08): recruit from the
+    board (with WHICH skill) or the supply, buy WHICH tech at what price, or
+    decline. Lets the policy learn skill and tech preferences."""
+    from src.ai.playstyle import SKILLS
+    from src.game.bloodlines.techs import TECHS
+    v = [0.0] * _BL_ACTION_DIM
+    if a.action_type != ActionType.RESOLVE_BL_CHOICE or not a.choice:
+        return v
+    bl = getattr(gs, "bl", None)
+    ch = a.choice
+    if ch.startswith("board:"):
+        v[0] = 1.0
+        sk = ch.split(":", 1)[1]
+    elif ch.startswith("skill:"):           # Plasteel Blades' bonus skill
+        sk = ch.split(":", 1)[1]
+    else:
+        sk = None
+    if ch == "supply":
+        v[1] = 1.0
+    if ch == "decline":
+        v[3] = 1.0
+    if sk in SKILLS:
+        v[5 + SKILLS.index(sk)] = 1.0
+    if ch.startswith("stack:") and bl is not None:
+        c = next((c for c in bl.pending if c.player_id == pid), None)
+        i = int(ch.split(":")[1])
+        if c is not None and c.kind in ("tech_buy", "tech_offer") \
+                and i < len(bl.tech_stacks) and bl.tech_stacks[i]:
+            d = bl.tech_stacks[i][0]
+            v[2] = 1.0
+            v[4] = bl.tech_price(pid, d, c.discount) / 6.0
+            names = [t.name for t in TECHS]
+            if d.name in names:
+                v[5 + len(SKILLS) + names.index(d.name)] = 1.0
+    return v
+
+
+def _bl_action_dim() -> int:
+    from src.ai.playstyle import SKILLS
+    from src.game.bloodlines.techs import TECHS
+    return 5 + len(SKILLS) + len(TECHS)
+
+
+_BL_ACTION_DIM = _bl_action_dim()
+
 #  (len(_TYPES)+1) type one-hot  +  10 agent-turn  +  7 acquire  +  4 misc
-ACTION_FEATURE_DIM = (len(_TYPES) + 1) + 10 + 7 + 4
+#  + Bloodlines purchase block (recruit / skill / tech)
+ACTION_FEATURE_DIM = (len(_TYPES) + 1) + 10 + 7 + 4 + _BL_ACTION_DIM

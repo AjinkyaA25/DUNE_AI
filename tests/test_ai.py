@@ -127,23 +127,6 @@ def test_make_agent_specs():
     assert isinstance(make_agent("value"), GreedyValueAgent)
 
 
-def test_tier_prior_orders_buys():
-    """The Consules tier blend should make S-tier cards outscore D-tier cards
-    at buy time, and leave untiered cards on their situational merit."""
-    from src.data.card_definitions import create_imperium_cards
-    from src.ai.agents import _acquire_card_value
-    gs = setup_game(4, seed=1)
-    gs.round = 6
-    gs.players[0].has_swordmaster = True
-    by = {c.name: c for c in create_imperium_cards()}
-    s = _acquire_card_value(gs, 0, by["Guild Spy"])          # S
-    d = _acquire_card_value(gs, 0, by["Hidden Missive"])     # D
-    u = _acquire_card_value(gs, 0, by["Junction Headquarters"])  # untiered
-    assert s > d + 2.0
-    assert by["Guild Spy"].tier == "S" and by["Hidden Missive"].tier == "D"
-    assert by["Junction Headquarters"].tier is None and u >= 0.0
-
-
 def test_deploy_scorer_counts_own_combat_intrigues():
     """Holding a Combat Intrigue should raise the value of committing troops to
     a crucial Conflict the intrigue could swing (vs holding none)."""

@@ -19,7 +19,10 @@ was built on. This agent is a policy-improvement step instead:
   - The heuristic's own choice is kept unless another candidate beats it by
     `margin` on average, so noise can't make it worse than the heuristic.
 
-spec: search[:K<k>][:M<m>][:MG<margin>][:round]   e.g. search:K5:M24
+spec: search[:K<k>][:M<m>][:MG<margin>][:round][:B][:KB<n>]   e.g. search:K5:M24
+  B     also search buys (Row / reserve cards and stopping)
+  KB<n> buy decisions try the heuristic's pick + up to n buy options in any
+        order (KB0 = every affordable card), not just the heuristic's top k
 """
 from __future__ import annotations
 
@@ -32,6 +35,9 @@ from src.game.gameState import ActionType, GameAction, GameState
 
 SEARCHED = (ActionType.AGENT_TURN, ActionType.REVEAL_TURN,
             ActionType.RESOLVE_DEPLOY)
+# with buys=True the search also plays out Imperium Row / reserve purchases
+# (and stopping), so self-play records how it values cards in context
+BUY_TYPES = (ActionType.ACQUIRE_CARD, ActionType.ACQUIRE_RESERVE, ActionType.END_REVEAL)
 
 
 def round_value(gs: GameState, pid: int) -> float:
@@ -70,10 +76,17 @@ class RoundSearchAgent:
 
     def __init__(self, k: int = 4, m: int = 6, margin: float = 1.0,
                  seed: Optional[int] = None, opening_book=None,
-                 move_cap: int = 3000, horizon: str = "end"):
+                 move_cap: int = 3000, horizon: str = "end",
+                 tuning: Optional[dict] = None, buys: bool = False,
+                 halving: bool = False, kb: Optional[int] = None):
         from src.ai.agents import HeuristicAgent
-        self.h = HeuristicAgent(seed=seed, opening_book=opening_book)
+        # the heuristic both shortlists the candidates and plays every seat in
+        # the playouts; `tuning` (e.g. the human-fitted knobs) changes both
+        self.h = HeuristicAgent(seed=seed, opening_book=opening_book, tuning=tuning)
         self.k, self.m, self.margin = k, m, margin
+        self.searched = SEARCHED + (BUY_TYPES if buys else ())
+        self.halving = halving
+        self.kb = kb
         self.rng = np.random.default_rng(seed)
         self.move_cap = move_cap
         # "end": play every sample to the end of the game and score the real
@@ -87,27 +100,54 @@ class RoundSearchAgent:
 
     def select_action(self, gs: GameState, pid: int,
                       valid: List[GameAction]) -> GameAction:
+        self.last = None
         acts = [a for a in valid if a.action_type != ActionType.NO_OP] or valid
-        if len(acts) <= 1 or not any(a.action_type in SEARCHED for a in acts):
+        if len(acts) <= 1 or not any(a.action_type in self.searched for a in acts):
             return self.h.select_action(gs, pid, valid)
         t0 = time.time()
         scores = [self.h.score(gs, pid, a) for a in acts]
-        order = sorted(range(len(acts)), key=lambda i: -scores[i])[: self.k]
+        ranked = sorted(range(len(acts)), key=lambda i: -scores[i])
+        order = ranked[: self.k]
+        if self.kb is not None and any(acts[i].action_type in BUY_TYPES for i in order):
+            # let the playouts judge every card on offer, not only the ones
+            # the heuristic already likes (the heuristic's pick stays first:
+            # it is the baseline the others must beat)
+            buys = [i for i in ranked[1:] if acts[i].action_type in BUY_TYPES]
+            order = [ranked[0]] + buys[: self.kb or len(buys)]
         cands = [acts[i] for i in order]
         from src.ai.determinize import determinize
         # common random numbers: sample j uses the same hidden-information
         # world for every candidate, so differences come from the move
-        seeds = self.rng.integers(0, 2**31 - 1, size=self.m)
-        vals = np.full((len(cands), self.m), np.nan)
-        for i, a in enumerate(cands):
-            for j, sd in enumerate(seeds):
-                g = determinize(gs, pid, np.random.default_rng(int(sd)))
+        k = len(cands)
+        total = k * self.m                       # playout budget for this decision
+        seeds = self.rng.integers(0, 2**31 - 1, size=total)
+        vals = np.full((k, total), np.nan)
+
+        def run(i, lo, hi):
+            for j in range(lo, hi):
+                g = determinize(gs, pid, np.random.default_rng(int(seeds[j])))
                 ga = next((x for x in g.get_valid_actions(pid)
-                           if repr(x) == repr(a)), None)
+                           if repr(x) == repr(cands[i])), None)
                 if ga is None:
-                    continue
+                    return
                 g.step(ga)
                 vals[i, j] = self._playout(g, pid, gs.round)
+
+        if self.halving and k > 2:
+            # successive halving: a few playouts for every candidate, then the
+            # rest of the same budget on the heuristic's pick + the best rival
+            m1 = max(3, self.m // 3)
+            for i in range(k):
+                run(i, 0, m1)
+            means = np.nanmean(vals[:, :m1], axis=1)
+            rival = 1 + int(np.nanargmax(means[1:]))
+            extra = (total - k * m1) // 2
+            for i in (0, rival):
+                run(i, m1, m1 + extra)
+        else:
+            for i in range(k):
+                run(i, 0, self.m)
+        self.last_vals = vals
         self.stats["searched"] += 1
         self.stats["seconds"] += time.time() - t0
         # paired comparison against the heuristic's choice (cands[0]):
@@ -124,6 +164,11 @@ class RoundSearchAgent:
                 best, best_gain = i, gain
         if best:
             self.stats["switched"] += 1
+        # what the search saw, for search-based self-play training
+        with np.errstate(all="ignore"):
+            sc = np.nanmean(vals, axis=1)
+        self.last = {"cands": cands, "scores": np.where(np.isnan(sc), -1.0, sc).tolist(),
+                     "chosen": best}
         return cands[best]
 
     def _playout(self, g: GameState, pid: int, start_round: int) -> float:

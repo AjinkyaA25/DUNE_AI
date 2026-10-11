@@ -76,6 +76,7 @@ def test_command_fires_once_at_six_persuasion():
 def test_recruit_commander_gives_skill_and_empties_space():
     gs, p = _game()
     p.solari = 5
+    gs.bl.skill_row = ["Canny", "Hardy", "Loyal", "Canny"]
     gs.bl.on_agent_placed(p.id, "Sardaukar")
     opts = gs.bl.pending_options(p.id)
     assert "board:Canny" in opts and "decline" in opts
@@ -92,6 +93,7 @@ def test_recruit_commander_gives_skill_and_empties_space():
 def test_commander_deploys_first_and_returns_to_commander_supply():
     gs, p = _game()
     p.solari = 5
+    gs.bl.skill_row = ["Hardy", "Driven", "Fierce", "Loyal"]
     gs.bl.recruit(p.id, "High Council", "board:Hardy")
     p.troops_garrison += 2                              # plus two plain troops
     gs._do_deploy(p.id, 1)
@@ -236,3 +238,73 @@ def test_urgent_shigawire_gives_next_bene_card_all_icons():
     p.bl_shigawire = True
     lit = _bl_card("Litany Against Fear")                  # BG, no icons
     assert "Arrakeen" in gs.get_legal_agent_spaces(p.id, lit)
+
+
+def test_skill_row_four_of_fourteen_tiles_refilled_when_taken():
+    gs, p = _game()
+    bl = gs.bl
+    assert len(bl.skill_row) == 4 and len(bl.skill_deck) == 10
+    from collections import Counter
+    assert Counter(bl.skill_row + bl.skill_deck) == {k: 2 for k in
+                                                     ("Canny", "Charismatic", "Desperate", "Driven",
+                                                      "Fierce", "Hardy", "Loyal")}
+    bl.skill_row = ["Canny", "Canny", "Hardy", "Loyal"]
+    bl.skill_deck = ["Driven"] + bl.skill_deck[1:]
+    p.solari = 5
+    bl.on_agent_placed(p.id, "Sardaukar")
+    opts = bl.pending_options(p.id)
+    # only skills in the row, each once, plus decline
+    assert sorted(o for o in opts if o.startswith("board:")) == \
+        ["board:Canny", "board:Hardy", "board:Loyal"]
+    bl.resolve_choice(p.id, "board:Canny")
+    assert p.skills == {"Canny"}
+    assert sorted(bl.skill_row) == ["Canny", "Driven", "Hardy", "Loyal"]   # refilled
+    assert len(bl.skill_deck) == 9
+
+
+def test_plasteel_blades_takes_a_row_skill():
+    gs, p = _game()
+    bl = gs.bl
+    _give_tech(gs, p, "Plasteel Blades")
+    bl.skill_row = ["Canny", "Hardy", "Loyal", "Fierce"]
+    p.solari = 5
+    bl.on_agent_placed(p.id, "Sardaukar")
+    bl.resolve_choice(p.id, "board:Canny")
+    opts = bl.pending_options(p.id)                       # Plasteel's bonus choice
+    assert "skill:Hardy" in opts and "skill:Canny" not in opts and "decline" in opts
+    bl.resolve_choice(p.id, "skill:Loyal")
+    assert p.skills == {"Canny", "Loyal"}
+    assert not bl.has(p.id, "Plasteel Blades")
+    assert "Loyal" not in bl.skill_row[:3] or bl.skill_row.count("Loyal") <= 1
+    assert len(bl.skill_row) == 4 and len(bl.skill_deck) == 8
+
+
+def test_board_and_one_supply_recruit_on_the_same_visit():
+    gs, p = _game()
+    p.solari = 10
+    p.commanders_supply = 2
+    gs.bl.skill_row = ["Canny", "Hardy", "Loyal", "Fierce"]
+    gs.bl.on_agent_placed(p.id, "Sardaukar")
+    opts = gs.bl.pending_options(p.id)
+    assert "board:Canny" in opts and "supply" in opts
+    gs.bl.resolve_choice(p.id, "board:Canny")
+    assert gs.bl.pending_options(p.id) == ["supply", "decline"]   # supply may follow
+    gs.bl.resolve_choice(p.id, "supply")
+    assert p.commanders_garrison == 2 and p.commanders_supply == 1 and p.solari == 6
+    assert not gs.bl.pending_options(p.id)                       # no 2nd supply re-recruit
+    # still the same turn: another commander space offers no supply re-recruit
+    gs.bl.on_agent_placed(p.id, "Gather Support")
+    assert "supply" not in gs.bl.pending_options(p.id)
+    gs.bl.end_agent_turn(p.id)                                   # next turn: allowed again
+    gs.bl.pending.clear()
+    gs.bl.on_agent_placed(p.id, "Gather Support")
+    assert "supply" in gs.bl.pending_options(p.id)
+
+
+def test_high_council_tech_discount_floors_at_zero():
+    from src.game.bloodlines.techs import TechDef
+    gs, p = _game()
+    cheap, dear = TechDef("Cheap", 1), TechDef("Dear", 4)
+    assert gs.bl.tech_price(p.id, cheap) == 1 and gs.bl.tech_price(p.id, dear) == 4
+    p.has_councilor = True
+    assert gs.bl.tech_price(p.id, cheap) == 0 and gs.bl.tech_price(p.id, dear) == 3

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import json
 import os
 import subprocess
 import sys
@@ -27,6 +28,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 HERE = os.path.dirname(os.path.abspath(__file__))
 PY = sys.executable
 VIDEO_EXT = (".webm", ".mp4", ".mkv")
+MIN_ROUNDS = 5      # a real game file has at least this many rounds
 
 
 def _run(args: list[str], log: str) -> bool:
@@ -51,6 +53,13 @@ def process(video: str, keep: bool) -> str:
     ok = ok and _run([os.path.join(HERE, "timeline_events.py"), video], log)
     if not ok:
         return f"{vid}: FAILED (video kept, see {log})"
+    # a scan that never read the game (unfamiliar layout, chat hidden) still
+    # "succeeds" with one short junk game; keep the video so it can be redone
+    games = glob.glob(os.path.join(HERE, "games", vid + ".json")) + \
+        glob.glob(os.path.join(HERE, "games", vid + "_g*.json"))
+    rounds = [len(json.load(open(g, encoding="utf-8")).get("rounds", [])) for g in games]
+    if not rounds or max(rounds) < MIN_ROUNDS:
+        return f"{vid}: SUSPECT ({len(games)} games, rounds {rounds}; video kept)"
     open(base + ".done", "w").close()
     if not keep:
         os.remove(video)
@@ -65,6 +74,9 @@ def main() -> None:
     args = ap.parse_args()
     videos = sorted(p for p in glob.glob(os.path.join(args.dir, "*"))
                     if p.endswith(VIDEO_EXT) and ".f" not in os.path.basename(p))
+    # videos with checkpointed progress first, so a restart finishes them soonest
+    videos.sort(key=lambda p: not glob.glob(os.path.splitext(p)[0] + ".*.partial")
+                and not os.path.exists(os.path.splitext(p)[0] + ".timeline.json"))
     print(f"{len(videos)} videos, {args.workers} workers", flush=True)
     with ProcessPoolExecutor(args.workers) as pool:
         futs = [pool.submit(process, v, args.keep) for v in videos]

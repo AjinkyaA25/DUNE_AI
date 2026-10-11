@@ -1,0 +1,773 @@
+#!/usr/bin/env python
+"""
+Replay scraped games (games/*.json) inside the engine and write training data.
+
+A scraped game is a partial record: which card each player sent to which
+space, reveals, buys, the conflict each round, and board snapshots
+(resources, influence, VP). The engine needs every decision, so this is a
+GUIDED replay:
+
+  seats      video seats -> engine players by the order of the first agent
+             turns in round 1 (engine player 0 starts round 1; the first
+             player rotates each round like on the table)
+  turns      on a seat's turn, play its next recorded agent turn for this
+             round (same card, same space); once those run out it reveals.
+             A card the engine copy doesn't have in hand is moved there
+             (drawn from its deck/discard, or created) - the video is truth
+  buys       after a reveal, the seat's recorded buys for the round are made
+             (the card is put in the Row if the engine's Row differs;
+             missing persuasion is topped up)
+  the rest   choices the video doesn't show (troops deployed, influence
+             picks, trashes, spies, combat intrigues) are made by the
+             heuristic player
+  re-sync    at every round start: the recorded conflict card, and each
+             seat's spice/solari/water, influence and VP from the video
+
+Every recorded move becomes a training sample in the self-play shard format
+(state features, the move + its alternatives for the policy head, and the
+discounted win target of the player who made it), so train_from_human.py
+can learn from them directly. Games whose winner can't be read are skipped.
+
+Usage:
+  python video_scrape/replay.py                       # every vision game
+  python video_scrape/replay.py games/NFT8aY_T3ZE.json --out data/video_games
+"""
+from __future__ import annotations
+
+import argparse
+import collections
+import glob
+import json
+import os
+import re
+import sys
+
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, ROOT)
+
+from src.ai.action_features import encode_action  # noqa: E402
+from src.ai.agents import HeuristicAgent  # noqa: E402
+from src.ai.features import encode_state  # noqa: E402
+from src.data.card_definitions import (  # noqa: E402
+    conflict_level_1_pool, conflict_level_2_pool, conflict_level_3_pool,
+    create_imperium_cards, create_reserve_prepare_the_way,
+    create_reserve_spice_must_flow, create_starter_cards, setup_game)
+from src.game.bloodlines.cards import (  # noqa: E402
+    create_bloodlines_imperium_cards, create_community_imperium_cards,
+    create_foldspace, create_replay_only_cards)
+from src.game.gameState import ActionType, GameAction  # noqa: E402
+
+FACE_DOWN = "facedowncard"   # vision's name for a card seen from the back
+GAMMA = 0.90            # same discounted win target as self-play
+POLICY_KMAX = 20
+MOVE_CAP = 4000
+FACTIONS = ("emperor", "spacing_guild", "bene_gesserit", "fremen")
+
+
+_BL_SKILLS = ("Hardy", "Driven", "Charismatic", "Canny", "Fierce", "Loyal", "Desperate")
+
+
+def _bl_skill(raw):
+    """An OCR'd skill name snapped to the 7 Sardaukar skills."""
+    if not raw:
+        return None
+    import difflib
+    m = difflib.get_close_matches(raw.strip(' "\'').title(), _BL_SKILLS, n=1, cutoff=0.5)
+    return m[0] if m else None
+
+
+def _bl_skill_from_raw(lines):
+    """The skill from a raw chat line ('Acquired Sardaukar Commander skill: X')."""
+    for ln in lines:
+        m = re.search(r"s[hk]?[il1]{1,2}[l1]?s?\s*[:;]\s*\"?([A-Za-z]+)", ln)
+        if m and _bl_skill(m.group(1)):
+            return _bl_skill(m.group(1))
+    return None
+
+
+def _bl_tech(raw):
+    """An OCR'd tech name snapped to the engine's tech tiles."""
+    import difflib
+    from src.game.bloodlines.techs import TECHS
+    m = difflib.get_close_matches(raw.strip(' "\''), [d.name for d in TECHS],
+                                  n=1, cutoff=0.6)
+    return m[0] if m else None
+
+
+def norm(s: str) -> str:
+    return re.sub(r"[^a-z]", "", (s or "").lower())
+
+
+def _card_factory() -> dict:
+    cards = {}
+    for c in (create_starter_cards() + create_imperium_cards()
+              + create_bloodlines_imperium_cards()
+              + create_community_imperium_cards() + create_replay_only_cards()
+              + [create_foldspace()]
+              + create_reserve_prepare_the_way(1) + create_reserve_spice_must_flow(1)):
+        cards.setdefault(norm(c.name), c)
+    return cards
+
+
+_CONFLICTS = None
+
+
+def conflict_by_name(name: str):
+    global _CONFLICTS
+    if _CONFLICTS is None:
+        _CONFLICTS = {}
+        for c in conflict_level_1_pool() + conflict_level_2_pool() + conflict_level_3_pool():
+            _CONFLICTS.setdefault(norm(c.name.split(" (")[0]), c)
+    return _CONFLICTS.get(norm(name))
+
+
+def resolve_name(name: str, factory: dict) -> str:
+    """Engine spelling key for a scraped card name (OCR typos like
+    'Chaom Demands' / 'Possibte Futures' map to the closest known card)."""
+    import difflib
+    n = norm(name)
+    if n in factory or not n:
+        return n
+    best = difflib.get_close_matches(n, list(factory), n=1, cutoff=0.82)
+    if best:
+        return best[0]
+    # chat lines sometimes run on into the next line: 'Mercantile Affairs'
+    # + 'recalled to gather intelligence' -> match a known name at the start
+    pre = [k for k in factory if len(k) >= 8 and
+           difflib.SequenceMatcher(None, k, n[:len(k)]).ratio() >= 0.85]
+    return max(pre, key=len) if pre else n
+
+
+class Replay:
+    def __init__(self, game: dict, seed: int = 0):
+        self.game = game
+        self.gs = setup_game(num_players=4, seed=seed, neutral_leaders=True,
+                             use_bloodlines=True)
+        self.h = HeuristicAgent(seed=seed)
+        self.factory = _card_factory()
+        self.stats = collections.Counter()
+        self.samples = []          # (features, pid, round, PA or None, ci)
+        seats = self._seat_order()
+        self.pid_of = {s: i for i, s in enumerate(seats)}
+        self.seat_of = {i: s for s, i in self.pid_of.items()}
+        self.colour_of = {p["seat"]: p["color"] for p in game["players"]}
+        # recorded moves per (seat, round)
+        self.agents = collections.defaultdict(list)
+        self.buys = collections.defaultdict(list)
+        self.recruits = collections.defaultdict(list)    # {"space", "skill"}
+        self.techs = collections.defaultdict(list)       # engine tech names
+        for a in sorted(game["actions"], key=lambda a: a["t"]):
+            seat = next((p["seat"] for p in game["players"]
+                         if p["name"] == a["player"]), None)
+            if seat is None:
+                continue
+            if a.get("card"):
+                key = resolve_name(a["card"], self.factory)
+                if key in self.factory:
+                    a["card"] = self.factory[key].name
+            if a["kind"] == "agent" and a.get("space") and a.get("card"):
+                self.agents[seat, a["round"]].append(a)
+            elif a["kind"] == "buy" and a.get("card") and norm(a["card"]) != FACE_DOWN:
+                self.buys[seat, a["round"]].append(a)
+            elif a["kind"] == "sardaukar":
+                # the chat prints a recruit on 2-3 lines: one per space/round
+                q = self.recruits[seat, a["round"]]
+                sk = _bl_skill(a.get("skill")) or _bl_skill_from_raw(a.get("raw", []))
+                same = next((r for r in q if r["space"] == a.get("space")), None)
+                if same is None:
+                    q.append({"space": a.get("space"), "skill": sk})
+                elif same["skill"] is None:
+                    same["skill"] = sk
+            elif a["kind"] == "tech" and a.get("name"):
+                name = _bl_tech(a["name"])
+                if name and name not in self.techs[seat, a["round"]]:
+                    self.techs[seat, a["round"]].append(name)
+        # exact Bloodlines choices (commander recruits + skills, techs) are
+        # only known when the chat log was merged
+        self.exact_bl = any(a["kind"] in ("tech", "sardaukar", "swordmaster")
+                            for a in game["actions"])
+        self.round_t = {r["round"]: r["t"] for r in game["rounds"]}
+        self.round_conflict = {r["round"]: r.get("conflict") for r in game["rounds"]}
+        self.synced_round = 0
+        # the recorded game decides when it ends: a misread VP track must not
+        # end the engine's copy early
+        n_rounds = len(game["rounds"])
+        real_check = self.gs.check_victory_conditions
+
+        def check_victory():
+            if self.gs.round < n_rounds:
+                return False
+            return real_check()
+        self.gs.check_victory_conditions = check_victory
+
+    # -- setup ----------------------------------------------------------------
+    def _seat_order(self) -> list[str]:
+        """Seats in turn order, from the first agent turns of round 1."""
+        seats = [p["seat"] for p in self.game["players"]]
+        first = {}
+        for a in sorted(self.game["actions"], key=lambda a: a["t"]):
+            if a["kind"] == "agent" and a["round"] == 1:
+                seat = next((p["seat"] for p in self.game["players"]
+                             if p["name"] == a["player"]), None)
+                if seat and seat not in first:
+                    first[seat] = a["t"]
+        order = sorted(first, key=first.get)
+        return order + [s for s in seats if s not in order]
+
+    # -- re-sync ----------------------------------------------------------------
+    def _snapshot(self, series, t):
+        best = None
+        for tt, v in series:
+            if tt > t + 5:
+                break
+            best = v
+        return best
+
+    def _resync(self, rnd: int) -> None:
+        gs = self.gs
+        t = self.round_t.get(rnd)
+        if t is None:
+            return
+        name = self.round_conflict.get(rnd)
+        c = conflict_by_name(name) if name else None
+        if c is not None and (gs.current_conflict is None
+                              or norm(gs.current_conflict.name.split(" (")[0]) != norm(name)):
+            gs.current_conflict = c
+            self.stats["conflict_set"] += 1
+        res = self.game.get("resources", {})
+        board = self._snapshot(self.game.get("board", []), t)
+        for seat, pid in self.pid_of.items():
+            p = gs.players[pid]
+            v = self._snapshot(res.get(seat, []), t)
+            if v:
+                for k in ("spice", "solari", "water"):
+                    if v.get(k) is not None:
+                        setattr(p, k, v[k])
+                self.stats["resources_synced"] += 1
+            colour = self.colour_of.get(seat)
+            if board and colour:
+                for f in FACTIONS:
+                    lv = board["influence"].get(colour, {}).get(f)
+                    if lv is not None:
+                        p.influence[f] = lv
+                vp = board["vp"].get(colour)
+                if vp is not None:
+                    p.victory_points = vp
+        if board:
+            for f in FACTIONS:
+                gs._check_and_update_alliance(f)
+
+    # -- forcing the record ------------------------------------------------------
+    def _force_in_hand(self, p, card_name: str) -> bool:
+        n = norm(card_name)
+        if any(norm(c.name) == n for c in p.hand):
+            return True
+        for pile in (p.deck, p.discard):
+            c = next((c for c in pile if norm(c.name) == n), None)
+            if c is not None:
+                pile.remove(c)
+                break
+        else:
+            proto = self.factory.get(n)
+            if proto is None:
+                self.stats["unknown_card"] += 1
+                return False
+            import copy
+            c = copy.copy(proto)
+            self.stats["card_created"] += 1
+        if p.hand:                                   # keep the hand size
+            p.deck.append(p.hand.pop())
+        p.hand.append(c)
+        self.stats["card_forced"] += 1
+        return True
+
+    def _match_agent(self, valid, rec):
+        n, space = norm(rec["card"]), rec["space"]
+        if n == FACE_DOWN:
+            # the card was face-down on the table (a card still turning over,
+            # or a leader ability like Ilesa Ecaz's): keep the space, play the
+            # player's best card for it
+            m = [a for a in valid if a.action_type == ActionType.AGENT_TURN
+                 and a.space_name == space]
+            if m:
+                self.stats["face_down_space_only"] += 1
+            return max(m, key=lambda a: self.h.score(self.gs, a.player_id, a)) if m else None
+        m = [a for a in valid if a.action_type == ActionType.AGENT_TURN
+             and norm(a.card_name) == n and a.space_name == space]
+        if not m:
+            return None
+        return max(m, key=lambda a: self.h.score(self.gs, a.player_id, a))
+
+    def _repair_agent(self, pid: int, rec):
+        """The card is in hand but the recorded space isn't legal for it.
+        Short on a cost (resources drifted mid-round): top it up. Wrong
+        icons: the space was misread (or reached via a Spy the engine copy
+        lacks) - keep the card, the player's real choice, on its most likely
+        legal space."""
+        gs, p = self.gs, self.gs.players[pid]
+        card = next((c for c in p.hand if norm(c.name) == norm(rec["card"])), None)
+        if card is None:
+            return None
+        ok, why = gs.can_send_agent(pid, rec["space"], card)
+        if not ok and why.startswith("Cannot afford"):
+            from src.game.board.board import SPACE_MANDATORY_COSTS
+            cost = dict(SPACE_MANDATORY_COSTS.get(rec["space"], {}))
+            if rec["space"] == "Swordmaster":
+                cost["solari"] = gs._swordmaster_cost()
+            for k, v in cost.items():
+                setattr(p, k, max(getattr(p, k), v))
+            self.stats["cost_topped_up"] += 1
+            act = self._match_agent(gs.get_valid_actions(pid), rec)
+            if act is not None:
+                return act
+        same_card = [a for a in gs.get_valid_actions(pid)
+                     if a.action_type == ActionType.AGENT_TURN
+                     and norm(a.card_name) == norm(rec["card"])]
+        if same_card:
+            self.stats["space_corrected"] += 1
+            return max(same_card, key=lambda a: self.h.score(gs, pid, a))
+        return None
+
+    def _buy(self, pid: int, rec) -> bool:
+        gs, p = self.gs, self.gs.players[pid]
+        n = norm(rec["card"])
+        for rtype, stack in (("spice_must_flow", gs.reserve_spice_must_flow),
+                             ("prepare_the_way", gs.reserve_prepare_the_way)):
+            if stack and norm(stack[-1].name) == n:
+                gs.persuasion_pool[pid] = max(gs.persuasion_pool[pid], stack[-1].cost)
+                return self._step(pid, next(a for a in gs.get_valid_actions(pid)
+                                            if a.action_type == ActionType.ACQUIRE_RESERVE
+                                            and a.reserve_type == rtype))
+        card = next((c for c in gs.imperium_row if norm(c.name) == n), None)
+        if card is None:
+            src = next((c for c in gs.imperium_deck if norm(c.name) == n), None)
+            if src is not None:
+                gs.imperium_deck.remove(src)
+            else:
+                proto = self.factory.get(n)
+                if proto is None:
+                    self.stats["unknown_card"] += 1
+                    return False
+                import copy
+                src = copy.copy(proto)
+            if gs.imperium_row:
+                gs.imperium_deck.append(gs.imperium_row.pop())
+            gs.imperium_row.append(src)
+            card = src
+            self.stats["row_forced"] += 1
+        if gs.persuasion_pool[pid] < card.cost:
+            self.stats["persuasion_topped_up"] += 1
+            gs.persuasion_pool[pid] = card.cost
+        act = next((a for a in gs.get_valid_actions(pid)
+                    if a.action_type == ActionType.ACQUIRE_CARD
+                    and norm(a.acquire_card_name) == n), None)
+        return act is not None and self._step(pid, act, record=True)
+
+    # -- stepping ------------------------------------------------------------
+    def _bl_prepare(self, pid: int, seat: str, space: str) -> None:
+        """Before a recorded agent lands where the chat says this player then
+        recruited a commander / bought a tech: make the engine offer it. Its
+        resources are only resynced once a round, and its tech market and
+        skill row are random, so the offer could otherwise be missing."""
+        from src.game.bloodlines.rules import COMMANDER_SPACES, GREEN_SPACES
+        gs, bl = self.gs, self.gs.bl
+        p = gs.players[pid]
+        rnd = gs.round
+        if space in COMMANDER_SPACES and self.recruits.get((seat, rnd)):
+            need = bl.commander_cost(pid)
+            if p.solari < need:
+                self.stats["bl_recruit_solari_topped_up"] += 1
+                p.solari = need
+        if space in GREEN_SPACES and self.techs.get((seat, rnd)):
+            name = self.techs[seat, rnd][0]
+            st = next((st for st in bl.tech_stacks
+                       if any(d.name == name for d in st)), None)
+            if st is not None and not bl.has(pid, name):
+                if st[0].name != name:
+                    d = next(d for d in st if d.name == name)
+                    st.remove(d)
+                    st.insert(0, d)
+                    self.stats["bl_tech_market_forced"] += 1
+                price = bl.tech_price(pid, st[0])
+                if p.spice < price:
+                    self.stats["bl_tech_spice_topped_up"] += 1
+                    p.spice = price
+
+    def _bl_choice(self, pid: int, seat: str) -> bool:
+        """Resolve a pending Bloodlines choice the way the chat log says.
+
+        Recorded recruits / techs are forced (putting the recorded skill into
+        the skill row, or the recorded tech on top of its market stack, when
+        the engine's random setup differs) and kept as policy samples. With
+        nothing recorded the human didn't recruit / buy: decline, but don't
+        keep that as a sample (the chat may just have missed the line)."""
+        gs, bl = self.gs, self.gs.bl
+        c = next((c for c in bl.pending if c.player_id == pid), None)
+        if c is None or c.kind not in ("commander", "tech_buy", "tech_offer"):
+            return False
+        rnd = gs.round
+
+        def act(choice):
+            return GameAction(ActionType.RESOLVE_BL_CHOICE, pid, choice=choice)
+
+        if c.kind == "commander":
+            q = self.recruits.get((seat, rnd), [])
+            rec = next((r for r in q if r["space"] == c.space), q[0] if q else None)
+            if rec is None:
+                self._step(pid, act("decline"))
+                self.stats["bl_recruit_declined"] += 1
+                return True
+            opts = bl.pending_options(pid)
+            board = [o for o in opts if o.startswith("board:")]
+            sk = rec["skill"]
+            if board and sk and f"board:{sk}" not in board \
+                    and sk not in gs.players[pid].skills and sk in bl.skill_deck:
+                # the video's skill row differs from the engine's random one
+                bl.skill_deck.remove(sk)
+                bl.skill_deck.append(bl.skill_row.pop(0))
+                bl.skill_row.append(sk)
+                opts = bl.pending_options(pid)
+                board = [o for o in opts if o.startswith("board:")]
+                self.stats["bl_skill_row_forced"] += 1
+            if board:
+                choice = f"board:{sk}" if sk and f"board:{sk}" in board else None
+                if choice is None:      # skill unreadable: the heuristic picks one
+                    cands = [a for a in gs.get_valid_actions(pid)
+                             if a.action_type == ActionType.RESOLVE_BL_CHOICE
+                             and a.choice in board]
+                    choice = self.h.select_action(gs, pid, cands).choice
+                    self.stats["bl_skill_by_heuristic"] += 1
+            elif "supply" in opts:
+                choice = "supply"
+            else:
+                return False
+            q.remove(rec)
+            self.stats["bl_recruit_forced"] += 1
+            self._step(pid, act(choice), record=True)
+            return True
+
+        q = self.techs.get((seat, rnd), [])
+        if not q:
+            self._step(pid, act("decline"))
+            self.stats["bl_tech_declined"] += 1
+            return True
+        name = q[0]
+        si = next((i for i, st in enumerate(bl.tech_stacks)
+                   if any(d.name == name for d in st)), None)
+        if si is None or bl.has(pid, name):
+            q.pop(0)
+            self._step(pid, act("decline"))
+            self.stats["bl_tech_missing"] += 1
+            return True
+        st = bl.tech_stacks[si]
+        if st[0].name != name:          # the video's market differs
+            d = next(d for d in st if d.name == name)
+            st.remove(d)
+            st.insert(0, d)
+            self.stats["bl_tech_market_forced"] += 1
+        p = gs.players[pid]
+        price = bl.tech_price(pid, st[0], c.discount)
+        if p.spice < price:
+            self.stats["bl_tech_spice_topped_up"] += 1
+            p.spice = price
+        q.pop(0)
+        self.stats["bl_tech_forced"] += 1
+        self._step(pid, act(f"stack:{si}"), record=True)
+        return True
+
+    def _record(self, pid: int, chosen, valid) -> None:
+        gs = self.gs
+        feats = encode_state(gs, pid)
+        cands = [a for a in valid if a.action_type != ActionType.NO_OP]
+        hs = [self.h.score(gs, pid, a) for a in cands]
+        order = sorted(range(len(cands)), key=lambda i: -hs[i])[:POLICY_KMAX]
+        ci = next((i for i, a in enumerate(cands) if repr(a) == repr(chosen)), None)
+        if ci is None:
+            # forced move the engine didn't list as legal: keep it as the
+            # only candidate (no policy signal, keeps shard arrays aligned)
+            PA = encode_action(gs, pid, chosen, 1.0)[None, :]
+            self.samples.append((feats, pid, gs.round, PA, 0))
+            return
+        if ci not in order:
+            order = order[:POLICY_KMAX - 1] + [ci]
+        lo, hi = min(hs[i] for i in order), max(hs[i] for i in order)
+        span = (hi - lo) or 1.0
+        PA = np.stack([encode_action(gs, pid, cands[i], (hs[i] - lo) / span)
+                       for i in order])
+        self.samples.append((feats, pid, gs.round, PA, order.index(ci)))
+
+    def _step(self, pid: int, action, record: bool = False) -> bool:
+        if record:
+            self._record(pid, action, self.gs.get_valid_actions(pid))
+        _, _, _, info = self.gs.step(action)
+        if info.get("error"):
+            self.stats["step_error"] += 1
+            return False
+        return True
+
+    def run(self) -> None:
+        gs = self.gs
+        n_rounds = len(self.game["rounds"])
+        moves = 0
+        bought = set()
+        while not gs.game_over and moves < MOVE_CAP and gs.round <= n_rounds:
+            moves += 1
+            if gs.round != self.synced_round and gs.phase.value == "player_turns":
+                self.synced_round = gs.round
+                self._resync(gs.round)
+            pid = gs.player_in_reveal_buy
+            if pid is None:
+                pid = gs.get_current_player_id()
+            valid = gs.get_valid_actions(pid)
+            seat = self.seat_of[pid]
+            pending = gs._has_mandatory_pending_for(pid)
+
+            # reveal-buy phase: this seat's recorded buys, then end
+            if gs.player_in_reveal_buy == pid and not pending:
+                for i, rec in enumerate(self.buys.get((seat, gs.round), [])):
+                    if (seat, gs.round, i) in bought:
+                        continue
+                    bought.add((seat, gs.round, i))
+                    self.stats["buy_ok" if self._buy(pid, rec) else "buy_failed"] += 1
+                    break
+                else:
+                    end = next((a for a in gs.get_valid_actions(pid)
+                                if a.action_type == ActionType.END_REVEAL), None)
+                    if end is not None:
+                        self._step(pid, end)
+                        continue
+                    # a buy queued a follow-up choice: the heuristic resolves it
+                    self._step(pid, self.h.select_action(gs, pid, gs.get_valid_actions(pid)))
+                continue
+
+            # agent placed, Plot window open: the log doesn't record Intrigues
+            if gs._post_agent_window == pid and not pending:
+                self._step(pid, next(a for a in valid
+                                     if a.action_type == ActionType.END_TURN))
+                continue
+
+            if gs.phase.value == "player_turns" and not pending \
+                    and gs.get_current_player_id() == pid:
+                queue =self.agents.get((seat, gs.round), [])
+                if queue and gs.players[pid].agents_available > 0:
+                    rec = queue[0]
+                    act = self._match_agent(valid, rec)
+                    if act is None and norm(rec["card"]) != FACE_DOWN and                             self._force_in_hand(gs.players[pid], rec["card"]):
+                        valid = gs.get_valid_actions(pid)
+                        act = self._match_agent(valid, rec)
+                    if act is None:
+                        act = self._repair_agent(pid, rec)
+                        valid = gs.get_valid_actions(pid)
+                    queue.pop(0)
+                    if act is not None:
+                        self.stats["agent_ok"] += 1
+                        if self.exact_bl and gs.bl is not None:
+                            self._bl_prepare(pid, seat, act.space_name)
+                        self._step(pid, act, record=True)
+                        continue
+                    self.stats["agent_unmatched"] += 1
+                    self.stats["agent_by_heuristic"] += 1
+                elif not queue:
+                    rev = next((a for a in valid
+                                if a.action_type == ActionType.REVEAL_TURN), None)
+                    if rev is not None:
+                        self.stats["reveal"] += 1
+                        self._step(pid, rev, record=True)
+                        continue
+            # a recorded commander recruit / skill / tech purchase
+            if self.exact_bl and gs.bl is not None and any(
+                    a.action_type == ActionType.RESOLVE_BL_CHOICE for a in valid):
+                if self._bl_choice(pid, seat):
+                    continue
+                valid = gs.get_valid_actions(pid)
+            # anything the video doesn't show: the heuristic decides
+            self.stats["heuristic_moves"] += 1
+            self._step(pid, self.h.select_action(gs, pid, valid))
+
+    # -- output ----------------------------------------------------------------
+    def winner(self):
+        """Engine pid of the winner, from the end-screen VP track when it was
+        read (end_frames.py / end_vp.py), else the chat's final standings,
+        else the last VP readings of the board.
+
+        end_vp: when all four discs were seen, its top disc is the winner (the
+        chat's standings are mapped to colours through OCR'd lobby lines and
+        were wrong in 3 of 12 checked games). A disc hidden under another
+        shares its height, so otherwise the winner is the top visible colour
+        or a hidden one: a pick outside that set is replaced."""
+        w = self._winner_unchecked()
+        ev = self.game.get("end_vp")
+        if not ev or not ev.get("vp"):
+            return w
+        pid_of_colour = {c: self.pid_of[s] for s, c in self.colour_of.items()
+                         if s in self.pid_of}
+        vp = ev["vp"]
+        top = max(vp.values())
+        best = [c for c, v in vp.items() if v == top]
+        if not ev.get("hidden") and len(best) == 1 and best[0] in pid_of_colour:
+            if pid_of_colour[best[0]] != w:
+                self.stats["winner_from_end_vp"] += 1
+            return pid_of_colour[best[0]]
+        possible = {pid_of_colour[c] for c in best + list(ev.get("hidden") or [])
+                    if c in pid_of_colour}
+        if w not in possible and len(best) == 1 and best[0] in pid_of_colour:
+            self.stats["winner_from_end_vp"] += 1
+            return pid_of_colour[best[0]]
+        return w
+
+    def _winner_unchecked(self):
+        res = self.game.get("result") or []
+        first = [r["player"] for r in res if r.get("place") == 1]
+        if len(first) == 1:
+            seat = next((p["seat"] for p in self.game["players"]
+                         if p["name"] == first[0]), None)
+            if seat in self.pid_of:
+                self.stats["winner_from_chat"] += 1
+                return self.pid_of[seat]
+        last = {}
+        for t, b in self.game.get("board", []):
+            for colour, vp in b["vp"].items():
+                if vp is not None:
+                    last[colour] = vp
+        if len(last) < 3:
+            return None
+        top = max(last.values())
+        best = [c for c, v in last.items() if v == top]
+        pids = [self.pid_of[s] for s, c in self.colour_of.items() if c in best]
+        if len(pids) == 1:
+            return pids[0]
+        # tied on the video's VP: break it with the replayed engine's final
+        # standing (VP, then the game's tiebreakers)
+        gs = self.gs
+        if not gs.game_over:
+            gs.check_victory_conditions()
+        key = lambda q: (gs.players[q].victory_points, gs.players[q].spice,
+                         gs.players[q].solari, gs.players[q].water)
+        self.stats["winner_tiebreak_by_engine"] += 1
+        return max(pids, key=key)
+
+
+# ---------------------------------------------------------------------------
+# game version filter: only Uprising + Bloodlines (community edition or not).
+# Immortality games (Tleilaxu deck, graft cards, research track) are skipped.
+# ---------------------------------------------------------------------------
+IMMORTALITY_CARDS = frozenset((
+    "beguilingPheromones", "chairdog", "contaminator", "corrinoGenes", "faceDancer",
+    "faceDancerInitiate", "fromTheTanks", "ghola", "guildImpersonator",
+    "industrialEspionage", "piterGeniusAdvisor", "scientificBreakthrough",
+    "sligFarmer", "stitchedHorror", "subjectX137", "tleilaxuInfiltrator",
+    "twistedMentat", "unnaturalReflexes", "usurp", "beneTleilaxLab",
+    "beneTleilaxResearcher", "tleilaxuMaster", "tleilaxuPuppet", "tleilaxuSurgeon",
+    "experimentation"))
+IMMORTALITY_CHAT = re.compile(r"specimen|graft|tleilax|research track|beetle", re.I)
+IMMORTALITY_MIN = 3          # independent sightings needed to call it
+
+
+def immortality_evidence(game: dict) -> dict:
+    """Signs the game was played with the Immortality expansion: confident
+    video sightings of Tleilaxu-deck / graft cards and chat lines about
+    specimens, grafts, the Tleilaxu or the research track."""
+    base = re.sub(r"_g\d+$", "", game["video_id"])
+    ts_ = [a["t"] for a in game["actions"]] or [0]
+    t0, t1 = min(ts_) - 300, max(ts_) + 120
+    seen = collections.Counter()
+    chat_hits = 0
+    for d in ("raw_streams", "raw_streams2", "raw_streams3", "raw_tournament", "raw"):
+        tl = os.path.join(HERE, d, f"{base}.timeline.json")
+        if os.path.exists(tl):
+            for e in json.load(open(tl, encoding="utf-8")):
+                if t0 <= e["t"] <= t1:
+                    for c in e.get("cards", []):
+                        if c["card"] in IMMORTALITY_CARDS and c["score"] >= 0.85:
+                            seen[c["card"]] += 1
+        ch = os.path.join(HERE, d, f"{base}.chat.txt")
+        if os.path.exists(ch):
+            for line in open(ch, encoding="utf-8"):
+                if "	" not in line:
+                    continue
+                t, txt = line.split("	", 1)
+                m, sec = t.split(":")
+                if t0 <= int(m) * 60 + float(sec) <= t1 and IMMORTALITY_CHAT.search(txt):
+                    chat_hits += 1
+    distinct_cards = len(seen)
+    return {"cards": dict(seen), "chat_lines": chat_hits,
+            "immortality": distinct_cards >= IMMORTALITY_MIN
+            or chat_hits >= IMMORTALITY_MIN}
+
+
+def replay_file(path: str, out_dir: str) -> dict:
+    with open(path, encoding="utf-8") as f:
+        game = json.load(f)
+    colours = [p_["color"] for p_ in game["players"]]
+    if len(set(colours)) != len(colours):
+        # seat colours misread: agent spaces and VP can't be attributed
+        return {"game": game["video_id"], "skipped": "seat colours not distinct"}
+    ev = immortality_evidence(game)
+    if ev["immortality"]:
+        return {"game": game["video_id"],
+                "skipped": f"Immortality expansion in play ({ev})"}
+    if game.get("duplicate_of"):
+        return {"game": game["video_id"], "skipped": f"duplicate of {game['duplicate_of']}"}
+    from clean import clean_game
+    game = clean_game(game, _card_factory())
+    rp = Replay(game)
+    rp.run()
+    win = rp.winner()
+    rep = {"game": game["video_id"], "rounds": len(game["rounds"]),
+           "samples": len(rp.samples), "winner_pid": win, **rp.stats}
+    if win is None or not rp.samples:
+        rep["skipped"] = "winner unknown" if win is None else "no samples"
+        return rep
+    rounds_played = len(game["rounds"])
+    X = np.stack([s[0] for s in rp.samples]).astype(np.float32)
+    y = np.array([GAMMA ** max(0, rounds_played - s[2]) if s[1] == win else 0.0
+                  for s in rp.samples], dtype=np.float32)
+    # trust a game less when much of it had to be forced
+    forced = rp.stats["card_created"] + rp.stats["agent_unmatched"] \
+        + rp.stats["buy_failed"]
+    quality = max(0.3, 1.0 - forced / max(1, len(rp.samples)))
+    w = np.full(len(y), quality, dtype=np.float32)
+    extra = {}
+    pol = [s for s in rp.samples if s[3] is not None]
+    if len(pol) == len(rp.samples):
+        from src.ai.action_features import ACTION_FEATURE_DIM
+        n = len(pol)
+        PA = np.zeros((n, POLICY_KMAX, ACTION_FEATURE_DIM), np.float32)
+        PM = np.zeros((n, POLICY_KMAX), np.float32)
+        for i, s in enumerate(pol):
+            k = min(len(s[3]), POLICY_KMAX)
+            PA[i, :k], PM[i, :k] = s[3][:k], 1.0
+        extra = dict(PA=PA, PM=PM, PCI=np.array([s[4] for s in pol], np.int32))
+    os.makedirs(out_dir, exist_ok=True)
+    np.savez_compressed(os.path.join(out_dir, f"video_{game['video_id']}.npz"),
+                        X=X, y=y, w=w, **extra)
+    rep["quality"] = round(quality, 2)
+    return rep
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("games", nargs="*")
+    ap.add_argument("--out", default=os.path.join(ROOT, "data", "video_games"))
+    args = ap.parse_args()
+    paths = args.games or sorted(
+        p for p in glob.glob(os.path.join(HERE, "games", "*.json"))
+        if json.load(open(p, encoding="utf-8")).get("source") == "vision")
+    reports = []
+    for p in paths:
+        r = replay_file(p, args.out)
+        reports.append(r)
+        print(json.dumps(r), flush=True)
+    # replaying a subset updates its entries and keeps the other games'
+    rep_path = os.path.join(args.out, "replay_report.json")
+    done = {r.get("game") for r in reports}
+    old = json.load(open(rep_path)) if os.path.exists(rep_path) else []
+    with open(rep_path, "w") as f:
+        json.dump([r for r in old if r.get("game") not in done] + reports, f, indent=1)
+
+
+if __name__ == "__main__":
+    main()

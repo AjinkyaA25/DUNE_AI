@@ -54,6 +54,18 @@ class PolicyModel:
         self.dim = state_dim + self.action_dim
         self._adam = {}
 
+    def grow_action(self, action_dim: int) -> None:
+        """Accept `action_dim` action features (new ones appended) with zero
+        weights, so predictions are unchanged."""
+        extra = action_dim - self.action_dim
+        if extra <= 0:
+            return
+        z = np.zeros((extra, self.W1.shape[1]), self.W1.dtype)
+        self.W1 = np.vstack([self.W1, z])
+        self.action_dim = action_dim
+        self.dim = self.state_dim + action_dim
+        self._adam = {}
+
     def _logits_flat(self, XA: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """XA: (M, state_dim + action_dim) -> (logits (M,), hidden (M,H))."""
         h = np.tanh(XA @ self.W1 + self.b1)
@@ -65,6 +77,7 @@ class PolicyModel:
         """state_feats: (state_dim,)  action_feats: (K, action_dim) -> (K,) logits."""
         K = action_feats.shape[0]
         state_feats = state_feats[:self.state_dim]   # older model: fewer feats
+        action_feats = action_feats[:, :self.action_dim]
         xa = np.concatenate(
             [np.repeat(state_feats.reshape(1, -1), K, axis=0),
              action_feats], axis=1).astype(np.float64)
@@ -94,6 +107,8 @@ class PolicyModel:
         """
         if S.shape[1] > self.state_dim:
             self.grow(S.shape[1])
+        if A.shape[2] > self.action_dim:
+            self.grow_action(A.shape[2])
         S = np.ascontiguousarray(S, np.float32)
         A = np.ascontiguousarray(A, np.float32)
         M = np.ascontiguousarray(M, np.float32)

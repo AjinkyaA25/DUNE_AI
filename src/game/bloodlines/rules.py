@@ -15,8 +15,14 @@ Command - on your Reveal turn, if your total persuasion (cards, techs,
 
 Sardaukar Commanders - one starts on each of 6 spaces. When you send an Agent
   to one of those spaces you may pay 2 solari (max one recruit per turn) to
-  take the commander there into your garrison and choose any skill you don't
-  hold; a recruited space stays empty for the rest of the game. A commander
+  take the commander there into your garrison and take one skill tile you
+  don't hold from the skill row; a recruited space stays empty for the rest
+  of the game.
+
+Skill row - 14 skill tiles (2 of each skill) are shuffled; 4 lie face-up in
+  the row. A skill is taken from the row (recruiting a commander from the
+  board, or Plasteel Blades' bonus skill) and its slot is refilled from the
+  10 face-down tiles while any remain. A commander
   deploys like a troop (strength 2). After combat it goes to your commander
   supply; re-recruiting it (2 solari, no new skill) is only possible by
   sending an Agent to one of the 6 commander spaces.
@@ -56,6 +62,8 @@ SKILLS = ("Canny", "Charismatic", "Desperate", "Driven", "Fierce", "Hardy",
 # Blades' bonus skill): strongest general-purpose skills first.
 SKILL_PRIORITY = ("Canny", "Loyal", "Fierce", "Hardy", "Charismatic",
                   "Driven", "Desperate")
+SKILL_COPIES = 2      # tiles per skill (14 in all)
+SKILL_ROW = 4         # face-up skill tiles
 COMMANDER_COST = 2
 COMMAND_THRESHOLD = 6
 LITANY = "card:Litany Against Fear"
@@ -94,6 +102,10 @@ class Bloodlines:
         pool = [pool[i] for i in order]
         self.tech_stacks: List[List] = [pool[i::3] for i in range(3)]
         self.commander_on_space: Dict[str, bool] = {s: True for s in COMMANDER_SPACES}
+        tiles = [k for k in SKILLS for _ in range(SKILL_COPIES)]
+        gs.rng.shuffle(tiles)
+        self.skill_row: List[str] = tiles[:SKILL_ROW]
+        self.skill_deck: List[str] = tiles[SKILL_ROW:]
         self.commanders_in_conflict: Dict[int, int] = {p.id: 0 for p in gs.players}
         self.pending: List[PendingBLChoice] = []
         for p in gs.players:
@@ -103,7 +115,8 @@ class Bloodlines:
             p.commanders_supply = 0
             p.bl_reveal_persuasion = None   # None = not in a reveal window
             p.bl_command_fired = False
-            p.bl_recruited_this_turn = False
+            p.bl_recruited_this_turn = False      # board commander taken this turn
+            p.bl_supply_recruited_this_turn = False
             p.bl_flags = set()              # per-turn tech flags
             p.bl_card_commands = []         # Command effects of revealed cards
             p.bl_after_turn = []            # effects resolved at end of turn
@@ -151,6 +164,9 @@ class Bloodlines:
         elif c.kind == "commander":
             live = set(self.recruit_options(pid, c.space))
             c.options = [o for o in c.options if o in live or o == "decline"]
+        elif c.kind == "plasteel":
+            live = {f"skill:{k}" for k in self.row_skills(pid)}
+            c.options = [o for o in c.options if o in live or o == "decline"]
         elif c.kind == "tech_offer":
             live = {f"stack:{i}" for i in self.buyable_stacks(pid, c.discount)}
             c.options = [o for o in c.options if o in live or o == "decline"]
@@ -189,6 +205,9 @@ class Bloodlines:
                     EffectResolver.resolve_single_effect(dict(c.bonus), p, self.gs)
         elif c.kind == "commander":
             self.recruit(pid, c.space, choice)
+        elif c.kind == "plasteel":
+            self._trash_tile(pid, "Plasteel Blades")
+            self.take_skill(pid, choice.split(":", 1)[1])
         elif c.kind == "desperate":
             p = self._p(pid)
             p.skills.discard("Desperate")
@@ -253,7 +272,7 @@ class Bloodlines:
             if stacks:
                 self.pending.append(PendingBLChoice(
                     pid, "tech_buy", [f"stack:{i}" for i in stacks] + ["decline"]))
-        if space in COMMANDER_SPACES and not p.bl_recruited_this_turn:
+        if space in COMMANDER_SPACES:
             opts = self.recruit_options(pid, space)
             if opts:
                 self.pending.append(PendingBLChoice(
@@ -265,36 +284,57 @@ class Bloodlines:
                    - self._p(pid).bl_commander_discount)
 
     def recruit_options(self, pid: int, space: str) -> List[str]:
+        """On a commander space you may recruit the board commander AND
+        re-recruit one from your supply (2 solari each); never more than one
+        supply re-recruit per turn."""
         p = self._p(pid)
         if p.solari < self.commander_cost(pid):
             return []
         opts = []
-        if self.commander_on_space.get(space):
-            lacking = [s for s in SKILLS if s not in p.skills]
-            opts += [f"board:{s}" for s in lacking] or ["board:"]
-        if p.commanders_supply > 0:
+        if self.commander_on_space.get(space) and not p.bl_recruited_this_turn:
+            opts += [f"board:{s}" for s in self.row_skills(pid)] or ["board:"]
+        if p.commanders_supply > 0 and not getattr(p, "bl_supply_recruited_this_turn", False):
             opts.append("supply")
         return opts
+
+    def row_skills(self, pid: int) -> List[str]:
+        """Skills in the face-up row that this player doesn't hold."""
+        p = self._p(pid)
+        row = getattr(self, "skill_row", None)
+        if row is None:          # positions saved before the skill row existed
+            row = list(SKILLS)
+        return [k for k in dict.fromkeys(row) if k not in p.skills]
+
+    def take_skill(self, pid: int, skill: str) -> None:
+        """Take a skill tile from the row; refill its slot from the deck."""
+        if skill in getattr(self, "skill_row", []):
+            self.skill_row.remove(skill)
+            if self.skill_deck:
+                self.skill_row.append(self.skill_deck.pop(0))
+        self._p(pid).skills.add(skill)
 
     def recruit(self, pid: int, space: str, choice: str) -> None:
         p = self._p(pid)
         p.solari -= self.commander_cost(pid)
         if choice == "supply":
             p.commanders_supply -= 1
+            p.bl_supply_recruited_this_turn = True
         else:
+            p.bl_recruited_this_turn = True
             self.commander_on_space[space] = False
             skill = choice.split(":", 1)[1]
             if skill:
-                p.skills.add(skill)
+                self.take_skill(pid, skill)
         p.commanders_garrison += 1
         p.troops_garrison += 1
-        p.bl_recruited_this_turn = True
-        # Plasteel Blades: trash it -> an additional skill
-        if self.has(pid, "Plasteel Blades"):
-            extra = next((s for s in SKILL_PRIORITY if s not in p.skills), None)
-            if extra:
-                self._trash_tile(pid, "Plasteel Blades")
-                p.skills.add(extra)
+        # the other kind of recruit (board / supply) may still follow
+        more = self.recruit_options(pid, space) if space in COMMANDER_SPACES else []
+        if more:
+            self.pending.append(PendingBLChoice(pid, "commander", more + ["decline"], space=space))
+        # Plasteel Blades: may trash it -> an additional skill from the row
+        if self.has(pid, "Plasteel Blades") and self.row_skills(pid):
+            self.pending.append(PendingBLChoice(
+                pid, "plasteel", [f"skill:{k}" for k in self.row_skills(pid)] + ["decline"]))
 
     def deploy_commanders(self, pid: int, n: int) -> None:
         """Called when n units leave the garrison for the Conflict: commanders
@@ -319,7 +359,9 @@ class Bloodlines:
             EffectResolver.resolve_single_effect(dict(eff), p, self.gs)
         p.bl_completed_contract = False
         p.bl_commander_discount = 0
+        p.bl_envoy = False
         p.bl_recruited_this_turn = False
+        p.bl_supply_recruited_this_turn = False
         p.bl_flags.discard("ignore_blocking")
         p.bl_flags.discard("dropships")
 
@@ -405,6 +447,9 @@ class Bloodlines:
                 else:
                     p.spice = 0
                     self._trash_tile(pid, t.name)
+        if getattr(p, "bl_reveal_bonus", 0):            # Recruitment Mission
+            gs.gain_persuasion(pid, p.bl_reveal_bonus)
+            p.bl_reveal_bonus = 0
         if self.commanders_in_conflict[pid] > 0:
             if "Hardy" in p.skills:
                 p.gain_troops(1)
@@ -580,6 +625,12 @@ class Bloodlines:
         if name == "other_bene":
             from src.game.cards.card import CardTag
             return p.count_cards_with_tag_in_play(CardTag.BENE_GESSERIT) >= 2
+        if name == "agent_on_emperor":
+            from src.game.board.board import SPACE_ICONS
+            return any(gs.agent_on_space.get(s) == p.id
+                       for s, ic in SPACE_ICONS.items() if ic == "emperor")
+        if name == "endgame_solari_10":
+            return gs.game_over and p.solari >= 10
         if name == "not_endgame":
             return not gs.game_over
         if name == "endgame_techs_3":
@@ -675,6 +726,17 @@ class Bloodlines:
             elif k == "bl_free_commander":
                 p.commanders_garrison += 1
                 p.troops_garrison += 1
+            elif k == "bl_recover_bene":             # Other Memory
+                card = next((c for c in reversed(p.discard) if self._is_bene(c)), None)
+                if card is not None:
+                    p.discard.remove(card)
+                    p.hand.append(card)
+            elif k == "bl_reveal_persuasion":        # Recruitment Mission
+                p.bl_reveal_bonus = getattr(p, "bl_reveal_bonus", 0) + int(v)
+            elif k == "bl_topdeck_round":
+                p.bl_topdeck = True
+            elif k == "bl_envoy":                    # Dispatch an Envoy
+                p.bl_envoy = True
             elif k == "bl_shigawire":
                 p.bl_shigawire = True
             elif k == "bl_commander_discount":
@@ -714,6 +776,8 @@ class Bloodlines:
             icons |= set(ALL_AGENT_ICONS)                   # Urgent Shigawire
         if card.name == "Delivery Logistics":
             icons |= self.contract_icons(pid)
+        if getattr(p, "bl_envoy", False):
+            icons |= set(FACTIONS)                          # Dispatch an Envoy
         return icons
 
     def contract_icons(self, pid: int) -> set:
@@ -733,6 +797,8 @@ class Bloodlines:
     def reset_round(self) -> None:
         for p in self.gs.players:
             p.bl_shigawire = False
+            p.bl_reveal_bonus = 0
+            p.bl_topdeck = False
 
     # ------------------------------------------------------------------
     # endgame

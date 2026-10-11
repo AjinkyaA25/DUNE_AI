@@ -161,6 +161,8 @@ class Player:
         if amount > 0:
             self.gained_spice_this_turn = True   # Leverage precondition
             self.spice_gained_this_turn = getattr(self, "spice_gained_this_turn", 0) + amount
+            # whole-turn total for Harvest contracts (reset when a turn starts)
+            self.harvest_spice_this_turn = getattr(self, "harvest_spice_this_turn", 0) + amount
 
     def gain_water(self, amount: int):
         """Gain water"""

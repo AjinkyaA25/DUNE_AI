@@ -1,0 +1,11 @@
+{
+ "early.res_solari": 1.3,
+ "early.res_spice": 1.3,
+ "early.res_water": 1.3,
+ "late.influence": 1.5,
+ "late.combat": 1.5,
+ "late.res_solari": 0.6,
+ "late.res_spice": 0.6,
+ "late.res_water": 0.6,
+ "late.res_draw": 0.7
+}

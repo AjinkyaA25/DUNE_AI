@@ -205,3 +205,135 @@ def create_bloodlines_intrigues() -> List[IntrigueCard]:
         # (user: "discard 2 cards to draw 2 cards").
         IC("Ixian Probe", _PLOT, [{"bl_discard_for": {"reward": {"draw": 2}, "n": 2}}]),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Community pool additions: cards from other expansions that the TTS mod's
+# community-balanced pool uses, seen in the user's tournament videos. Text
+# read from the dunecardshub.com card images (2026-09-29). Kept separate from
+# the Bloodlines lists so feature indices of those stay stable.
+# ---------------------------------------------------------------------------
+# Seen in recorded games but NOT in the community mod's current pool (user,
+# 2026-09-30): kept only so replays of older games can recreate them.
+REPLAY_ONLY = frozenset(("Crysknife", "Dr. Yueh", "Fedaykin Death Commando",
+                         "Missionaria Protectiva", "Other Memory", "Lisan al Gaib",
+                         "CHOAM Delegate"))
+
+
+def create_community_imperium_cards() -> List:
+    """Community-pool cards dealt in engine games."""
+    return [c for c in _with_discard_triggers(_community_imperium_cards())
+            if c.name not in REPLAY_ONLY]
+
+
+def create_replay_only_cards() -> List:
+    """Cards recognised when replaying recorded games, never dealt."""
+    return [c for c in _with_discard_triggers(_community_imperium_cards())
+            if c.name in REPLAY_ONLY]
+
+
+def _community_imperium_cards() -> List:
+    m = _make
+    return [
+        m("Gene Manipulation", 3, I, access=["landsraad", "city"],
+          tags=["bene_gesserit"],
+          agent={"trash": 1, "if_tag_other_bene": {"spice": 2}}, persuasion=2),
+        m("Satellite Ban", 5, I, access=["spacing_guild", "fremen"],
+          tags=["spacing_guild", "fremen"],
+          agent={"discard_then": {"spice": 1, "water": 1}}, persuasion=1,
+          reveal={"retreat": 2},
+          notes="Reveal: retreat up to two of your troops (taken when losing)."),
+        m("Smuggler's Thopter", 4, I, access=["desert"], tags=["spacing_guild"],
+          agent={"if_influence_spacing_guild_2": {"draw": 2}}, persuasion=1,
+          reveal={"spice": 1}),
+        m("Imperial Bashar", 4, I, access=["city"], tags=["emperor"],
+          agent={"bl_choose": {"options": [{"troops": 1}, {"trash": 1}]}},
+          persuasion=1, swords=2, reveal={"swords_per_other_revealed_card": 1},
+          notes="Reveal: +1 sword per other revealed card with swords."),
+        m("Imperial Shock Trooper", 3, I, tags=["emperor"], persuasion=1,
+          swords=2, reveal={"if_bl_agent_on_emperor": {"swords": 3}}),
+        m("Local Fence", 3, I, access=["city"], agent={"bl_choose": {"options": [
+            {}, {"pay_then": {"cost": {"spice": 2}, "solari": 5}},
+            {"pay_then": {"cost": {"solari": 5}, "spice": 4}}]}}, persuasion=2),
+        m("Stillsuit Manufacturer", 5, I, access=["fremen", "city"],
+          tags=["fremen"],
+          agent={"water": 1, "if_alliance_fremen": {"return_self_to_hand": 1}},
+          persuasion=1, reveal={"if_fremen_bond": {"spice": 2}}),
+        m("High Priority Travel", 1, I, access=["landsraad", "desert"],
+          tags=["spacing_guild"],
+          agent={"if_influence_spacing_guild_2": {"bl_choose": {"options": [
+              {"draw": 1}, {"grant_deploy": 0}]}}},
+          persuasion=1, reveal={"solari": 1},
+          notes="Agent: with 2+ Spacing Guild influence, draw a card OR this "
+                "turn's space counts as a combat space (deploy troops, like "
+                "Rapid Dropships) - confirmed by the user."),
+        m("Imperium Ceremony", 6, I, access=["emperor", "spacing_guild", "landsraad"],
+          tags=["emperor", "spacing_guild"], agent={"intrigue": 1}, persuasion=3,
+          notes="Agent: look at the top two Intrigues, keep one, put the other "
+                "back (engine: draw one)."),
+        m("Sietch Reverend Mother", 4, I, access=["bene_gesserit", "fremen"],
+          tags=["bene_gesserit", "fremen"], agent={"trash": 1},
+          reveal={"if_fremen_bond": {"persuasion": 3, "spice": 1}}),
+        m("Truthsayer", 3, I, access=["emperor", "bene_gesserit", "landsraad"],
+          tags=["emperor", "bene_gesserit"],
+          agent={"discard_then": {"draw": 1}}, persuasion=1, swords=1),
+        # --- seen in the stream chat logs (dunecardshub.com, 2026-09-30) ---
+        m("Crysknife", 3, I, access=["fremen", "desert"], tags=["fremen"],
+          agent={"solari": 1}, swords=1,
+          reveal={"if_fremen_bond": {"influence_fremen": 1}}),
+        m("Dr. Yueh", 1, I, access=["city"], agent={"draw": 1}, persuasion=1),
+        m("Fedaykin Death Commando", 3, I, access=["city", "desert"],
+          tags=["fremen"], agent={"trash": 1}, persuasion=1,
+          reveal={"if_fremen_bond": {"swords": 3}}),
+        m("Missionaria Protectiva", 1, I, access=["city"], tags=["bene_gesserit"],
+          agent={"if_tag_other_bene": {"influence_any": 1}}, persuasion=1),
+        m("Other Memory", 4, I, access=["city", "desert"], tags=["bene_gesserit"],
+          agent={"bl_choose": {"options": [{"draw": 1}, {"bl_recover_bene": 1}]}},
+          persuasion=2,
+          notes="Agent: draw a card OR take a Bene Gesserit card from your "
+                "discard pile into your hand."),
+        m("Piter de Vries", 5, I, access=["landsraad", "city"],
+          agent={"intrigue": 1}, persuasion=3, swords=1),
+        m("Keys to Power", 5, I, access=["spacing_guild", "bene_gesserit", "landsraad"],
+          tags=["spacing_guild", "bene_gesserit"],
+          agent={"if_influence_emperor_2": {"spice": 2}}, persuasion=2),
+        m("Spice Trader", 4, I, access=["city", "desert"], tags=["fremen"],
+          agent={"if_influence_fremen_2": {"discard_then": {"spice": 2}}},
+          persuasion=2, swords=1),
+        m("Lisan al Gaib", 4, I, access=["fremen", "city", "desert"],
+          tags=["bene_gesserit", "fremen"], acquire={"spice": 1},
+          agent={"if_tag_other_bene": {"influence_fremen": 1}}, persuasion=1,
+          reveal={"if_fremen_bond": {"swords": 2}}),
+        m("CHOAM Delegate", 1, I, access=["desert"], trash={"solari": 3},
+          notes="When discarded or trashed: 3 solari (icon reading - to "
+                "confirm)."),
+    ]
+
+
+def _with_discard_triggers(cards: List) -> List:
+    for c in cards:
+        if c.name == "CHOAM Delegate":
+            c.bl_on_discard = {"solari": 3}
+    return cards
+
+
+def create_foldspace() -> "object":
+    """Foldspace (reserve card, all icons): draw a card, trash this card.
+    Only for replays - how it is gained in the user's pool is unconfirmed."""
+    return _make("Foldspace", 0, CardType.RESERVE, access=ALL_ICONS,
+                 agent={"draw": 1, "trash_self": 1})
+
+
+def create_community_intrigues() -> List[IntrigueCard]:
+    IC = IntrigueCard
+    return [
+        IC("War Chest", _CE, [
+            {"choose_by_combat": {"combat": {"pay_then": {"cost": {"solari": 2},
+                                                          "swords": 4}}, "else": {}}},
+            {"if_bl_endgame_solari_10": {"vp": 1}}]),
+        IC("Weirding Combat", _COMBAT,
+           [{"swords": 3, "if_influence_bene_gesserit_3": {"swords": 2}}]),
+        IC("Recruitment Mission", _PLOT,
+           [{"bl_reveal_persuasion": 1, "bl_topdeck_round": 1}]),
+        IC("Dispatch an Envoy", _PLOT, [{"bl_envoy": 1}]),
+    ]
