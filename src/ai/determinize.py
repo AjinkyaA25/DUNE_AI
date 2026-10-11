@@ -23,6 +23,13 @@ into one consistent possible world:
   - The Imperium Row replenishment deck and the future Conflict deck have
     fully known contents (everything else is accounted for in public piles)
     but hidden order, so they are simply shuffled in place.
+  - pid's OWN deck: contents known, draw order hidden, so it is shuffled too
+    (2026-10-10: it was left in true order, so every playout knew exactly
+    which cards pid would draw next round).
+  - The Conflict deck is built in level order (I, then II, then III; see
+    create_conflict_deck), so it is shuffled within each level, never across.
+  - Bloodlines: the tech tiles under each stack's top (face-down) are pooled
+    and dealt back keeping every stack's size; the skill deck is shuffled.
   - The RNG is reseeded so repeated determinizations (and the simulation that
     follows) don't replay a correlated sequence from the original clone.
 """
@@ -40,6 +47,8 @@ def determinize(gs, pid: int, rng: np.random.Generator):
     # --- opponents' hand/deck: known composition, hidden split + order ---
     for p in gs2.players:
         if p.id == pid:
+            if p.deck:
+                gs2.rng.shuffle(p.deck)      # own draw order is hidden too
             continue
         pool = p.hand + p.deck
         if pool:
@@ -68,6 +77,24 @@ def determinize(gs, pid: int, rng: np.random.Generator):
 
     # --- known contents, hidden order ---
     gs2.rng.shuffle(gs2.imperium_deck)
-    gs2.rng.shuffle(gs2.conflict_deck)
+    deck = gs2.conflict_deck                 # level order: shuffle within levels
+    for lvl in sorted({c.conflict_level for c in deck}):
+        idx = [i for i, c in enumerate(deck) if c.conflict_level == lvl]
+        cards = [deck[i] for i in idx]
+        gs2.rng.shuffle(cards)
+        for i, c in zip(idx, cards):
+            deck[i] = c
+
+    bl = getattr(gs2, "bl", None)
+    if bl is not None:
+        under = [t for st in bl.tech_stacks for t in st[1:]]
+        gs2.rng.shuffle(under)
+        k = 0
+        for st in bl.tech_stacks:
+            n = len(st) - 1
+            if n > 0:
+                st[1:] = under[k:k + n]
+                k += n
+        gs2.rng.shuffle(bl.skill_deck)
 
     return gs2

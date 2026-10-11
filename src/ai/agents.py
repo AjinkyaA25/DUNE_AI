@@ -2066,8 +2066,9 @@ def make_agent(spec: str, seed: Optional[int] = None,
                               faction_focus=faction_focus, bloodlines=bloodlines,
                               tuning=tuning)
     if kind == "styleselect":
+        # styleselect[:<model.npz>] (default config/style_select.npz)
         from src.ai.style_select import StyleSelectAgent
-        return StyleSelectAgent(seed=seed)
+        return StyleSelectAgent(seed=seed, model=parts[1] if len(parts) > 1 else None)
     if kind == "stylesearch":
         # stylesearch[:M<playouts per style>][:MG<margin>][:search]: picks a
         # playstyle (config/styles/) each round by playing the game out
