@@ -121,6 +121,19 @@ TUNE_DEFAULTS = {
     "fix_swordmaster": 0.0, "fix_high_council": 0.0,
     "fix_commanders": 0.0, "fix_techs": 0.0,
     "buy_mult": 1.0, "tsmf": 0.0,
+    # VP gap vs humans (2026-10-11: humans take 1.8 TSMF / 1.0 alliances per
+    # game, the AI 0.6 / 0.7). tsmf_early: 1 = no round<4 discount on TSMF;
+    # alliance: multiplier on the alliance-crossing bonus; alliance_step:
+    # extra value for the 3rd influence point (one step from an alliance).
+    "tsmf_early": 0.0, "alliance": 1.0, "alliance_step": 0.0,
+    # worm_model 1 (2026-10-11): a sandworm DOUBLES the winner's reward, so
+    # the conflict is valued doubled once the player has a worm in it, a worm
+    # is valued by the expected-reward change it makes (3 strength + the
+    # double), never on a protected conflict behind an intact Shield Wall, and
+    # breaking the wall is valued by the worm it opens for you minus the ones
+    # it opens for rivals with Maker Hooks. 0 = old scoring; 2 = only the
+    # summon / wall values; 3 = only the doubled conflict value.
+    "worm_model": 0.0,
 }
 # Situational tuning: a key "<phase>.<knob>" overrides <knob> in that phase
 # only. Phases follow how the game is played: early = rounds 1-3 (build
@@ -275,7 +288,7 @@ def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> floa
             v += 7.0 * urgency
             v += _FRIENDSHIP_GATE_BONUS.get(fac, 0.0)
         if cur < 4 <= new:
-            alliance_mult = 1.0 + 1.5 * access
+            alliance_mult = (1.0 + 1.5 * access) * _TUNE.get("alliance", 1.0)
             holder = gs.alliance_holder.get(fac)
             v += (10.0 if (holder is not None and holder != pid) else 7.5) * urgency * alliance_mult
         elif cur >= 4 and gs.alliance_holder.get(fac) == pid \
@@ -296,7 +309,7 @@ def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> floa
     if cur < 2 <= new:                                # friendship crossed = clean 1 VP
         v += 5.5 * urgency + _FRIENDSHIP_GATE_BONUS.get(fac, 0.0)
     if cur < 4 <= new:                                # alliance crossed
-        alliance_mult = 1.0 + 1.5 * access
+        alliance_mult = (1.0 + 1.5 * access) * _TUNE.get("alliance", 1.0)
         holder = gs.alliance_holder.get(fac)
         v += (10.0 if (holder is not None and holder != pid) else 7.5) * urgency * alliance_mult
     # per-point "down payment" on points that DON'T cross a threshold this gain
@@ -311,6 +324,8 @@ def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> floa
             # stranded overshoot
             committed = reach * (0.7 if gs.alliance_holder.get(fac) in (None, pid) else 1.1)
             v += 3.0 * min(1.0, committed)
+            if pos == 3:
+                v += _TUNE.get("alliance_step", 0.0) * reach
         else:
             v += 0.4                                  # 5,6: essentially dead
     if cur >= 4 and gs.alliance_holder.get(fac) == pid \
@@ -337,9 +352,9 @@ def _effect_value(gs: GameState, pid: int, eff: dict) -> float:
         elif k == "contract" and amt > 0 and _TUNE.get("contracts", 0):
             v += _take_contract_value(gs, pid) * amt
         elif k in _WALL_BREAK_KEYS:
-            v += _wall_break_value(gs, pid) * amt
+            v += _wall_break_value(gs, pid, with_worm=any(x in eff for x in _SANDWORM_KEYS)) * amt
         elif k in _SANDWORM_KEYS:
-            v += _sandworm_value(gs, pid) * amt
+            v += _sandworm_value(gs, pid, wall_open=any(x in eff for x in _WALL_BREAK_KEYS)) * amt
         else:
             val = _RES_VALUE.get(k, 0.3)
             sat = _TUNE.get("sat_" + k, 0.0)
@@ -481,9 +496,9 @@ def _card_effect_value(gs: GameState, pid: int, eff: dict, w: float = 1.0) -> fl
             elif k == "contract" and sub > 0 and _TUNE.get("contracts", 0):
                 v += w * _take_contract_value(gs, pid) * sub
             elif k in _WALL_BREAK_KEYS:
-                v += w * _wall_break_value(gs, pid) * sub
+                v += w * _wall_break_value(gs, pid, with_worm=any(x in eff for x in _SANDWORM_KEYS)) * sub
             elif k in _SANDWORM_KEYS:
-                v += w * _sandworm_value(gs, pid) * sub
+                v += w * _sandworm_value(gs, pid, wall_open=any(x in eff for x in _WALL_BREAK_KEYS)) * sub
             else:
                 from src.ai.bloodlines_heuristic import BL_RES_VALUE
                 v += w * _RES_VALUE.get(k, BL_RES_VALUE.get(k, 0.3)) * sub
@@ -615,7 +630,7 @@ def _acquire_card_value(gs: GameState, pid: int, card, lean: bool = False) -> fl
     # TSMF is a late-game VP dump, not a card that compounds into future turns
     # like a Row card does — rarely worth it before round 4; from then on it
     # competes normally (i.e. only wins out when the Row has nothing better).
-    if card.name == "The Spice Must Flow" and gs.round < 4:
+    if card.name == "The Spice Must Flow" and gs.round < 4 and not _TUNE.get("tsmf_early", 0):
         s *= 0.15
 
     # Prepare the Way is a cheap tempo/ramp card, not a payload: the 2nd copy is
@@ -734,14 +749,16 @@ def _opp_fight(gs: GameState, q: int):
     return vis + pot, 1.5 + 0.9 * (pot ** 0.5), can
 
 
-def fight_ev(gs: GameState, pid: int, my_strength: float, my_units: int) -> float:
+def fight_ev(gs: GameState, pid: int, my_strength: float, my_units: int,
+             worm: Optional[bool] = None) -> float:
     """Expected value of this Conflict's rewards for pid at this strength."""
     cc = gs.current_conflict
     if cc is None or my_units <= 0:
         return 0.0
-    rewards = [_conflict_worth(gs, pid),
-               _reward_worth(gs, pid, cc.second_place_reward),
-               _reward_worth(gs, pid, cc.third_place_reward) if gs.num_players >= 4 else 0.0]
+    k2 = 2.0 if _worm_doubled(gs, pid, worm) else 1.0
+    rewards = [_conflict_worth(gs, pid, worm),
+               k2 * _reward_worth(gs, pid, cc.second_place_reward),
+               k2 * _reward_worth(gs, pid, cc.third_place_reward) if gs.num_players >= 4 else 0.0]
     dist = [1.0]                         # P(k opponents ahead of me)
     for q in range(gs.num_players):
         if q == pid:
@@ -958,7 +975,40 @@ def _intrigue_value(gs: GameState, pid: int, ic) -> float:
     return v
 
 
-def _conflict_worth(gs: GameState, pid: int) -> float:
+def _worm_doubled(gs: GameState, pid: int, worm: Optional[bool]) -> bool:
+    """Is pid's reward doubled (a sandworm of theirs in the Conflict)? Only
+    under worm_model; `worm` forces the answer (valuing a summon)."""
+    m = _TUNE.get("worm_model", 0)
+    if not m:
+        return False
+    if worm is not None:
+        return worm
+    if m == 2:                       # 2: summon / wall values only
+        return False
+    return gs.sandworms_in_conflict.get(pid, 0) > 0
+
+
+def _worms_blocked(gs: GameState) -> bool:
+    from src.game.board.board import SHIELD_WALL_PROTECTED
+    cc = gs.current_conflict
+    return cc is None or (gs.shield_wall_intact and cc.location in SHIELD_WALL_PROTECTED)
+
+
+def _worm_gain(gs: GameState, pid: int, n: float = 1.0, wall_open: bool = False) -> float:
+    """worm_model: expected-reward change from n sandworms of pid's joining
+    this Conflict (3 strength each, and the doubled reward)."""
+    if gs.current_conflict is None:
+        return 0.0
+    if _worms_blocked(gs) and not wall_open:
+        return 0.0
+    mine, u = _my_strength(gs, pid)
+    had = gs.sandworms_in_conflict.get(pid, 0) > 0
+    ev0 = fight_ev(gs, pid, mine, u, worm=had) if u > 0 else 0.0
+    ev1 = fight_ev(gs, pid, mine + 3 * n, u + n, worm=True)
+    return max(0.0, ev1 - ev0)
+
+
+def _conflict_worth(gs: GameState, pid: int, worm: Optional[bool] = None) -> float:
     """
     How valuable is winning the current Conflict for this player. Scaled by
     `_game_urgency` — the same reward is worth much more to chase once the
@@ -978,12 +1028,13 @@ def _conflict_worth(gs: GameState, pid: int) -> float:
     if cc is None:
         return 0.0
     r = cc.first_place_reward
+    doubled = _worm_doubled(gs, pid, worm)
     v = {1: 0.5, 2: 1.8, 3: 2.8}.get(cc.conflict_level, 1.0)
-    v += 3.0 * r.get("vp", 0)
     if r.get("control"):
         v += 1.6
-    v += sum(_RES_VALUE.get(k, 0.3) * n for k, n in r.items()
-             if isinstance(n, (int, float)))
+    flat = 3.0 * r.get("vp", 0) + sum(_RES_VALUE.get(k, 0.3) * n for k, n in r.items()
+                                      if isinstance(n, (int, float)))
+    v += flat * (2.0 if doubled else 1.0)
     # resource -> VP conversions the winner may take (Battle for Imperial Basin
     # = pay 4 spice, Battle for Spice Refinery = pay 6 solari, Battle for
     # Arrakeen = recall 2 Spies).  Worth a near-full VP when the player can
@@ -999,10 +1050,14 @@ def _conflict_worth(gs: GameState, pid: int) -> float:
             res = "spice" if "spice" in k else "solari"
             cost, cvp = val.get("cost", 3), val.get("vp", 1)
             v += (2.8 if getattr(p_conv, res, 0) >= cost else 1.0) * cvp
+            if doubled:                           # the worm's 2nd application
+                v += (2.8 if getattr(p_conv, res, 0) >= 2 * cost else 0.6) * cvp
         elif k == "may_pay_troops_for_vp":
             cost, cvp = val.get("cost", 1), val.get("vp", 1)
             have = gs.troops_in_conflict.get(pid, 0)
             v += (2.4 if have >= cost else 1.0) * cvp
+            if doubled:
+                v += (2.4 if have >= 2 * cost else 0.6) * cvp
         elif k == "may_recall_spies_for_vp":
             cnt, cvp = int(val.get("count", 2)), val.get("vp", 1)
             have = sum(p_conv.spies_on_board.values())
@@ -1030,7 +1085,7 @@ def _conflict_worth(gs: GameState, pid: int) -> float:
     return v * _game_urgency(gs, pid)
 
 
-def _wall_break_value(gs: GameState, pid: int) -> float:
+def _wall_break_value(gs: GameState, pid: int, with_worm: bool = False) -> float:
     """
     Breaking the Shield Wall is only good for YOU if it unlocks a sandworm on
     a Conflict worth winning that you can actually reach with Maker Hooks —
@@ -1047,6 +1102,17 @@ def _wall_break_value(gs: GameState, pid: int) -> float:
     cc = gs.current_conflict
     if not gs.shield_wall_intact:
         return 0.0
+    if _TUNE.get("worm_model", 0) in (1, 2) and cc is not None:
+        if cc.location not in SHIELD_WALL_PROTECTED:
+            # nothing to open this round; later protected conflicts open for
+            # everyone alike
+            return 0.3 if p.has_maker_hooks else -0.5 - 0.4 * sum(
+                1 for q in gs.players if q.id != pid and q.has_maker_hooks)
+        mine = _worm_gain(gs, pid, wall_open=True) if (
+            p.has_maker_hooks and p.agents_available > 0) or with_worm else 0.0
+        theirs = sum(_worm_gain(gs, q.id, wall_open=True) for q in gs.players
+                     if q.id != pid and q.has_maker_hooks and q.agents_available > 0)
+        return 0.8 * mine - 0.4 * theirs
     if (p.has_maker_hooks and cc is not None
             and cc.location in SHIELD_WALL_PROTECTED
             and _conflict_worth(gs, pid) > 1.5):
@@ -1055,7 +1121,7 @@ def _wall_break_value(gs: GameState, pid: int) -> float:
     return -0.5 - 0.4 * rival_hooks
 
 
-def _sandworm_value(gs: GameState, pid: int) -> float:
+def _sandworm_value(gs: GameState, pid: int, wall_open: bool = False) -> float:
     """
     A sandworm in the Conflict doubles the winner's reward (except control /
     battle-icon), so summoning one is only worth what winning THIS Conflict
@@ -1066,6 +1132,8 @@ def _sandworm_value(gs: GameState, pid: int) -> float:
     beating them denies their double, is one of the best plays available
     (`_conflict_worth` already prices both of those situations in).
     """
+    if _TUNE.get("worm_model", 0) in (1, 2):
+        return _worm_gain(gs, pid, wall_open=wall_open)
     worth = _conflict_worth(gs, pid)
     if worth <= 0.5:
         return 0.6                                # bank hooks/board-state for later
