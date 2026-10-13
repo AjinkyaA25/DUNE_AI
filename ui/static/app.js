@@ -5,10 +5,6 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 const FACTIONS = [["emperor", "EMP"], ["spacing_guild", "GLD"], ["bene_gesserit", "BG"], ["fremen", "FRE"]];
-const AREAS = [
-  ["emperor", "Emperor"], ["spacing_guild", "Spacing Guild"], ["bene_gesserit", "Bene Gesserit"],
-  ["fremen", "Fremen"], ["landsraad", "Landsraad"], ["city", "Cities"], ["desert", "Desert"],
-];
 
 let S = null;            // last state
 let lastKey = "";
@@ -62,10 +58,10 @@ function render() {
       (S.thinking != null ? `${esc(pname(player(S.thinking)))} is thinking…`
         : S.active === S.seat ? "<b>Your move</b>" : `${esc(pname(act))} to move`) +
       ` · seed ${S.seed}`;
+  renderBoard();
   renderConflict();
   renderContracts();
   renderBloodlines();
-  renderBoard();
   renderPlayers();
   renderPurchases();
   renderHand(me);
@@ -139,26 +135,68 @@ function legalSpaces() {
   return new Set(S.actions.filter((a) => a.type === "agent_turn" && a.card === selectedCard).map((a) => a.space));
 }
 
+// Board picture (ui/static/board.png, built by ui/make_board_image.py): pixel
+// boxes of each space and observation post, drawn over with the live state.
+const BOARD_W = 1268, BOARD_H = 795;
+const SPACE_BOX = {
+  "Sardaukar": [2, 2, 218, 92], "Dutiful Service": [2, 98, 218, 186],
+  "Heighliner": [2, 203, 218, 292], "Deliver Supplies": [2, 298, 218, 386],
+  "Espionage": [2, 403, 218, 490], "Secrets": [2, 497, 218, 584],
+  "Desert Tactics": [2, 603, 218, 690], "Fremkit": [2, 697, 218, 785],
+  "High Council": [258, 20, 580, 116], "Imperial Privilege": [258, 132, 486, 230],
+  "Swordmaster": [512, 132, 742, 230], "Assembly Hall": [754, 20, 982, 116],
+  "Gather Support": [754, 132, 982, 230], "Shipping": [998, 20, 1228, 116],
+  "Accept Contract": [998, 134, 1228, 230], "Spice Refinery": [388, 270, 614, 366],
+  "Arrakeen": [643, 270, 871, 366], "Imperial Basin": [900, 270, 1130, 366],
+  "Research Station": [328, 414, 558, 510], "Sietch Tabr": [328, 557, 558, 653],
+  "Deep Desert": [606, 414, 836, 510], "Hagga Basin": [884, 414, 1112, 510],
+};
+const POST_XY = {
+  "Emperor Post": [235, 100], "Spacing Guild Post": [235, 299], "Bene Gesserit Post": [235, 498],
+  "Fremen Post": [235, 700], "Landsraad Post": [618, 92], "Green Post": [705, 107],
+  "Shipping Post": [1245, 136], "Arrakeen Post": [655, 395], "Research Station Right Post": [575, 395],
+  "Research Station Left Post": [575, 546], "Deep Desert Post": [703, 529],
+  "Hagga Basin Post": [975, 529], "Imperial Basin Post": [1126, 410],
+};
+const BANNER_XY = { "Spice Refinery": [454, 291], "Arrakeen": [709, 291], "Imperial Basin": [969, 291] };
+const COUNCIL_SEATS = [[340, 48], [384, 48], [430, 48], [476, 48]];
+const SWORDMASTER_COIN = [538, 183];
+const SHIELD_WALL = [880, 385];
+const pctX = (x) => `${(100 * x) / BOARD_W}%`;
+const pctY = (y) => `${(100 * y) / BOARD_H}%`;
+const at = (x, y) => `left:${pctX(x)};top:${pctY(y)}`;
+
 function renderBoard() {
   const legal = legalSpaces();
-  const html = AREAS.map(([type, title]) => {
-    const spaces = S.spaces.filter((s) => s.type === type);
-    if (!spaces.length) return "";
-    return `<div class="area" style="border-top-color:var(--${type})"><h4>${title}</h4>` + spaces.map((s) => {
-      const occ = s.occupant != null ? player(s.occupant) : null;
-      const cost = Object.keys(s.cost || {}).length ? `pay ${fmtObj(s.cost)} → ` : "";
-      const gate = s.gate ? ` (needs ${s.gate[1]} ${s.gate[0].replace("_", " ")})` : "";
-      const eff = [fmtEffects(s.effects), s.special].filter(Boolean).join(" · ");
-      const ctl = s.controlledBy != null ? `<span class="ctl" style="background:${player(s.controlledBy).color}">ctrl</span>` : "";
-      const maker = s.makerSpice ? ` · +${s.makerSpice} bonus spice` : "";
-      const cmdr = S.bl && S.bl.commanders.some((c) => c.space === s.name && c.present) ? `<span class="cmdr" title="Sardaukar commander here">CMDR</span>` : "";
-      return `<div class="space ${legal.has(s.name) ? "legal" : ""}" data-space="${esc(s.name)}">
-        <span class="dot" style="${occ ? `background:${occ.color};border:0` : ""}" title="${occ ? esc(pname(occ)) : "empty"}"></span>
-        ${ctl}${cmdr}<div class="nm">${esc(s.name)}${s.combat ? " ⚔" : ""}</div>
-        <div class="ef">${esc(cost + eff + gate + maker)}</div></div>`;
-    }).join("") + `</div>`;
+  const cmdrs = new Set(S.bl ? S.bl.commanders.filter((c) => c.present).map((c) => c.space) : []);
+  const spaces = S.spaces.filter((s) => SPACE_BOX[s.name]).map((s) => {
+    const [x0, y0, x1, y1] = SPACE_BOX[s.name];
+    const occ = s.occupant != null ? player(s.occupant) : null;
+    const cls = ["bspace", legal.has(s.name) ? "legal" : "", selectedCard && !legal.has(s.name) ? "dim" : ""].join(" ");
+    return `<div class="${cls}" data-space="${esc(s.name)}" title="${esc(s.name)}${occ ? ` · ${esc(pname(occ))}` : ""}"
+      style="${at(x0, y0)};width:${pctX(x1 - x0)};height:${pctY(y1 - y0)}">
+      ${occ ? `<span class="agent" style="background:${occ.color}"></span>` : ""}
+      ${cmdrs.has(s.name) ? `<span class="cmdr-dot" title="Sardaukar commander available"></span>` : ""}
+      ${s.makerSpice ? `<span class="maker" title="bonus spice">+${s.makerSpice}</span>` : ""}
+    </div>`;
   }).join("");
-  $("board").innerHTML = `<div class="panel-title">Board</div><div class="board-grid">${html}</div>`;
+  // one circle per occupied post, split into equal slices when several Spies share it
+  const spies = Object.entries(S.spyPosts || {}).filter(([post, ids]) => POST_XY[post] && ids.length).map(([post, ids]) => {
+    const step = 360 / ids.length;
+    const fill = ids.length === 1 ? player(ids[0]).color
+      : `conic-gradient(${ids.map((id, k) => `${player(id).color} ${k * step}deg ${(k + 1) * step}deg`).join(", ")})`;
+    return `<span class="spy" style="${at(...POST_XY[post])};background:${fill}"
+      title="${esc(post)}: ${ids.map((id) => esc(pname(player(id)))).join(", ")}"></span>`;
+  }).join("");
+  const banners = S.spaces.filter((s) => BANNER_XY[s.name] && s.controlledBy != null).map((s) =>
+    `<span class="ctrl" style="${at(...BANNER_XY[s.name])};background:${player(s.controlledBy).color}" title="controlled by ${esc(pname(player(s.controlledBy)))}"></span>`).join("");
+  const seats = S.players.filter((p) => p.councilor).map((p, k) =>
+    `<span class="seat" style="${at(...COUNCIL_SEATS[k])};background:${p.color}" title="${esc(pname(p))}: High Council seat"></span>`).join("");
+  const sm = S.players.some((p) => p.swordmaster) ? "" : `<span class="coin" style="${at(...SWORDMASTER_COIN)}">8</span>`;
+  const wall = S.shieldWall ? "" : `<span class="wall-down" style="${at(...SHIELD_WALL)}" title="Shield Wall destroyed">✕</span>`;
+  $("board").innerHTML = `<div class="bwrap"><img class="bimg" src="/static/board.png" alt="board" draggable="false">
+    ${spaces}${banners}${seats}${spies}${sm}${wall}
+    <div class="conflict" id="conflict" style="${at(706, 562)};width:${pctX(552)};height:${pctY(226)}"></div></div>`;
 }
 
 function renderPlayers() {
@@ -172,7 +210,7 @@ function renderPlayers() {
     return `<div class="pl ${S.active === p.id && !S.gameOver ? "active" : ""}" style="border-left-color:${p.color}">
       <div class="hd"><span class="who">${esc(pname(p))}</span><span class="vp">${p.vp} VP</span></div>
       <div class="res"><span>💰 <b>${p.solari}</b></span><span>🟠 <b>${p.spice}</b></span><span>💧 <b>${p.water}</b></span>
-        <span>🧍 <b>${p.agentsAvail}</b>/${p.agentsTotal}</span><span>🛡 <b>${p.garrison}</b></span><span>🕵 <b>${p.spies}</b></span></div>
+        <span>🧍 <b>${p.agentsAvail}</b>/${p.agentsTotal}</span><span>🛡 <b>${p.garrison}</b></span><span title="Spies: in supply / on the board">🕵 <b>${p.spies}</b> / ${Object.values(S.spyPosts || {}).flat().filter((id) => id === p.id).length} on board</span></div>
       <div class="infl">${infl}</div>
       <div class="sub">Hand ${p.handSize} · deck ${p.deck} · intrigue ${p.intrigueCount}${p.swordmaster ? " · Swordmaster" : ""}${p.councilor ? " · High Council" : ""}${p.revealed ? " · revealed" : ""}</div>
       ${p.techs && p.techs.length ? `<div class="techs-mini">${p.techs.map((t) => t.img ? `<img src="${t.img}" data-img="${t.img}" title="${esc(t.name)}: ${esc(t.text)}">` : `<span class="chip">${esc(t.name)}</span>`).join("")}</div>` : ""}

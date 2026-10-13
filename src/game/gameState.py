@@ -402,6 +402,10 @@ class GameState:
         # After an Agent is placed, a player holding a playable Plot Intrigue
         # may still play it before ending the turn (END_TURN).
         self._post_agent_window: Optional[int] = None
+        # Seats (humans in the UI) that always get the post-Agent window and
+        # must END_TURN themselves, so an Intrigue drawn by the Agent's space
+        # (Assembly Hall, Secrets, ...) can still be played this turn.
+        self.manual_end_turn: Set[int] = set()
 
         # ===== PERSUASION POOL (per-turn) =====
         # Accumulated from revealed cards; spent to acquire Imperium row cards.
@@ -778,7 +782,8 @@ class GameState:
         if self.use_choam:
             self.check_turn_harvest_contracts(pid)
         self._agent_turn_open = None
-        if self.phase == Phase.PLAYER_TURNS and self._has_playable_plot(pid):
+        if self.phase == Phase.PLAYER_TURNS and (
+                pid in self.manual_end_turn or self._has_playable_plot(pid)):
             self._post_agent_window = pid
             return
         if self.phase == Phase.PLAYER_TURNS and self.player_in_reveal_buy is None:
@@ -804,7 +809,8 @@ class GameState:
             return
         if self.use_choam:
             self.check_turn_harvest_contracts(pid)
-        if not force and self.phase == Phase.PLAYER_TURNS and self._has_playable_plot(pid):
+        if not force and self.phase == Phase.PLAYER_TURNS and (
+                pid in self.manual_end_turn or self._has_playable_plot(pid)):
             return
         self._post_agent_window = None
         if self.phase == Phase.PLAYER_TURNS and self.player_in_reveal_buy is None:

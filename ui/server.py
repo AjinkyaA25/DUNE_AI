@@ -44,7 +44,7 @@ from src.ai.action_features import encode_action  # noqa: E402
 from src.ai.agents import make_agent  # noqa: E402
 from src.ai.features import encode_state  # noqa: E402
 from src.data.card_definitions import setup_game  # noqa: E402
-from src.game.board.board import UPRISING_BOARD  # noqa: E402
+from src.game.board.board import ALL_OBSERVATION_POSTS, UPRISING_BOARD  # noqa: E402
 from src.game.gameState import ActionType, GameAction, GameState  # noqa: E402
 
 STATIC = os.path.join(HERE, "static")
@@ -336,6 +336,7 @@ class Session:
         self.gs = setup_game(num_players=players, seed=self.seed,
                              neutral_leaders=True, use_bloodlines=bloodlines)
         self.seat = seat
+        self.gs.manual_end_turn = {seat}   # you end your own Agent turn
         self.specs = {}
         self.agents = {}
         opp = iter(specs)
@@ -665,6 +666,9 @@ class Session:
                 "conflictsLeft": d["conflict_deck_remaining"],
                 "shieldWall": gs.shield_wall_intact, "alliance": d["alliance_holder"],
                 "spaces": spaces,
+                "spyPosts": {post: [p.id for p in gs.players
+                                    for _ in range(p.spies_on_board.get(post, 0))]
+                             for post in ALL_OBSERVATION_POSTS},
                 "row": [card_info(c) for c in gs.imperium_row],
                 "reserve": {"prepare_the_way": len(gs.reserve_prepare_the_way),
                             "spice_must_flow": len(gs.reserve_spice_must_flow)},
