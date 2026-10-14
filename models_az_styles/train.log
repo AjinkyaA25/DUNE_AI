@@ -1,0 +1,2 @@
+device cuda; 200 generations x 5000 games; state 1051, params 657,093
+gen 0 eval {'games': 200, 'win_share': 0.0, 'vp': 3.135, 'opp_vp': 8.726666666666667, 'rounds': 9.125}
