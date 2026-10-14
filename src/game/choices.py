@@ -198,14 +198,14 @@ def build(gs: "GameState", p: "Player", key: str, spec) -> Optional[Tuple[str, s
         for give in FACTIONS:
             if p.influence.get(give, 0) <= 0:
                 continue
-            for gain in FACTIONS:
-                if gain != give:
-                    opts.append((f"{give}>{gain}", f"-1 {FNAME[give]}, +1 {FNAME[gain]}",
-                                 {"_lose_influence": give, "_gain_influences": [gain]}))
+            for gain in FACTIONS:                 # the same Faction is allowed (user)
+                opts.append((f"{give}>{gain}", f"-1 {FNAME[give]}, +1 {FNAME[gain]}",
+                             {"_lose_influence": give, "_gain_influences": [gain]}))
         if not opts:
             return None
-        opts.append(("decline", "Don't swap", {}))
-        return ("influence_swap", "Move 1 influence to another Faction", opts)
+        if getattr(gs, "_intrigue_cost_for", None) != pid:      # the Intrigue's only ability: must do it
+            opts.append(("decline", "Don't swap", {}))
+        return ("influence_swap", "Move 1 influence (the same Faction is allowed)", opts)
 
     if key == "take_contract_from_reserve":                   # Coercive Negotiation
         if not getattr(gs, "use_choam", False):
@@ -327,10 +327,10 @@ def apply_internal(gs: "GameState", p: "Player", eff: Dict) -> None:
             p.reserved_discount = int(eff.get("_discount", 1))
             gs.refill_imperium_row()
     if eff.get("_retreat_n"):
-        n = min(int(eff["_retreat_n"]), gs.troops_in_conflict.get(pid, 0))
-        gs.troops_in_conflict[pid] -= n
-        p.troops_garrison += n
-        gs.update_combat_strength(pid)           # step() re-syncs commanders
+        gs.retreat_with_choice(pid, int(eff["_retreat_n"]))     # troops and/or commanders
+    if eff.get("_retreat_mix"):
+        n, c = eff["_retreat_mix"]
+        gs.retreat_units(pid, int(n), int(c))
     if "_trash_discard" in eff:
         card = next((c for c in p.discard if c.name == eff["_trash_discard"]), None)
         if card is not None:

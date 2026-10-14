@@ -124,6 +124,56 @@ class EffectResolver:
                 game_state._pending_reveal_conditionals.append((conds, player.id))
 
     @staticmethod
+    def cond_holds(key: str, player, game_state) -> bool:
+        """An Uprising card condition (if_<key>) for player right now."""
+        from src.game.cards.card import CardTag
+        _tag = {"bene": CardTag.BENE_GESSERIT, "fremen": CardTag.FREMEN,
+                "emperor": CardTag.EMPEROR, "spacing": CardTag.SPACING_GUILD}
+        if key == "fremen_bond":
+            return player.influence["fremen"] >= 2
+        if key == "councilor":
+            return player.has_councilor
+        if key == "swordmaster":
+            return player.has_swordmaster
+        if key == "spy_recalled":
+            return getattr(player, "recalled_spy_this_turn", False)
+        if key == "agent_to_maker":
+            return getattr(player, "agent_to_maker_this_turn", False)
+        if key == "faction_agent":
+            return getattr(player, "agent_to_faction_this_turn", False)
+        if key == "trashed_costly":              # trashed a 1+ persuasion card
+            return getattr(player, "trashed_costly_card_this_round", False)
+        if key == "any_alliance":
+            return any(player.alliances.values())
+        if key.startswith("alliance_"):
+            return player.alliances.get(key[9:], False)
+        if key.startswith("influence_"):        # influence_fremen_2
+            fac, _, n = key[10:].rpartition("_")
+            return player.influence.get(fac, 0) >= int(n)
+        if key.startswith("contracts_"):
+            return len(player.contracts_completed) >= int(key[10:])
+        if key.startswith("tag_other_"):         # another <tag> card besides self
+            return player.count_cards_with_tag_in_play(_tag[key[10:]]) >= 2
+        if key.startswith("spies_"):             # spies_2 == 2+ spies on board
+            return sum(player.spies_on_board.values()) >= int(key[6:])
+        if key.startswith("units_in_conflict_"):  # troops + sandworms in Conflict
+            n = int(key.rsplit("_", 1)[1])
+            return (game_state.troops_in_conflict.get(player.id, 0)
+                    + game_state.sandworms_in_conflict.get(player.id, 0)) >= n
+        return False
+
+    @staticmethod
+    def _resolve_under(cond: str, sub: Dict, player, game_state) -> None:
+        """Resolve a conditional reward; a draw / Intrigue it defers keeps the
+        condition, which must still hold when the player claims it."""
+        stack = game_state.__dict__.setdefault("_defer_conds", [])
+        stack.append(cond)
+        try:
+            EffectResolver.resolve_single_effect(sub, player, game_state)
+        finally:
+            stack.pop()
+
+    @staticmethod
     def resolve_single_effect(effect: Dict, player: 'Player', game_state: 'GameState') -> None:
         """
         Execute a single effect dict.
@@ -212,7 +262,9 @@ class EffectResolver:
         if "troops" in effect:
             _before = player.troops_garrison
             player.gain_troops(effect["troops"])
-            if getattr(game_state, "_agent_turn_active", False):
+            # recruited this turn (deployable from a combat space): during the
+            # Agent turn or later in it (Plot Intrigues, claimed rewards)
+            if game_state.in_own_turn(player.id):
                 player.troops_recruited_this_turn += player.troops_garrison - _before
 
         # ===== TRASH A CARD (optional; surfaced as a pending choice) =====
@@ -228,12 +280,23 @@ class EffectResolver:
             game_state.add_pending_influence_choice(player.id, effect["influence_any"])
 
         # ===== CARD DRAW — always through seeded GameState RNG (Bug 7 fix) =====
+        # On an Agent turn, card draws and Intrigue draws from the space / card
+        # are rewards the player takes when they choose (user, 2026-10-14):
+        # e.g. buy Suspensor Suits before taking Assembly Hall's Intrigue, or
+        # trash from the discard before drawing.
+        defer = game_state.defer_reward_for(player.id)
         if "draw" in effect:
-            game_state.draw_cards_for_player(player.id, effect["draw"])
+            if defer:
+                game_state.defer_reward(player.id, "draw", effect["draw"])
+            else:
+                game_state.draw_cards_for_player(player.id, effect["draw"])
 
         # ===== INTRIGUE =====
         if "intrigue" in effect:
-            game_state.draw_intrigue_for_player(player.id, effect["intrigue"])
+            if defer:
+                game_state.defer_reward(player.id, "intrigue", effect["intrigue"])
+            else:
+                game_state.draw_intrigue_for_player(player.id, effect["intrigue"])
 
         # ===== INFLUENCE =====
         if "influence_emperor" in effect:
@@ -360,10 +423,12 @@ class EffectResolver:
                     + spec.get("swords", 0)
 
         # -- retreat troops from the Conflict (only when it helps) ----
-        if "retreat" in effect and _units_in_conflict() and _losing_combat():
-            n = min(int(effect["retreat"]), gs.troops_in_conflict.get(player.id, 0))
-            gs.troops_in_conflict[player.id] -= n
-            player.troops_garrison += n
+        if "retreat" in effect and gs.troops_in_conflict.get(player.id, 0) > 0:
+            # "retreat up to N": the player's choice (0..N)
+            top = min(int(effect["retreat"]), gs.troops_in_conflict.get(player.id, 0))
+            gs.add_pending_choice(player.id, "retreat_up_to", f"Retreat up to {top} from the Conflict?",
+                                  [("decline", "Don't retreat", {})] +
+                                  [(f"retreat{k}", f"Retreat {k}", {"_retreat_n": k}) for k in range(1, top + 1)])
 
         # -- retreat min (or max, if losing) troops -> gain a reward ---------
         # (Go to Ground -> Spy, Reach Agreement -> contract, Spice is Power
@@ -374,9 +439,7 @@ class EffectResolver:
             lo = int(spec.get("min", 1))
             if in_conf >= lo and not (spec.get("only_if_losing") and not _losing_combat()):
                 n = min(int(spec.get("max", lo)) if _losing_combat() else lo, in_conf)
-                gs.troops_in_conflict[player.id] -= n
-                player.troops_garrison += n
-                EffectResolver.resolve_single_effect(spec.get("reward", {}), player, gs)
+                gs.retreat_with_choice(player.id, n, reward=spec.get("reward", {}))
 
         # -- Thumper: double the bonus spice you just collected from a Maker
         #    space's accumulated pile (the board's own spice was already
@@ -743,7 +806,13 @@ class EffectResolver:
         # -- Adaptive Tactics: grant a deploy action.  The per-turn deploy budget
         #    is 2 (once) + every troop recruited this turn + `extra` (this card's
         #    own troop, which isn't counted as "recruited").  Icons don't stack. --
-        if "grant_deploy" in effect and gs.current_conflict is not None:
+        if "grant_deploy" in effect and gs.current_conflict is not None and gs.in_own_turn(player.id):
+            # open for the rest of this turn (Agent or Reveal): 2 from the
+            # garrison + every troop gained this turn + this card's `extra`
+            player.deploy_icon_this_turn = True
+            player.deploy_extra_this_turn = max(getattr(player, "deploy_extra_this_turn", 0),
+                                                int(effect["grant_deploy"]))
+        elif "grant_deploy" in effect and gs.current_conflict is not None:
             extra = int(effect["grant_deploy"])
             player.deploy_budget_this_turn = max(
                 getattr(player, "deploy_budget_this_turn", 0),
@@ -1058,50 +1127,29 @@ class EffectResolver:
                 "emperor": CardTag.EMPEROR, "spacing": CardTag.SPACING_GUILD}
 
         def _cond(key: str) -> bool:
-            if key == "fremen_bond":
-                return player.influence["fremen"] >= 2
-            if key == "councilor":
-                return player.has_councilor
-            if key == "swordmaster":
-                return player.has_swordmaster
-            if key == "spy_recalled":
-                return getattr(player, "recalled_spy_this_turn", False)
-            if key == "agent_to_maker":
-                return getattr(player, "agent_to_maker_this_turn", False)
-            if key == "faction_agent":
-                return getattr(player, "agent_to_faction_this_turn", False)
-            if key == "trashed_costly":              # trashed a 1+ persuasion card
-                return getattr(player, "trashed_costly_card_this_round", False)
-            if key == "any_alliance":
-                return any(player.alliances.values())
-            if key.startswith("alliance_"):
-                return player.alliances.get(key[9:], False)
-            if key.startswith("influence_"):        # influence_fremen_2
-                fac, _, n = key[10:].rpartition("_")
-                return player.influence.get(fac, 0) >= int(n)
-            if key.startswith("contracts_"):
-                return len(player.contracts_completed) >= int(key[10:])
-            if key.startswith("tag_other_"):         # another <tag> card besides self
-                return player.count_cards_with_tag_in_play(_tag[key[10:]]) >= 2
-            if key.startswith("spies_"):             # spies_2 == 2+ spies on board
-                return sum(player.spies_on_board.values()) >= int(key[6:])
-            if key.startswith("units_in_conflict_"):  # troops + sandworms in Conflict
-                n = int(key.rsplit("_", 1)[1])
-                return (game_state.troops_in_conflict.get(player.id, 0)
-                        + game_state.sandworms_in_conflict.get(player.id, 0)) >= n
-            return False
+            return EffectResolver.cond_holds(key, player, game_state)
 
         for k, sub in list(effect.items()):
             if k.startswith("if_") and k[3:] in (
                     "fremen_bond", "councilor", "swordmaster", "spy_recalled",
                     "agent_to_maker", "faction_agent", "any_alliance", "trashed_costly"):
                 if _cond(k[3:]):
-                    EffectResolver.resolve_single_effect(sub, player, game_state)
+                    EffectResolver._resolve_under(k[3:], sub, player, game_state)
+                elif game_state.defer_reward_for(player.id):
+                    # not met yet: the reward waits and can be taken later this
+                    # turn once it is (e.g. Strike Fleet, then recall a Spy with
+                    # Special Mission; Prepare the Way, then gain the influence)
+                    game_state.defer_reward(player.id, "effect", 0, effect=sub, cond=k[3:])
             elif (k.startswith("if_alliance_") or k.startswith("if_influence_")
                   or k.startswith("if_contracts_") or k.startswith("if_tag_other_")
                   or k.startswith("if_spies_") or k.startswith("if_units_in_conflict_")):
                 if _cond(k[3:]):
-                    EffectResolver.resolve_single_effect(sub, player, game_state)
+                    EffectResolver._resolve_under(k[3:], sub, player, game_state)
+                elif game_state.defer_reward_for(player.id):
+                    # not met yet: the reward waits and can be taken later this
+                    # turn once it is (e.g. Strike Fleet, then recall a Spy with
+                    # Special Mission; Prepare the Way, then gain the influence)
+                    game_state.defer_reward(player.id, "effect", 0, effect=sub, cond=k[3:])
 
         # ===== OPTIONAL EFFECTS (surfaced as RL actions; NOT executed here) =====
         # "may_convert": becomes a ConversionAction in get_valid_actions()

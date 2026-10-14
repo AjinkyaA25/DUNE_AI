@@ -47,6 +47,7 @@ class Player:
         # Intrigue cards are one-time use
         # After played, they go to GLOBAL intrigue discard (not player's discard)
         self.intrigue_cards: List['IntrigueCard'] = []
+        self.tsmf_acquired = 0      # The Spice Must Flow copies acquired this game
 
         # ===== AGENTS =====
         self.agents_total = 2  # Total agents (starts at 2, can increase to 3 with Swordmaster)

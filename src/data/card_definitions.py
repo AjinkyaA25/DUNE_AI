@@ -10,7 +10,7 @@ source extraction.
 Conflicts, contracts and intrigue are still placeholder data (a later pass).
 """
 from __future__ import annotations
-from typing import List
+from typing import Dict, List
 
 from src.game.cards.card import Card, CardType, AccessSymbol, CardTag
 from src.game.combat.conflict import Conflict, BattleIcon
@@ -667,6 +667,48 @@ def create_intrigue_deck() -> List[IntrigueCard]:
 # Full game setup
 # ---------------------------------------------------------------------------
 
+# Imperium cards printed twice (dunecardshub.com "(x2)"): Uprising 54 names /
+# 69 cards, Bloodlines 26 / 32. The factories return one of each (feature
+# indices are built from them); setup_game deals the second copy.
+IMPERIUM_COPIES: Dict[str, int] = {n: 2 for n in (
+    # Uprising
+    "Bene Gesserit Operative", "Calculus of Power", "Desert Survival",
+    "Double Agent", "Maker Keeper", "Maula Pistol", "Public Spectacle",
+    "Rebel Supplier", "Sardaukar Coordination", "Smuggler's Harvester",
+    "Spacing Guild's Favor", "Tread in Darkness", "Truthtrance",
+    "Unswerving Loyalty", "Weirding Woman",
+    # Bloodlines
+    "Delivery Logistics", "Intelligence Training", "Ixian Ambassador",
+    "Quash Rebellion", "Sandwalk", "Urgent Shigawire",
+    # Uprising Intrigue (Contingency Plan x3, Detonation / Special Mission x2
+    # are already dealt as separate cards)
+    "Distraction",
+)}
+
+# Cards from other expansions (Rise of Ix, Immortality, base game) that the
+# TTS mod's community pool added; out of the default deck (user, 2026-10-14:
+# Uprising + Bloodlines + promo cards only). Dealt with community_pool=True.
+NOT_UPRISING = frozenset((
+    # Imperium (community pool)
+    "Gene Manipulation", "High Priority Travel", "Imperial Bashar",
+    "Imperial Shock Trooper", "Imperium Ceremony", "Keys to Power",
+    "Local Fence", "Piter de Vries", "Satellite Ban", "Sietch Reverend Mother",
+    "Smuggler's Thopter", "Spice Trader", "Stillsuit Manufacturer", "Truthsayer",
+    # Intrigue
+    "Bribery", "Poison Snooper", "Counterattack", "Ixian Probe", "War Chest",
+    "Recruitment Mission", "Dispatch an Envoy",
+))
+
+
+def with_imperium_copies(cards: List) -> List:
+    """`cards` plus the extra printed copies (distinct objects)."""
+    import copy
+    out = list(cards)
+    for c in cards:
+        out += [copy.deepcopy(c) for _ in range(IMPERIUM_COPIES.get(c.name, 1) - 1)]
+    return out
+
+
 def setup_game(
     num_players: int = 2,
     seed: int = None,
@@ -674,6 +716,8 @@ def setup_game(
     leaders=None,
     neutral_leaders: bool = False,
     use_bloodlines: bool = False,
+    ix_techs: bool = False,
+    community_pool: bool = False,
 ) -> GameState:
     """
     Return a fully initialized GameState with round 1 started and hands dealt.
@@ -685,12 +729,18 @@ def setup_game(
     `neutral_leaders=True` gives every player a no-op Leader instead (ignores
     `leaders`) — Leader ability text is still unverified, so self-play/eval
     tooling defaults to this; pass real leader names to opt back in.
+    Bloodlines games use only the 18 Bloodlines tech tiles; `ix_techs=True`
+    adds the Rise of Ix tiles too (replaying the user's recorded TTS games).
+    Card pool = Uprising + Bloodlines + their promo cards, with printed copy
+    counts; `community_pool=True` restores the TTS mod's community-pool cards
+    from other expansions (replays of the user's recorded games).
     """
     if not (2 <= num_players <= 4):
         raise ValueError("num_players must be 2–4")
 
     gs = GameState(num_players=num_players, seed=seed, use_choam=use_choam,
-                   use_bloodlines=use_bloodlines)
+                   use_bloodlines=use_bloodlines, ix_techs=ix_techs)
+    pool_ok = (lambda c: True) if community_pool else (lambda c: c.name not in NOT_UPRISING)
 
     imperium, intrigues = create_imperium_cards(), create_intrigue_deck()
     if use_bloodlines:
@@ -699,6 +749,8 @@ def setup_game(
             create_community_imperium_cards, create_community_intrigues)
         imperium += create_bloodlines_imperium_cards() + create_community_imperium_cards()
         intrigues += create_bloodlines_intrigues() + create_community_intrigues()
+    imperium = with_imperium_copies([c for c in imperium if pool_ok(c)])
+    intrigues = with_imperium_copies([c for c in intrigues if pool_ok(c)])
     gs.setup_conflict_deck(create_conflict_deck(gs.rng))
     gs.setup_imperium_deck(
         imperium,
