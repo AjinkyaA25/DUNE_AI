@@ -1,0 +1,4752 @@
+{
+ "_back": {
+  "files": [
+   "_back__101.png",
+   "_back__2011.png",
+   "_back__1062.png",
+   "_back__2007.png",
+   "_back__1083.png",
+   "_back__1084.png",
+   "_back__1085.png",
+   "_back__1088.png",
+   "_back__1999.png",
+   "_back__1112.png",
+   "_back__1117.png",
+   "_back__1197.png",
+   "_back__1672.png",
+   "_back__1671.png"
+  ],
+  "names": [
+   "face-down card"
+  ]
+ },
+ "acceptContractAndShipping1": {
+  "files": [
+   "acceptContractAndShipping1__1088.png",
+   "acceptContractAndShipping1__1173.png"
+  ],
+  "names": [
+   "Accept Contract / Shipping",
+   "Accepter un contract / Expédition"
+  ]
+ },
+ "acceptContractAndShipping2": {
+  "files": [
+   "acceptContractAndShipping2__1088.png",
+   "acceptContractAndShipping2__1173.png"
+  ],
+  "names": [
+   "Accept Contract / Shipping",
+   "Accepter un contract / Expédition"
+  ]
+ },
+ "advancedWeaponry": {
+  "files": [
+   "advancedWeaponry__1057.png",
+   "advancedWeaponry__1142.png"
+  ],
+  "names": [
+   "Advanced Weaponry",
+   "Armement avancé"
+  ]
+ },
+ "alliedArmada": {
+  "files": [
+   "alliedArmada__1056.png",
+   "alliedArmada__1141.png"
+  ],
+  "names": [
+   "Allied Armada",
+   "Armada alliée"
+  ]
+ },
+ "amberMetulli": {
+  "files": [
+   "amberMetulli__1108.png",
+   "amberMetulli__1117.png",
+   "amberMetulli__1193.png",
+   "amberMetulli__1202.png"
+  ],
+  "names": [
+   "Lady Amber Metulli",
+   "Dame Amber Metulli"
+  ]
+ },
+ "ambush": {
+  "files": [
+   "ambush__1056.png",
+   "ambush__1141.png"
+  ],
+  "names": [
+   "Ambush",
+   "Embuscade"
+  ]
+ },
+ "appropriate": {
+  "files": [
+   "appropriate__1043.png",
+   "appropriate__1129.png"
+  ],
+  "names": [
+   "Appropriate",
+   "Appropriation"
+  ]
+ },
+ "arianaThorvald": {
+  "files": [
+   "arianaThorvald__1099.png",
+   "arianaThorvald__1184.png"
+  ],
+  "names": [
+   "Countess Ariana Thorvald",
+   "Comtesse Ariana Thorvald"
+  ]
+ },
+ "arianaThorvald_com": {
+  "files": [
+   "arianaThorvald_com__1996.png"
+  ],
+  "names": [
+   "Countess Ariana Thorvald"
+  ]
+ },
+ "armandEcaz": {
+  "files": [
+   "armandEcaz__1101.png",
+   "armandEcaz__1186.png"
+  ],
+  "names": [
+   "Archduke Armand Ecaz",
+   "Archiduc Armand Ecaz"
+  ]
+ },
+ "arrakeen": {
+  "files": [
+   "arrakeen__1088.png",
+   "arrakeen__1173.png"
+  ],
+  "names": [
+   "Arrakeen"
+  ]
+ },
+ "arrakisRecruiter": {
+  "files": [
+   "arrakisRecruiter__1044.png",
+   "arrakisRecruiter__1128.png"
+  ],
+  "names": [
+   "Arrakis Recruiter",
+   "Recruteur d’Arrakis"
+  ]
+ },
+ "arrakisRevolt": {
+  "files": [
+   "arrakisRevolt__1046.png",
+   "arrakisRevolt__1131.png"
+  ],
+  "names": [
+   "Arrakis Revolt",
+   "La révolte d’Arrakis"
+  ]
+ },
+ "artillery": {
+  "files": [
+   "artillery__1066.png",
+   "artillery__1151.png"
+  ],
+  "names": [
+   "Artillery",
+   "Artillerie"
+  ]
+ },
+ "assassinationMission": {
+  "files": [
+   "assassinationMission__1044.png",
+   "assassinationMission__1128.png"
+  ],
+  "names": [
+   "Assassination Mission",
+   "Mission d’assassination"
+  ]
+ },
+ "assemblyHall": {
+  "files": [
+   "assemblyHall__1088.png",
+   "assemblyHall__1173.png"
+  ],
+  "names": [
+   "Assembly Hall",
+   "Salle de l’assemblée"
+  ]
+ },
+ "backedByChoam": {
+  "files": [
+   "backedByChoam__1060.png",
+   "backedByChoam__1145.png"
+  ],
+  "names": [
+   "{backedByChoam}"
+  ]
+ },
+ "battleForArrakeen": {
+  "files": [
+   "battleForArrakeen__1085.png",
+   "battleForArrakeen__1170.png"
+  ],
+  "names": [
+   "Battle for Arrakeen",
+   "Battaille pour Arrakeen"
+  ]
+ },
+ "battleForImperialBasin": {
+  "files": [
+   "battleForImperialBasin__1085.png",
+   "battleForImperialBasin__1170.png"
+  ],
+  "names": [
+   "Battle for Imperial Basin",
+   "Bataille pour le bassin impérial"
+  ]
+ },
+ "battleForSpiceRefinery": {
+  "files": [
+   "battleForSpiceRefinery__1085.png",
+   "battleForSpiceRefinery__1170.png"
+  ],
+  "names": [
+   "Battle for Spice Refinery",
+   "Bataille pour la raffinerie d’épice"
+  ]
+ },
+ "beguilingPheromones": {
+  "files": [
+   "beguilingPheromones__1054.png",
+   "beguilingPheromones__1139.png"
+  ],
+  "names": [
+   "Beguiling Pheromones",
+   "Phéromones ensorcelantes"
+  ]
+ },
+ "beneGesseritInitiate": {
+  "files": [
+   "beneGesseritInitiate__1044.png",
+   "beneGesseritInitiate__1128.png"
+  ],
+  "names": [
+   "Bene Gesserit Initiate",
+   "Initiée Bene Gesserit"
+  ]
+ },
+ "beneGesseritOperative": {
+  "files": [
+   "beneGesseritOperative__1046.png",
+   "beneGesseritOperative__1131.png"
+  ],
+  "names": [
+   "Bene Gesserit Operative",
+   "Opératrice Bene Gesserit"
+  ]
+ },
+ "beneGesseritSister": {
+  "files": [
+   "beneGesseritSister__1044.png",
+   "beneGesseritSister__1128.png"
+  ],
+  "names": [
+   "Bene Gesserit Sister",
+   "Sœur du Bene Gesserit"
+  ]
+ },
+ "beneTleilaxLab": {
+  "files": [
+   "beneTleilaxLab__1045.png",
+   "beneTleilaxLab__1130.png"
+  ],
+  "names": [
+   "Bene Tleilax Lab",
+   "Laboratoire du Bene Tleilax"
+  ]
+ },
+ "beneTleilaxResearcher": {
+  "files": [
+   "beneTleilaxResearcher__1045.png",
+   "beneTleilaxResearcher__1130.png"
+  ],
+  "names": [
+   "Bene Tleilax Researcher",
+   "Chercheur du Bene Tleilax"
+  ]
+ },
+ "binduSuspension": {
+  "files": [
+   "binduSuspension__1056.png",
+   "binduSuspension__1141.png"
+  ],
+  "names": [
+   "Bindu Suspension",
+   "Suspension bindu"
+  ]
+ },
+ "bl_AdaptiveTactics": {
+  "files": [
+   "bl_AdaptiveTactics__1675.png"
+  ],
+  "names": [
+   "Adaptive Tactics"
+  ]
+ },
+ "bl_AdvancedDataAnalysis": {
+  "files": [
+   "bl_AdvancedDataAnalysis__1651.png"
+  ],
+  "names": [
+   "Advanced Data Analysis"
+  ]
+ },
+ "bl_ArrakisObserver": {
+  "files": [
+   "bl_ArrakisObserver__1650.png"
+  ],
+  "names": [
+   "Arrakis Observer"
+  ]
+ },
+ "bl_BattlefieldResearch": {
+  "files": [
+   "bl_BattlefieldResearch__1675.png"
+  ],
+  "names": [
+   "Battlefield Research"
+  ]
+ },
+ "bl_Bombast": {
+  "files": [
+   "bl_Bombast__1650.png"
+  ],
+  "names": [
+   "Bombast"
+  ]
+ },
+ "bl_Chani": {
+  "files": [
+   "bl_Chani__1677.png"
+  ],
+  "names": [
+   "Chani"
+  ]
+ },
+ "bl_ChoamDemands": {
+  "files": [
+   "bl_ChoamDemands__1650.png"
+  ],
+  "names": [
+   "Choam Demands"
+  ]
+ },
+ "bl_ChoamTransports": {
+  "files": [
+   "bl_ChoamTransports__1651.png"
+  ],
+  "names": [
+   "Choam Transports"
+  ]
+ },
+ "bl_CoerciveNegotiation": {
+  "files": [
+   "bl_CoerciveNegotiation__1675.png"
+  ],
+  "names": [
+   "Coercive Negotiation"
+  ]
+ },
+ "bl_CommandCenter": {
+  "files": [
+   "bl_CommandCenter__1650.png"
+  ],
+  "names": [
+   "Command Center"
+  ]
+ },
+ "bl_CorruptBureaucrat": {
+  "files": [
+   "bl_CorruptBureaucrat__1650.png"
+  ],
+  "names": [
+   "Corrupt Bureaucrat"
+  ]
+ },
+ "bl_DeliverLogistics": {
+  "files": [
+   "bl_DeliverLogistics__1650.png"
+  ],
+  "names": [
+   "Deliver Logistics"
+  ]
+ },
+ "bl_DeliveryBay": {
+  "files": [
+   "bl_DeliveryBay__1651.png"
+  ],
+  "names": [
+   "Delivery Bay"
+  ]
+ },
+ "bl_DesertSupport": {
+  "files": [
+   "bl_DesertSupport__1675.png"
+  ],
+  "names": [
+   "Desert Support"
+  ]
+ },
+ "bl_DisruptionTactics": {
+  "files": [
+   "bl_DisruptionTactics__1650.png"
+  ],
+  "names": [
+   "Disruption Tactics"
+  ]
+ },
+ "bl_Duncan": {
+  "files": [
+   "bl_Duncan__1677.png"
+  ],
+  "names": [
+   "Duncan Idaho"
+  ]
+ },
+ "bl_EliminateAllies": {
+  "files": [
+   "bl_EliminateAllies__1650.png"
+  ],
+  "names": [
+   "Eliminate Allies"
+  ]
+ },
+ "bl_EliteForces": {
+  "files": [
+   "bl_EliteForces__1650.png"
+  ],
+  "names": [
+   "Elite Forces"
+  ]
+ },
+ "bl_EmperorsInvitation": {
+  "files": [
+   "bl_EmperorsInvitation__1675.png"
+  ],
+  "names": [
+   "Emperor's Invitation"
+  ]
+ },
+ "bl_EngineeredMiracle": {
+  "files": [
+   "bl_EngineeredMiracle__1650.png"
+  ],
+  "names": [
+   "Engineered Miracle"
+  ]
+ },
+ "bl_Esmar": {
+  "files": [
+   "bl_Esmar__1677.png"
+  ],
+  "names": [
+   "Esmar Tuek"
+  ]
+ },
+ "bl_FalseOrders": {
+  "files": [
+   "bl_FalseOrders__1675.png"
+  ],
+  "names": [
+   "False Orders"
+  ]
+ },
+ "bl_FalseOrders_com": {
+  "files": [
+   "bl_FalseOrders_com__2010.png"
+  ],
+  "names": [
+   "False Orders"
+  ]
+ },
+ "bl_ForbiddenWeapons": {
+  "files": [
+   "bl_ForbiddenWeapons__1651.png"
+  ],
+  "names": [
+   "Forbidden Weapons"
+  ]
+ },
+ "bl_FremenWarName": {
+  "files": [
+   "bl_FremenWarName__1650.png"
+  ],
+  "names": [
+   "Fremen War Name"
+  ]
+ },
+ "bl_GeneLockedVault": {
+  "files": [
+   "bl_GeneLockedVault__1651.png"
+  ],
+  "names": [
+   "Gene-Locked Vault"
+  ]
+ },
+ "bl_Glowglobes": {
+  "files": [
+   "bl_Glowglobes__1651.png"
+  ],
+  "names": [
+   "Glowglobes"
+  ]
+ },
+ "bl_GraspArrakis": {
+  "files": [
+   "bl_GraspArrakis__1675.png"
+  ],
+  "names": [
+   "Grasp Arrakis"
+  ]
+ },
+ "bl_Hasimir": {
+  "files": [
+   "bl_Hasimir__1677.png"
+  ],
+  "names": [
+   "Count Hasimir Fenring"
+  ]
+ },
+ "bl_HolyWar": {
+  "files": [
+   "bl_HolyWar__1650.png"
+  ],
+  "names": [
+   "Holy War"
+  ]
+ },
+ "bl_HonorGuard": {
+  "files": [
+   "bl_HonorGuard__1675.png"
+  ],
+  "names": [
+   "Honor Guard"
+  ]
+ },
+ "bl_IBelieve": {
+  "files": [
+   "bl_IBelieve__1650.png"
+  ],
+  "names": [
+   "I Believe"
+  ]
+ },
+ "bl_ImperialThroneship": {
+  "files": [
+   "bl_ImperialThroneship__1650.png"
+  ],
+  "names": [
+   "Imperial Throneship"
+  ]
+ },
+ "bl_InsiderInformation": {
+  "files": [
+   "bl_InsiderInformation__1675.png"
+  ],
+  "names": [
+   "Insider Information"
+  ]
+ },
+ "bl_IntelligenceTraining": {
+  "files": [
+   "bl_IntelligenceTraining__1650.png"
+  ],
+  "names": [
+   "Intelligence Training"
+  ]
+ },
+ "bl_IxianAmbassador": {
+  "files": [
+   "bl_IxianAmbassador__1650.png"
+  ],
+  "names": [
+   "Ixian Ambassador"
+  ]
+ },
+ "bl_Kota": {
+  "files": [
+   "bl_Kota__1677.png"
+  ],
+  "names": [
+   "Kota Odax of Ix"
+  ]
+ },
+ "bl_Liet": {
+  "files": [
+   "bl_Liet__1677.png"
+  ],
+  "names": [
+   "Liet Kynes"
+  ]
+ },
+ "bl_Liet_com": {
+  "files": [
+   "bl_Liet_com__2012.png"
+  ],
+  "names": [
+   "Liet Kynes"
+  ]
+ },
+ "bl_LitanyAgainstFear": {
+  "files": [
+   "bl_LitanyAgainstFear__1650.png"
+  ],
+  "names": [
+   "Litany Against Fear"
+  ]
+ },
+ "bl_MercantileAffairs": {
+  "files": [
+   "bl_MercantileAffairs__1650.png"
+  ],
+  "names": [
+   "Mercantile Affairs"
+  ]
+ },
+ "bl_Mohiam": {
+  "files": [
+   "bl_Mohiam__1677.png"
+  ],
+  "names": [
+   "Gaius Helen Mohiam"
+  ]
+ },
+ "bl_NavigationChamber": {
+  "files": [
+   "bl_NavigationChamber__1651.png"
+  ],
+  "names": [
+   "Navigation Chamber"
+  ]
+ },
+ "bl_OrnithopterFleet": {
+  "files": [
+   "bl_OrnithopterFleet__1651.png"
+  ],
+  "names": [
+   "Ornithopter Fleet"
+  ]
+ },
+ "bl_Panopticon": {
+  "files": [
+   "bl_Panopticon__1651.png"
+  ],
+  "names": [
+   "Panopticon"
+  ]
+ },
+ "bl_Piter": {
+  "files": [
+   "bl_Piter__1677.png"
+  ],
+  "names": [
+   "Piter De Vries"
+  ]
+ },
+ "bl_Piter_com": {
+  "files": [
+   "bl_Piter_com__2013.png"
+  ],
+  "names": [
+   "Piter De Vries"
+  ]
+ },
+ "bl_PivotalGambit": {
+  "files": [
+   "bl_PivotalGambit__1650.png"
+  ],
+  "names": [
+   "Pivotal Gambit"
+  ]
+ },
+ "bl_PlanetaryArray": {
+  "files": [
+   "bl_PlanetaryArray__1651.png"
+  ],
+  "names": [
+   "Planetary Array"
+  ]
+ },
+ "bl_PointingTheWay": {
+  "files": [
+   "bl_PointingTheWay__1650.png"
+  ],
+  "names": [
+   "Pointing The Way"
+  ]
+ },
+ "bl_PossibleFutures": {
+  "files": [
+   "bl_PossibleFutures__1650.png"
+  ],
+  "names": [
+   "Possible Futures"
+  ]
+ },
+ "bl_QuashRebellion": {
+  "files": [
+   "bl_QuashRebellion__1650.png"
+  ],
+  "names": [
+   "Quash Rebellion"
+  ]
+ },
+ "bl_RapidEngineering": {
+  "files": [
+   "bl_RapidEngineering__1675.png"
+  ],
+  "names": [
+   "Rapid Engineering"
+  ]
+ },
+ "bl_RapidEngineering_com": {
+  "files": [
+   "bl_RapidEngineering_com__2009.png"
+  ],
+  "names": [
+   "Rapid Engineering"
+  ]
+ },
+ "bl_ReturnTheFavor": {
+  "files": [
+   "bl_ReturnTheFavor__1675.png"
+  ],
+  "names": [
+   "Return the Favor"
+  ]
+ },
+ "bl_RipplesInTheSand": {
+  "files": [
+   "bl_RipplesInTheSand__1675.png"
+  ],
+  "names": [
+   "Ripples In The Sand"
+  ]
+ },
+ "bl_RuthlessLeadership": {
+  "files": [
+   "bl_RuthlessLeadership__1650.png"
+  ],
+  "names": [
+   "Ruthless Leadership"
+  ]
+ },
+ "bl_SacredPools": {
+  "files": [
+   "bl_SacredPools__1675.png"
+  ],
+  "names": [
+   "Sacred Pools"
+  ]
+ },
+ "bl_Sandwalk": {
+  "files": [
+   "bl_Sandwalk__1650.png"
+  ],
+  "names": [
+   "Sandwalk"
+  ]
+ },
+ "bl_SardaukarStandard": {
+  "files": [
+   "bl_SardaukarStandard__1650.png"
+  ],
+  "names": [
+   "Sardaukar Standard"
+  ]
+ },
+ "bl_SeizeProduction": {
+  "files": [
+   "bl_SeizeProduction__1675.png"
+  ],
+  "names": [
+   "Seize Production"
+  ]
+ },
+ "bl_ShroudedCounsel": {
+  "files": [
+   "bl_ShroudedCounsel__1650.png"
+  ],
+  "names": [
+   "Shrouded Counsel"
+  ]
+ },
+ "bl_Skirmish": {
+  "files": [
+   "bl_Skirmish__1653.png"
+  ],
+  "names": [
+   "Skirmish"
+  ]
+ },
+ "bl_SleeperUnit": {
+  "files": [
+   "bl_SleeperUnit__1675.png"
+  ],
+  "names": [
+   "Sleeper Unit"
+  ]
+ },
+ "bl_SouthernFaith": {
+  "files": [
+   "bl_SouthernFaith__1650.png"
+  ],
+  "names": [
+   "Southern Faith"
+  ]
+ },
+ "bl_StormsInTheSouth": {
+  "files": [
+   "bl_StormsInTheSouth__1654.png"
+  ],
+  "names": [
+   "Storms in the South"
+  ]
+ },
+ "bl_TenuousBond": {
+  "files": [
+   "bl_TenuousBond__1675.png"
+  ],
+  "names": [
+   "Tenuous Bond"
+  ]
+ },
+ "bl_TheStrongSurvive": {
+  "files": [
+   "bl_TheStrongSurvive__1675.png"
+  ],
+  "names": [
+   "The Strong Survive"
+  ]
+ },
+ "bl_UrgentShigawire": {
+  "files": [
+   "bl_UrgentShigawire__1650.png"
+  ],
+  "names": [
+   "Urgent Shigawire"
+  ]
+ },
+ "bl_WithdrawalAgreement": {
+  "files": [
+   "bl_WithdrawalAgreement__1675.png"
+  ],
+  "names": [
+   "Withdrawal Agreement"
+  ]
+ },
+ "bl_Yrkoon": {
+  "files": [
+   "bl_Yrkoon__1677.png"
+  ],
+  "names": [
+   "Steersman Y'rkoon"
+  ]
+ },
+ "bl_YrkoonPersuasion": {
+  "files": [
+   "bl_YrkoonPersuasion__1672.png"
+  ],
+  "names": []
+ },
+ "blackmail": {
+  "files": [
+   "blackmail__1057.png",
+   "blackmail__1142.png"
+  ],
+  "names": [
+   "Blackmail",
+   "Chantage"
+  ]
+ },
+ "blankSlate": {
+  "files": [
+   "blankSlate__1045.png",
+   "blankSlate__1130.png"
+  ],
+  "names": [
+   "Blank Slate",
+   "Ardoise vierge"
+  ]
+ },
+ "boundlessAmbition": {
+  "files": [
+   "boundlessAmbition__1043.png",
+   "boundlessAmbition__1129.png"
+  ],
+  "names": [
+   "Boundless Ambition",
+   "Ambition sans limites"
+  ]
+ },
+ "bountyHunter": {
+  "files": [
+   "bountyHunter__1043.png",
+   "bountyHunter__1129.png"
+  ],
+  "names": [
+   "Bounty Hunter",
+   "Chasseur de primes"
+  ]
+ },
+ "branchingPath": {
+  "files": [
+   "branchingPath__1046.png",
+   "branchingPath__1131.png"
+  ],
+  "names": [
+   "Branching Path",
+   "Cheminement ramifié"
+  ]
+ },
+ "breakthrough": {
+  "files": [
+   "breakthrough__1058.png",
+   "breakthrough__1143.png"
+  ],
+  "names": [
+   "Breakthrough",
+   "Percée"
+  ]
+ },
+ "bribery": {
+  "files": [
+   "bribery__1056.png",
+   "bribery__1141.png"
+  ],
+  "names": [
+   "Bribery",
+   "Pot-de-vin"
+  ]
+ },
+ "buyAccess": {
+  "files": [
+   "buyAccess__1059.png",
+   "buyAccess__1144.png"
+  ],
+  "names": [
+   "Buy Access",
+   "Acheter le passage"
+  ]
+ },
+ "bypassProtocol": {
+  "files": [
+   "bypassProtocol__1056.png",
+   "bypassProtocol__1141.png"
+  ],
+  "names": [
+   "Bypass Protocol",
+   "Contourner les procédures"
+  ]
+ },
+ "calculatedHire": {
+  "files": [
+   "calculatedHire__1056.png",
+   "calculatedHire__1141.png"
+  ],
+  "names": [
+   "Calculated Hire",
+   "Recrutement calculé"
+  ]
+ },
+ "calculusOfPower": {
+  "files": [
+   "calculusOfPower__1046.png",
+   "calculusOfPower__1131.png"
+  ],
+  "names": [
+   "Calculus of Power",
+   "Calcul de la pouvoir"
+  ]
+ },
+ "callToArms": {
+  "files": [
+   "callToArms__1059.png",
+   "callToArms__1144.png"
+  ],
+  "names": [
+   "Call to Arms",
+   "Appel aux armes"
+  ]
+ },
+ "cannonTurrets": {
+  "files": [
+   "cannonTurrets__1057.png",
+   "cannonTurrets__1142.png"
+  ],
+  "names": [
+   "Cannon Turrets",
+   "Tourelles de canons"
+  ]
+ },
+ "capturedMentat": {
+  "files": [
+   "capturedMentat__1046.png",
+   "capturedMentat__1131.png"
+  ],
+  "names": [
+   "Captured Mentat",
+   "Mentat capturé"
+  ]
+ },
+ "cargoRunner": {
+  "files": [
+   "cargoRunner__1047.png",
+   "cargoRunner__1132.png"
+  ],
+  "names": [
+   "CargoRunner",
+   "Convoyeur de fret"
+  ]
+ },
+ "carryall": {
+  "files": [
+   "carryall__1044.png",
+   "carryall__1128.png"
+  ],
+  "names": [
+   "Carryall",
+   "Aile portante"
+  ]
+ },
+ "chairdog": {
+  "files": [
+   "chairdog__1054.png",
+   "chairdog__1139.png"
+  ],
+  "names": [
+   "Chairdog",
+   "Canisiège"
+  ]
+ },
+ "changeAllegiances": {
+  "files": [
+   "changeAllegiances__1059.png",
+   "changeAllegiances__1144.png"
+  ],
+  "names": [
+   "Change Allegiances",
+   "Changement d’allégeances"
+  ]
+ },
+ "changeAllegiances_com": {
+  "files": [
+   "changeAllegiances_com__2011.png"
+  ],
+  "names": [
+   "Change Allegiances"
+  ]
+ },
+ "chani": {
+  "files": [
+   "chani__1044.png",
+   "chani__1128.png"
+  ],
+  "names": [
+   "Chani"
+  ]
+ },
+ "chaniCleverTactician": {
+  "files": [
+   "chaniCleverTactician__1046.png",
+   "chaniCleverTactician__1131.png"
+  ],
+  "names": [
+   "Chani Clever Tactician",
+   "Chani, tacticienne rusée"
+  ]
+ },
+ "charisma": {
+  "files": [
+   "charisma__1056.png",
+   "charisma__1141.png"
+  ],
+  "names": [
+   "Charisma",
+   "Charisme"
+  ]
+ },
+ "chaumurky": {
+  "files": [
+   "chaumurky__1076.png",
+   "chaumurky__1161.png"
+  ],
+  "names": [
+   "Chaumurky"
+  ]
+ },
+ "choamDelegate": {
+  "files": [
+   "choamDelegate__1043.png",
+   "choamDelegate__1129.png"
+  ],
+  "names": [
+   "CHOAM Delegate",
+   "Délégé de la CHOM"
+  ]
+ },
+ "choamDirectorship": {
+  "files": [
+   "choamDirectorship__1044.png",
+   "choamDirectorship__1128.png"
+  ],
+  "names": [
+   "CHOAM Directorship",
+   "Directoire de CHOM"
+  ]
+ },
+ "choamProfits": {
+  "files": [
+   "choamProfits__1060.png",
+   "choamProfits__1145.png"
+  ],
+  "names": [
+   "{choamProfits}"
+  ]
+ },
+ "choamSecurity": {
+  "files": [
+   "choamSecurity__1084.png",
+   "choamSecurity__1169.png"
+  ],
+  "names": [
+   "CHOAM Security",
+   "Sécurité de la CHOM"
+  ]
+ },
+ "choamShares": {
+  "files": [
+   "choamShares__1056.png",
+   "choamShares__1141.png"
+  ],
+  "names": [
+   "CHOAM Shares",
+   "Part de la CHOM"
+  ]
+ },
+ "clandestineMeeting": {
+  "files": [
+   "clandestineMeeting__1045.png",
+   "clandestineMeeting__1130.png"
+  ],
+  "names": [
+   "Clandestine Meeting",
+   "Réunion clandestine"
+  ]
+ },
+ "contaminator": {
+  "files": [
+   "contaminator__1054.png",
+   "contaminator__1139.png"
+  ],
+  "names": [
+   "Contaminator",
+   "Contaminateur"
+  ]
+ },
+ "contingencyPlan": {
+  "files": [
+   "contingencyPlan__1059.png",
+   "contingencyPlan__1144.png"
+  ],
+  "names": [
+   "Contingency Plan",
+   "Plan contingence"
+  ]
+ },
+ "controlTheSpice": {
+  "files": [
+   "controlTheSpice__102.png",
+   "controlTheSpice__1121.png"
+  ],
+  "names": [
+   "Control the Spice",
+   "Contrôler l’épice"
+  ]
+ },
+ "convincingArgument": {
+  "files": [
+   "convincingArgument__101.png",
+   "convincingArgument__1120.png"
+  ],
+  "names": [
+   "Convincing Argument",
+   "Argument convaincant"
+  ]
+ },
+ "cornerTheMarket": {
+  "files": [
+   "cornerTheMarket__1056.png",
+   "cornerTheMarket__1141.png"
+  ],
+  "names": [
+   "Corner the Market",
+   "Accaparer le marché"
+  ]
+ },
+ "corrinoGenes": {
+  "files": [
+   "corrinoGenes__1054.png",
+   "corrinoGenes__1139.png"
+  ],
+  "names": [
+   "Corrino Genes",
+   "Gènes Corrino"
+  ]
+ },
+ "corrinthCity": {
+  "files": [
+   "corrinthCity__1046.png",
+   "corrinthCity__1131.png"
+  ],
+  "names": [
+   "Corrinth City",
+   "Corrinth"
+  ]
+ },
+ "corruptSmuggler": {
+  "files": [
+   "corruptSmuggler__1045.png",
+   "corruptSmuggler__1130.png"
+  ],
+  "names": [
+   "Corrupt Smuggler",
+   "Contrebandier corrompu"
+  ]
+ },
+ "councilorAmbition": {
+  "files": [
+   "councilorAmbition__1059.png",
+   "councilorAmbition__1144.png"
+  ],
+  "names": [
+   "Councilor Ambition",
+   "Ambition du conseiller"
+  ]
+ },
+ "councilorsDispensation": {
+  "files": [
+   "councilorsDispensation__1056.png",
+   "councilorsDispensation__1141.png"
+  ],
+  "names": [
+   "Councilors Dispensation",
+   "Dispense des conseillers"
+  ]
+ },
+ "counterattack": {
+  "files": [
+   "counterattack__1058.png",
+   "counterattack__1143.png"
+  ],
+  "names": [
+   "Counterattack",
+   "Contre attaque"
+  ]
+ },
+ "courtIntrigue": {
+  "files": [
+   "courtIntrigue__1043.png",
+   "courtIntrigue__1129.png"
+  ],
+  "names": [
+   "Court Intrigue",
+   "Intrigue de cour"
+  ]
+ },
+ "covertOperation": {
+  "files": [
+   "covertOperation__1046.png",
+   "covertOperation__1131.png"
+  ],
+  "names": [
+   "Covert Operation",
+   "Opération clandestine"
+  ]
+ },
+ "crysknife": {
+  "files": [
+   "crysknife__1044.png",
+   "crysknife__1059.png",
+   "crysknife__1062.png",
+   "crysknife__1128.png",
+   "crysknife__1144.png",
+   "crysknife__1147.png"
+  ],
+  "names": [
+   "Crysknife",
+   "Krys"
+  ]
+ },
+ "crysknife4to6p": {
+  "files": [
+   "crysknife4to6p__1062.png",
+   "crysknife4to6p__1147.png"
+  ],
+  "names": [
+   "Crysknife",
+   "Krys"
+  ]
+ },
+ "cull": {
+  "files": [
+   "cull__1057.png",
+   "cull__1142.png"
+  ],
+  "names": [
+   "Cull",
+   "Élimination"
+  ]
+ },
+ "cunning": {
+  "files": [
+   "cunning__1059.png",
+   "cunning__1144.png"
+  ],
+  "names": [
+   "Cunning",
+   "Ruse"
+  ]
+ },
+ "dagger": {
+  "files": [
+   "dagger__101.png",
+   "dagger__1120.png"
+  ],
+  "names": [
+   "Dagger",
+   "Dague"
+  ]
+ },
+ "dangerousRhetoric": {
+  "files": [
+   "dangerousRhetoric__1046.png",
+   "dangerousRhetoric__1131.png"
+  ],
+  "names": [
+   "Dangerous Rhetoric",
+   "Rhétorique dangereuse"
+  ]
+ },
+ "deepDesert": {
+  "files": [
+   "deepDesert__1088.png",
+   "deepDesert__1173.png"
+  ],
+  "names": [
+   "Deep Desert",
+   "Désert profond"
+  ]
+ },
+ "deliverSuppliesAndHeighliner": {
+  "files": [
+   "deliverSuppliesAndHeighliner__1088.png",
+   "deliverSuppliesAndHeighliner__1173.png"
+  ],
+  "names": [
+   "Deliver Supplies / Heighliner",
+   "Livrer des fournitures / Long-courrier"
+  ]
+ },
+ "deliverSuppliesAndInterstellarShipping": {
+  "files": [
+   "deliverSuppliesAndInterstellarShipping__1090.png",
+   "deliverSuppliesAndInterstellarShipping__1175.png"
+  ],
+  "names": [
+   "Deliver Supplies / Interstellar Shipping",
+   "Livrer des fournitures / Livraison interstellaire"
+  ]
+ },
+ "deliveryAgreement": {
+  "files": [
+   "deliveryAgreement__1047.png",
+   "deliveryAgreement__1132.png"
+  ],
+  "names": [
+   "Delivery Agreement",
+   "Accords de livraison"
+  ]
+ },
+ "demandRespect": {
+  "files": [
+   "demandRespect__1056.png",
+   "demandRespect__1141.png"
+  ],
+  "names": [
+   "Demand Respect",
+   "Demander le respect"
+  ]
+ },
+ "departForArrakis": {
+  "files": [
+   "departForArrakis__1059.png",
+   "departForArrakis__1144.png"
+  ],
+  "names": [
+   "Depart for Arrakis",
+   "Départ pour Arrakis"
+  ]
+ },
+ "desertAmbush": {
+  "files": [
+   "desertAmbush__1043.png",
+   "desertAmbush__1129.png"
+  ],
+  "names": [
+   "Desert Ambush",
+   "Embuscade dans le désert"
+  ]
+ },
+ "desertMouse": {
+  "files": [
+   "desertMouse__1059.png",
+   "desertMouse__1144.png"
+  ],
+  "names": [
+   "Desert Mouse",
+   "Souris du désert"
+  ]
+ },
+ "desertPower": {
+  "files": [
+   "desertPower__1046.png",
+   "desertPower__1131.png"
+  ],
+  "names": [
+   "Desert Power",
+   "La puissance du désert"
+  ]
+ },
+ "desertSurvival": {
+  "files": [
+   "desertSurvival__1046.png",
+   "desertSurvival__1131.png"
+  ],
+  "names": [
+   "Desert Survival",
+   "Survie dans le désert"
+  ]
+ },
+ "desertTactics": {
+  "files": [
+   "desertTactics__1088.png",
+   "desertTactics__1173.png"
+  ],
+  "names": [
+   "Desert Tactics",
+   "Tactiques du désert"
+  ]
+ },
+ "detonation": {
+  "files": [
+   "detonation__1059.png",
+   "detonation__1144.png"
+  ],
+  "names": [
+   "Detonation",
+   "Détonation"
+  ]
+ },
+ "detonationDevices": {
+  "files": [
+   "detonationDevices__1071.png",
+   "detonationDevices__1156.png"
+  ],
+  "names": [
+   "Detonation Devices",
+   "Engins de détonation"
+  ]
+ },
+ "devour": {
+  "files": [
+   "devour__1059.png",
+   "devour__1144.png"
+  ],
+  "names": [
+   "Devour",
+   "Engloutir"
+  ]
+ },
+ "diplomacy": {
+  "files": [
+   "diplomacy__101.png",
+   "diplomacy__1120.png"
+  ],
+  "names": [
+   "Diplomacy",
+   "Diplomatie"
+  ]
+ },
+ "disguisedBureaucrat": {
+  "files": [
+   "disguisedBureaucrat__1058.png",
+   "disguisedBureaucrat__1143.png"
+  ],
+  "names": [
+   "Disguised Bureaucrat",
+   "Déguisement de bureaucrate"
+  ]
+ },
+ "dispatchAnEnvoy": {
+  "files": [
+   "dispatchAnEnvoy__1056.png",
+   "dispatchAnEnvoy__1141.png"
+  ],
+  "names": [
+   "Dispatch an Envoy",
+   "Dépêcher un envoyé"
+  ]
+ },
+ "disposalFacility": {
+  "files": [
+   "disposalFacility__1067.png",
+   "disposalFacility__1152.png"
+  ],
+  "names": [
+   "Disposal Facility",
+   "Installation d’élimination"
+  ]
+ },
+ "dissectingKit": {
+  "files": [
+   "dissectingKit__1045.png",
+   "dissectingKit__1130.png"
+  ],
+  "names": [
+   "Dissecting Kit",
+   "Kit de dissection"
+  ]
+ },
+ "distraction": {
+  "files": [
+   "distraction__1059.png",
+   "distraction__1144.png"
+  ],
+  "names": [
+   "Distraction",
+   "Détourner l’attention"
+  ]
+ },
+ "diversion": {
+  "files": [
+   "diversion__1057.png",
+   "diversion__1142.png"
+  ],
+  "names": [
+   "Diversion"
+  ]
+ },
+ "doubleAgent": {
+  "files": [
+   "doubleAgent__1046.png",
+   "doubleAgent__1131.png"
+  ],
+  "names": [
+   "Double Agent",
+   "Agent double"
+  ]
+ },
+ "doubleCross": {
+  "files": [
+   "doubleCross__1056.png",
+   "doubleCross__1141.png"
+  ],
+  "names": [
+   "Double Cross",
+   "Trahison"
+  ]
+ },
+ "drYueh": {
+  "files": [
+   "drYueh__1044.png",
+   "drYueh__1128.png"
+  ],
+  "names": [
+   "Dr Yueh"
+  ]
+ },
+ "drYueh_com": {
+  "files": [
+   "drYueh_com__2006.png"
+  ],
+  "names": [
+   "Dr Yueh"
+  ]
+ },
+ "dreadnought1p": {
+  "files": [
+   "dreadnought1p__1090.png",
+   "dreadnought1p__1175.png"
+  ],
+  "names": [
+   "Dreadnought",
+   "Cuirassé"
+  ]
+ },
+ "dreadnought2p": {
+  "files": [
+   "dreadnought2p__1090.png",
+   "dreadnought2p__1175.png"
+  ],
+  "names": [
+   "Dreadnought",
+   "Cuirassé"
+  ]
+ },
+ "duncanIdaho": {
+  "files": [
+   "duncanIdaho__1044.png",
+   "duncanIdaho__1128.png"
+  ],
+  "names": [
+   "Duncan Idaho"
+  ]
+ },
+ "duncanLoyalBlade": {
+  "files": [
+   "duncanLoyalBlade__1043.png",
+   "duncanLoyalBlade__1128.png"
+  ],
+  "names": [
+   "Duncan Loyal Blade",
+   "Duncan, lame fidèle"
+  ]
+ },
+ "duneTheDesertPlanet": {
+  "files": [
+   "duneTheDesertPlanet__101.png",
+   "duneTheDesertPlanet__1119.png"
+  ],
+  "names": [
+   "Dune the Desert Planet",
+   "Dune, la planète désertique"
+  ]
+ },
+ "dutifulService": {
+  "files": [
+   "dutifulService__1088.png",
+   "dutifulService__1173.png"
+  ],
+  "names": [
+   "Dutiful Service",
+   "Service assidu"
+  ]
+ },
+ "ecologicalTestingStation": {
+  "files": [
+   "ecologicalTestingStation__1046.png",
+   "ecologicalTestingStation__1131.png"
+  ],
+  "names": [
+   "Ecological Testing Station",
+   "Station de test écologique"
+  ]
+ },
+ "economicPositioning": {
+  "files": [
+   "economicPositioning__1058.png",
+   "economicPositioning__1143.png"
+  ],
+  "names": [
+   "Economic Positioning",
+   "Positionnement économique"
+  ]
+ },
+ "economicSupremacy": {
+  "files": [
+   "economicSupremacy__1086.png",
+   "economicSupremacy__1171.png"
+  ],
+  "names": [
+   "Economic Supremacy",
+   "Suprémacie économique"
+  ]
+ },
+ "embeddedAgent": {
+  "files": [
+   "embeddedAgent__1043.png",
+   "embeddedAgent__1129.png"
+  ],
+  "names": [
+   "Embedded Agent",
+   "Agent infiltré"
+  ]
+ },
+ "emperorConvincingArgument": {
+  "files": [
+   "emperorConvincingArgument__1040.png",
+   "emperorConvincingArgument__1124.png"
+  ],
+  "names": [
+   "Convincing Argument",
+   "Argument convaincant"
+  ]
+ },
+ "emperorCorrinoMight": {
+  "files": [
+   "emperorCorrinoMight__1040.png",
+   "emperorCorrinoMight__1124.png"
+  ],
+  "names": [
+   "Corrino Might",
+   "Puissance des Corrino"
+  ]
+ },
+ "emperorCriticalShipments": {
+  "files": [
+   "emperorCriticalShipments__1040.png",
+   "emperorCriticalShipments__1124.png"
+  ],
+  "names": [
+   "Critical Shipments",
+   "Livraisons critiques"
+  ]
+ },
+ "emperorDemandResults": {
+  "files": [
+   "emperorDemandResults__1040.png",
+   "emperorDemandResults__1124.png"
+  ],
+  "names": [
+   "Demand Results",
+   "Exiger des résultats"
+  ]
+ },
+ "emperorDevastatingAssault": {
+  "files": [
+   "emperorDevastatingAssault__1040.png",
+   "emperorDevastatingAssault__1124.png"
+  ],
+  "names": [
+   "Devastating Assault",
+   "Assaut dévastateur"
+  ]
+ },
+ "emperorImperialOrnithopter": {
+  "files": [
+   "emperorImperialOrnithopter__1040.png",
+   "emperorImperialOrnithopter__1124.png"
+  ],
+  "names": [
+   "Imperial Ornithopter",
+   "Ornithoptère impérial"
+  ]
+ },
+ "emperorImperialTent": {
+  "files": [
+   "emperorImperialTent__1040.png",
+   "emperorImperialTent__1124.png"
+  ],
+  "names": [
+   "Imperial Tent",
+   "Tente impériale"
+  ]
+ },
+ "emperorSeekAllies": {
+  "files": [
+   "emperorSeekAllies__1040.png",
+   "emperorSeekAllies__1124.png"
+  ],
+  "names": [
+   "Seek Allies",
+   "À la recherche d’alliés"
+  ]
+ },
+ "emperorSignetRing": {
+  "files": [
+   "emperorSignetRing__1040.png",
+   "emperorSignetRing__1124.png"
+  ],
+  "names": [
+   "Signet Ring",
+   "Chevalière"
+  ]
+ },
+ "esmarTuek": {
+  "files": [
+   "esmarTuek__1043.png",
+   "esmarTuek__1129.png"
+  ],
+  "names": [
+   "{esmarTuek}"
+  ]
+ },
+ "espionage": {
+  "files": [
+   "espionage__1088.png",
+   "espionage__1173.png"
+  ],
+  "names": [
+   "Espionage"
+  ]
+ },
+ "expedite": {
+  "files": [
+   "expedite__1057.png",
+   "expedite__1142.png"
+  ],
+  "names": [
+   "Expedite",
+   "Accélérer"
+  ]
+ },
+ "experimentation": {
+  "files": [
+   "experimentation__103.png",
+   "experimentation__1122.png"
+  ],
+  "names": [
+   "Experimentation",
+   "Expérimentation"
+  ]
+ },
+ "faceDancer": {
+  "files": [
+   "faceDancer__1054.png",
+   "faceDancer__1139.png"
+  ],
+  "names": [
+   "Face Dancer",
+   "Danseur-visage"
+  ]
+ },
+ "faceDancerInitiate": {
+  "files": [
+   "faceDancerInitiate__1054.png",
+   "faceDancerInitiate__1139.png"
+  ],
+  "names": [
+   "Face Dancer Initiate",
+   "Initié danseur visage"
+  ]
+ },
+ "favoredSubject": {
+  "files": [
+   "favoredSubject__1056.png",
+   "favoredSubject__1141.png"
+  ],
+  "names": [
+   "Favored Subject",
+   "Sujet favori"
+  ]
+ },
+ "fedaykinDeathCommando": {
+  "files": [
+   "fedaykinDeathCommando__1044.png",
+   "fedaykinDeathCommando__1128.png"
+  ],
+  "names": [
+   "Fedaykin Death Commando",
+   "Commando de la mort Fedaykin"
+  ]
+ },
+ "fedaykinStilltent": {
+  "files": [
+   "fedaykinStilltent__1046.png",
+   "fedaykinStilltent__1131.png"
+  ],
+  "names": [
+   "Fedaykin Stilltent",
+   "Abris Fedaykin"
+  ]
+ },
+ "feydRauthaHarkonnen": {
+  "files": [
+   "feydRauthaHarkonnen__1113.png",
+   "feydRauthaHarkonnen__1117.png",
+   "feydRauthaHarkonnen__1198.png",
+   "feydRauthaHarkonnen__1202.png"
+  ],
+  "names": [
+   "Feyd-Rautha Harkonnen"
+  ]
+ },
+ "findWeakness": {
+  "files": [
+   "findWeakness__1059.png",
+   "findWeakness__1144.png"
+  ],
+  "names": [
+   "Find Weakness",
+   "Trouver la faiblesse"
+  ]
+ },
+ "finesse": {
+  "files": [
+   "finesse__1057.png",
+   "finesse__1142.png"
+  ],
+  "names": [
+   "Finesse"
+  ]
+ },
+ "firmGrip": {
+  "files": [
+   "firmGrip__1044.png",
+   "firmGrip__1128.png"
+  ],
+  "names": [
+   "Firm Grip",
+   "Poigne de fer"
+  ]
+ },
+ "flagship": {
+  "files": [
+   "flagship__1073.png",
+   "flagship__1158.png"
+  ],
+  "names": [
+   "Flagship",
+   "Navire amiral"
+  ]
+ },
+ "flagship_com": {
+  "files": [
+   "flagship_com__2007.png"
+  ],
+  "names": [
+   "Flagship"
+  ]
+ },
+ "foldspace": {
+  "files": [
+   "foldspace__1049.png",
+   "foldspace__1134.png"
+  ],
+  "names": [
+   "Foldspace",
+   "Replier l’espace"
+  ]
+ },
+ "forHumanity": {
+  "files": [
+   "forHumanity__1045.png",
+   "forHumanity__1130.png"
+  ],
+  "names": [
+   "For Humanity",
+   "Pour l’Humanité"
+  ]
+ },
+ "freighterFleet": {
+  "files": [
+   "freighterFleet__1043.png",
+   "freighterFleet__1129.png"
+  ],
+  "names": [
+   "Freighter Fleet",
+   "Flotte de cargos"
+  ]
+ },
+ "fremenCamp": {
+  "files": [
+   "fremenCamp__1044.png",
+   "fremenCamp__1128.png"
+  ],
+  "names": [
+   "Fremen Camp",
+   "Camp fremen"
+  ]
+ },
+ "fremkit": {
+  "files": [
+   "fremkit__1088.png",
+   "fremkit__1173.png"
+  ],
+  "names": [
+   "Fremkit"
+  ]
+ },
+ "fromTheTanks": {
+  "files": [
+   "fromTheTanks__1054.png",
+   "fromTheTanks__1139.png"
+  ],
+  "names": [
+   "From the Tanks",
+   "Né des cuves"
+  ]
+ },
+ "fullScaleAssault": {
+  "files": [
+   "fullScaleAssault__1043.png",
+   "fullScaleAssault__1129.png"
+  ],
+  "names": [
+   "Full Scale Assault",
+   "Assaut planétaire"
+  ]
+ },
+ "gatherSupport1": {
+  "files": [
+   "gatherSupport1__1088.png",
+   "gatherSupport1__1173.png"
+  ],
+  "names": [
+   "Gather Support",
+   "Rassembler du soutien"
+  ]
+ },
+ "gatherSupport2": {
+  "files": [
+   "gatherSupport2__1088.png",
+   "gatherSupport2__1173.png"
+  ],
+  "names": [
+   "Gather Support",
+   "Rassembler du soutien"
+  ]
+ },
+ "geneManipulation": {
+  "files": [
+   "geneManipulation__1044.png",
+   "geneManipulation__1128.png"
+  ],
+  "names": [
+   "Gene Manipulation",
+   "Manipulation génétique"
+  ]
+ },
+ "ghola": {
+  "files": [
+   "ghola__1054.png",
+   "ghola__1139.png"
+  ],
+  "names": [
+   "Ghola"
+  ]
+ },
+ "glimpseThePath": {
+  "files": [
+   "glimpseThePath__1057.png",
+   "glimpseThePath__1142.png"
+  ],
+  "names": [
+   "Glimpse the Path",
+   "Entrevoir le chemin"
+  ]
+ },
+ "glossuRabban": {
+  "files": [
+   "glossuRabban__1094.png",
+   "glossuRabban__1117.png",
+   "glossuRabban__1179.png",
+   "glossuRabban__1202.png"
+  ],
+  "names": [
+   "Glossu \"The Beast\" Rabban",
+   "Glossu « la bête » Rabban"
+  ]
+ },
+ "goToGround": {
+  "files": [
+   "goToGround__1059.png",
+   "goToGround__1144.png"
+  ],
+  "names": [
+   "Go to Ground",
+   "Cachette"
+  ]
+ },
+ "grandConspiracy": {
+  "files": [
+   "grandConspiracy__1057.png",
+   "grandConspiracy__1142.png"
+  ],
+  "names": [
+   "Grand Conspiracy",
+   "Grande conspiration"
+  ]
+ },
+ "gruesomeSacrifice": {
+  "files": [
+   "gruesomeSacrifice__1058.png",
+   "gruesomeSacrifice__1143.png"
+  ],
+  "names": [
+   "Gruesome Sacrifice",
+   "Sacrifice sanglant"
+  ]
+ },
+ "guildAccord": {
+  "files": [
+   "guildAccord__1043.png",
+   "guildAccord__1129.png"
+  ],
+  "names": [
+   "Guild Accord",
+   "Accord de la Guilde"
+  ]
+ },
+ "guildAdministrator": {
+  "files": [
+   "guildAdministrator__1044.png",
+   "guildAdministrator__1128.png"
+  ],
+  "names": [
+   "Guild Administrator",
+   "Administrateur de la guilde"
+  ]
+ },
+ "guildAmbassador": {
+  "files": [
+   "guildAmbassador__1044.png",
+   "guildAmbassador__1128.png"
+  ],
+  "names": [
+   "Guild Ambassador",
+   "Ambassadeur de la Guilde"
+  ]
+ },
+ "guildAuthorization": {
+  "files": [
+   "guildAuthorization__1056.png",
+   "guildAuthorization__1141.png"
+  ],
+  "names": [
+   "Guild Authorization",
+   "Autorisation de la Guilde"
+  ]
+ },
+ "guildBankers": {
+  "files": [
+   "guildBankers__1044.png",
+   "guildBankers__1128.png"
+  ],
+  "names": [
+   "Guild Bankers",
+   "Banquiers de la Guilde"
+  ]
+ },
+ "guildChiefAdministrator": {
+  "files": [
+   "guildChiefAdministrator__1043.png",
+   "guildChiefAdministrator__1129.png"
+  ],
+  "names": [
+   "Guild Chief Administrator",
+   "Administrateur en chef de la Guilde"
+  ]
+ },
+ "guildEnvoy": {
+  "files": [
+   "guildEnvoy__1046.png",
+   "guildEnvoy__1131.png"
+  ],
+  "names": [
+   "Guild Envoy",
+   "Émissaire de la Guilde"
+  ]
+ },
+ "guildImpersonator": {
+  "files": [
+   "guildImpersonator__1054.png",
+   "guildImpersonator__1139.png"
+  ],
+  "names": [
+   "Guild Impersonator",
+   "Imposteur de la Guilde"
+  ]
+ },
+ "guildSpy": {
+  "files": [
+   "guildSpy__1046.png",
+   "guildSpy__1131.png"
+  ],
+  "names": [
+   "Guild Spy",
+   "Espion de la Guilde"
+  ]
+ },
+ "gunThopter": {
+  "files": [
+   "gunThopter__1044.png",
+   "gunThopter__1128.png"
+  ],
+  "names": [
+   "Gun'Thopter",
+   "Orni-mitrailleur"
+  ]
+ },
+ "gurneyHalleck": {
+  "files": [
+   "gurneyHalleck__1044.png",
+   "gurneyHalleck__1109.png",
+   "gurneyHalleck__1117.png",
+   "gurneyHalleck__1128.png",
+   "gurneyHalleck__1194.png",
+   "gurneyHalleck__1202.png"
+  ],
+  "names": [
+   "Gurney Halleck"
+  ]
+ },
+ "haggaBasinAndImperialBasin": {
+  "files": [
+   "haggaBasinAndImperialBasin__1088.png",
+   "haggaBasinAndImperialBasin__1173.png"
+  ],
+  "names": [
+   "Hagga Basin / Imperial Basin",
+   "Bassin de Hagga / Bassin imperial"
+  ]
+ },
+ "harvestCells": {
+  "files": [
+   "harvestCells__1058.png",
+   "harvestCells__1143.png"
+  ],
+  "names": [
+   "Harvest Cells",
+   "Prélèvement de cellules"
+  ]
+ },
+ "heighliner": {
+  "files": [
+   "heighliner__1088.png",
+   "heighliner__1173.png"
+  ],
+  "names": [
+   "Heighliner",
+   "Long-courrier"
+  ]
+ },
+ "helenaRichese": {
+  "files": [
+   "helenaRichese__1096.png",
+   "helenaRichese__1181.png"
+  ],
+  "names": [
+   "Helena Richese"
+  ]
+ },
+ "hiddenMissive": {
+  "files": [
+   "hiddenMissive__1046.png",
+   "hiddenMissive__1131.png"
+  ],
+  "names": [
+   "Hidden Missive",
+   "Missive secrète"
+  ]
+ },
+ "highPriorityTravel": {
+  "files": [
+   "highPriorityTravel__1045.png",
+   "highPriorityTravel__1130.png"
+  ],
+  "names": [
+   "High Priority Travel",
+   "Voyage en haute priorité"
+  ]
+ },
+ "holoprojectors": {
+  "files": [
+   "holoprojectors__1068.png",
+   "holoprojectors__1153.png"
+  ],
+  "names": [
+   "Holoprojectors",
+   "Holoprojecteurs"
+  ]
+ },
+ "holtzmanEngine": {
+  "files": [
+   "holtzmanEngine__1080.png",
+   "holtzmanEngine__1165.png"
+  ],
+  "names": [
+   "Holtzman Engine",
+   "Moteur Holtzman"
+  ]
+ },
+ "hundroMoritani": {
+  "files": [
+   "hundroMoritani__1106.png",
+   "hundroMoritani__1191.png"
+  ],
+  "names": [
+   "Viscount Hundro Moritani",
+   "Vicomte Hundro Moritani"
+  ]
+ },
+ "ilbanRichese": {
+  "files": [
+   "ilbanRichese__1095.png",
+   "ilbanRichese__1180.png"
+  ],
+  "names": [
+   "Count Ilban Richese",
+   "Comte Ilban Richese"
+  ]
+ },
+ "ilbanRichese_com": {
+  "files": [
+   "ilbanRichese_com__1998.png"
+  ],
+  "names": [
+   "Count Ilban Richese"
+  ]
+ },
+ "ilesaEcaz": {
+  "files": [
+   "ilesaEcaz__1102.png",
+   "ilesaEcaz__1187.png"
+  ],
+  "names": [
+   "Ilesa Ecaz"
+  ]
+ },
+ "ilesaEcaz_com": {
+  "files": [
+   "ilesaEcaz_com__2021.png"
+  ],
+  "names": [
+   "Ilesa Ecaz"
+  ]
+ },
+ "illicitDealings": {
+  "files": [
+   "illicitDealings__1058.png",
+   "illicitDealings__1143.png"
+  ],
+  "names": [
+   "Illicit Dealings",
+   "Transactions illicites"
+  ]
+ },
+ "imperialBashar": {
+  "files": [
+   "imperialBashar__1043.png",
+   "imperialBashar__1129.png"
+  ],
+  "names": [
+   "Imperial Bashar",
+   "Bashar impérial"
+  ]
+ },
+ "imperialShockTrooper": {
+  "files": [
+   "imperialShockTrooper__1043.png",
+   "imperialShockTrooper__1129.png"
+  ],
+  "names": [
+   "Imperial Shock Trooper",
+   "Troupe de choc impériale"
+  ]
+ },
+ "imperialSpy": {
+  "files": [
+   "imperialSpy__1044.png",
+   "imperialSpy__1128.png"
+  ],
+  "names": [
+   "Imperial Spy",
+   "Espion impérial"
+  ]
+ },
+ "imperialSpymaster": {
+  "files": [
+   "imperialSpymaster__1046.png",
+   "imperialSpymaster__1131.png"
+  ],
+  "names": [
+   "Imperial Spymaster",
+   "Maître espion impérial"
+  ]
+ },
+ "imperiumCeremony": {
+  "files": [
+   "imperiumCeremony__1045.png",
+   "imperiumCeremony__1130.png"
+  ],
+  "names": [
+   "Imperium Ceremony",
+   "Cérémonie de l’Imperium"
+  ]
+ },
+ "imperiumPolitics": {
+  "files": [
+   "imperiumPolitics__1059.png",
+   "imperiumPolitics__1144.png"
+  ],
+  "names": [
+   "Imperium Politics",
+   "Politique de l’Empire"
+  ]
+ },
+ "impress": {
+  "files": [
+   "impress__1059.png",
+   "impress__1144.png"
+  ],
+  "names": [
+   "Impress",
+   "Impressionner"
+  ]
+ },
+ "inHighPlaces": {
+  "files": [
+   "inHighPlaces__1046.png",
+   "inHighPlaces__1131.png"
+  ],
+  "names": [
+   "In High Places",
+   "En haut lieu"
+  ]
+ },
+ "inTheShadows": {
+  "files": [
+   "inTheShadows__1043.png",
+   "inTheShadows__1129.png"
+  ],
+  "names": [
+   "In the Shadows",
+   "Parmi les ombres"
+  ]
+ },
+ "industrialEspionage": {
+  "files": [
+   "industrialEspionage__1054.png",
+   "industrialEspionage__1139.png"
+  ],
+  "names": [
+   "Industrial Espionage",
+   "Espionnage industriel"
+  ]
+ },
+ "infiltrate": {
+  "files": [
+   "infiltrate__1056.png",
+   "infiltrate__1141.png"
+  ],
+  "names": [
+   "Infiltrate",
+   "Infiltrer"
+  ]
+ },
+ "inspireAwe": {
+  "files": [
+   "inspireAwe__1059.png",
+   "inspireAwe__1144.png"
+  ],
+  "names": [
+   "Inspire Awe",
+   "Inspirer le respect"
+  ]
+ },
+ "intelligenceReport": {
+  "files": [
+   "intelligenceReport__1059.png",
+   "intelligenceReport__1144.png"
+  ],
+  "names": [
+   "Intelligence Report",
+   "Rapport des renseignements"
+  ]
+ },
+ "interstellarConspiracy": {
+  "files": [
+   "interstellarConspiracy__1045.png",
+   "interstellarConspiracy__1130.png"
+  ],
+  "names": [
+   "Interstellar Conspiracy",
+   "Conspiration interstellaire"
+  ]
+ },
+ "interstellarShipping": {
+  "files": [
+   "interstellarShipping__1090.png",
+   "interstellarShipping__1175.png"
+  ],
+  "names": [
+   "Interstellar Shipping",
+   "Livraison interstellaire"
+  ]
+ },
+ "interstellarTrade": {
+  "files": [
+   "interstellarTrade__1047.png",
+   "interstellarTrade__1132.png"
+  ],
+  "names": [
+   "Interstellar Trade",
+   "Commerce interstellaire"
+  ]
+ },
+ "invasionShips": {
+  "files": [
+   "invasionShips__1081.png",
+   "invasionShips__1166.png"
+  ],
+  "names": [
+   "Invasion Ships",
+   "Vaisseaux d’invasion"
+  ]
+ },
+ "irulanCorrino": {
+  "files": [
+   "irulanCorrino__1111.png",
+   "irulanCorrino__1117.png",
+   "irulanCorrino__1196.png",
+   "irulanCorrino__1202.png"
+  ],
+  "names": [
+   "Princess Irulan",
+   "Princesse Irulan"
+  ]
+ },
+ "ixGuildCompact": {
+  "files": [
+   "ixGuildCompact__1043.png",
+   "ixGuildCompact__1129.png"
+  ],
+  "names": [
+   "Ix-Guild Compact",
+   "Contrat Ix-Guild"
+  ]
+ },
+ "ixianEngineer": {
+  "files": [
+   "ixianEngineer__1043.png",
+   "ixianEngineer__1129.png"
+  ],
+  "names": [
+   "Ixian Engineer",
+   "Ingénieurs ixiens"
+  ]
+ },
+ "ixianProbe": {
+  "files": [
+   "ixianProbe__1057.png",
+   "ixianProbe__1142.png"
+  ],
+  "names": [
+   "Ixian Probe",
+   "Sonde ixienne"
+  ]
+ },
+ "jamis": {
+  "files": [
+   "jamis__1043.png",
+   "jamis__1129.png"
+  ],
+  "names": [
+   "Jamis"
+  ]
+ },
+ "jessica": {
+  "files": [
+   "jessica__1112.png",
+   "jessica__1117.png",
+   "jessica__1197.png",
+   "jessica__1202.png"
+  ],
+  "names": [
+   "Lady Jessica",
+   "Dame Jessica"
+  ]
+ },
+ "jessicaOfArrakis": {
+  "files": [
+   "jessicaOfArrakis__1043.png",
+   "jessicaOfArrakis__1128.png"
+  ],
+  "names": [
+   "Jessica of Arrakis",
+   "Jessica d’Arrakis"
+  ]
+ },
+ "junctionHeadquarters": {
+  "files": [
+   "junctionHeadquarters__1046.png",
+   "junctionHeadquarters__1131.png"
+  ],
+  "names": [
+   "Junction Headquarters",
+   "Quartier général de Jonction"
+  ]
+ },
+ "junctionHeadquarters_com": {
+  "files": [
+   "junctionHeadquarters_com__2005.png"
+  ],
+  "names": [
+   "Junction Headquarters"
+  ]
+ },
+ "keysToPower": {
+  "files": [
+   "keysToPower__1045.png",
+   "keysToPower__1130.png"
+  ],
+  "names": [
+   "Keys to Power",
+   "Les clefs du pouvoir"
+  ]
+ },
+ "knowTheirWays": {
+  "files": [
+   "knowTheirWays__1056.png",
+   "knowTheirWays__1141.png"
+  ],
+  "names": [
+   "Know their Ways",
+   "Connaître leurs coutumes"
+  ]
+ },
+ "kwisatzHaderach": {
+  "files": [
+   "kwisatzHaderach__1044.png",
+   "kwisatzHaderach__1128.png"
+  ],
+  "names": [
+   "Kwisatz Haderach"
+  ]
+ },
+ "ladyJessica": {
+  "files": [
+   "ladyJessica__1044.png",
+   "ladyJessica__1128.png"
+  ],
+  "names": [
+   "Lady Jessica",
+   "Dame Jessica"
+  ]
+ },
+ "landingRights": {
+  "files": [
+   "landingRights__1043.png",
+   "landingRights__1129.png"
+  ],
+  "names": [
+   "Landing Rights",
+   "Droits d’atterrissage"
+  ]
+ },
+ "leadership": {
+  "files": [
+   "leadership__1046.png",
+   "leadership__1131.png"
+  ],
+  "names": [
+   "Leadership",
+   "Commandement"
+  ]
+ },
+ "letoAtreides": {
+  "files": [
+   "letoAtreides__1097.png",
+   "letoAtreides__1182.png"
+  ],
+  "names": [
+   "Duke Leto Atreides",
+   "Duc Leto Atréides"
+  ]
+ },
+ "leverage": {
+  "files": [
+   "leverage__1060.png",
+   "leverage__1145.png"
+  ],
+  "names": [
+   "{leverage}"
+  ]
+ },
+ "lietKynes": {
+  "files": [
+   "lietKynes__1044.png",
+   "lietKynes__1128.png"
+  ],
+  "names": [
+   "lietKynes",
+   "Liet Kynes"
+  ]
+ },
+ "lisanAlGaib": {
+  "files": [
+   "lisanAlGaib__1045.png",
+   "lisanAlGaib__1130.png"
+  ],
+  "names": [
+   "Lisan Al-Gaib"
+  ]
+ },
+ "localFence": {
+  "files": [
+   "localFence__1043.png",
+   "localFence__1129.png"
+  ],
+  "names": [
+   "Local Fence",
+   "Receleur local"
+  ]
+ },
+ "longLiveTheFighters": {
+  "files": [
+   "longLiveTheFighters__1046.png",
+   "longLiveTheFighters__1131.png"
+  ],
+  "names": [
+   "Long Live the Fighters",
+   "Vive les combattants"
+  ]
+ },
+ "longReach": {
+  "files": [
+   "longReach__1045.png",
+   "longReach__1130.png"
+  ],
+  "names": [
+   "Long Reach",
+   "Bras long"
+  ]
+ },
+ "machineCulture": {
+  "files": [
+   "machineCulture__1057.png",
+   "machineCulture__1142.png"
+  ],
+  "names": [
+   "Machine Culture",
+   "Culte de la machine"
+  ]
+ },
+ "makerKeeper": {
+  "files": [
+   "makerKeeper__1046.png",
+   "makerKeeper__1131.png"
+  ],
+  "names": [
+   "Maker Keeper",
+   "Gardien du Faiseur"
+  ]
+ },
+ "manipulate": {
+  "files": [
+   "manipulate__1059.png",
+   "manipulate__1144.png"
+  ],
+  "names": [
+   "Manipulate",
+   "Manipuler"
+  ]
+ },
+ "margotFenring": {
+  "files": [
+   "margotFenring__1110.png",
+   "margotFenring__1117.png",
+   "margotFenring__1195.png",
+   "margotFenring__1202.png"
+  ],
+  "names": [
+   "Lady Margot Fenring",
+   "Dame Margot Fenring"
+  ]
+ },
+ "marketOpportunity": {
+  "files": [
+   "marketOpportunity__1059.png",
+   "marketOpportunity__1144.png"
+  ],
+  "names": [
+   "Market Opportunity",
+   "Opportunité du marché"
+  ]
+ },
+ "masterTactician": {
+  "files": [
+   "masterTactician__1056.png",
+   "masterTactician__1141.png"
+  ],
+  "names": [
+   "Master Tactician",
+   "Maître tacticien"
+  ]
+ },
+ "maulaPistol": {
+  "files": [
+   "maulaPistol__1046.png",
+   "maulaPistol__1131.png"
+  ],
+  "names": [
+   "Maula Pistol",
+   "Pistolet Maula"
+  ]
+ },
+ "memnonThorvald": {
+  "files": [
+   "memnonThorvald__1100.png",
+   "memnonThorvald__1185.png"
+  ],
+  "names": [
+   "Earl Memnon Thorvald",
+   "Comte Memnon Thorvald"
+  ]
+ },
+ "memocorders": {
+  "files": [
+   "memocorders__1072.png",
+   "memocorders__1157.png"
+  ],
+  "names": [
+   "Memocorders"
+  ]
+ },
+ "mercenaries": {
+  "files": [
+   "mercenaries__1059.png",
+   "mercenaries__1144.png"
+  ],
+  "names": [
+   "Mercenaries",
+   "Mercenaires"
+  ]
+ },
+ "minimicFilm": {
+  "files": [
+   "minimicFilm__1069.png",
+   "minimicFilm__1154.png"
+  ],
+  "names": [
+   "Minimic Film",
+   "Film Minimic"
+  ]
+ },
+ "missionariaProtectiva": {
+  "files": [
+   "missionariaProtectiva__1043.png",
+   "missionariaProtectiva__1128.png"
+  ],
+  "names": [
+   "Missionaria Protectiva"
+  ]
+ },
+ "muadDib": {
+  "files": [
+   "muadDib__1115.png",
+   "muadDib__1117.png",
+   "muadDib__1200.png",
+   "muadDib__1202.png"
+  ],
+  "names": [
+   "Muad'Dib",
+   "Muad’Dib"
+  ]
+ },
+ "muadDib4to6p": {
+  "files": [
+   "muadDib4to6p__1062.png",
+   "muadDib4to6p__1147.png"
+  ],
+  "names": [
+   "Muad'Dib",
+   "Muad’Dib"
+  ]
+ },
+ "muadDibCommandRespect": {
+  "files": [
+   "muadDibCommandRespect__1042.png",
+   "muadDibCommandRespect__1126.png"
+  ],
+  "names": [
+   "Command Respect",
+   "Imposer le respect"
+  ]
+ },
+ "muadDibConvincingArgument": {
+  "files": [
+   "muadDibConvincingArgument__1042.png",
+   "muadDibConvincingArgument__1126.png"
+  ],
+  "names": [
+   "Convincing Argument",
+   "Argument convaincant"
+  ]
+ },
+ "muadDibDemandAttention": {
+  "files": [
+   "muadDibDemandAttention__1042.png",
+   "muadDibDemandAttention__1126.png"
+  ],
+  "names": [
+   "Demand Attention",
+   "Exiger de l'attention"
+  ]
+ },
+ "muadDibDesertCall": {
+  "files": [
+   "muadDibDesertCall__1042.png",
+   "muadDibDesertCall__1126.png"
+  ],
+  "names": [
+   "Desert Call",
+   "Appel du désert"
+  ]
+ },
+ "muadDibFirstPlayer": {
+  "files": [
+   "muadDibFirstPlayer__1062.png",
+   "muadDibFirstPlayer__1147.png"
+  ],
+  "names": [
+   "Muad'Dib (First Player)",
+   "Muad’Dib (premier joueur)"
+  ]
+ },
+ "muadDibLimitedLandsraadAccess": {
+  "files": [
+   "muadDibLimitedLandsraadAccess__1042.png",
+   "muadDibLimitedLandsraadAccess__1126.png"
+  ],
+  "names": [
+   "Limited Landsraad Access",
+   "Accès limité au Landsraad"
+  ]
+ },
+ "muadDibSeekAllies": {
+  "files": [
+   "muadDibSeekAllies__1042.png",
+   "muadDibSeekAllies__1126.png"
+  ],
+  "names": [
+   "Seek Allies",
+   "À la recherche d’alliés"
+  ]
+ },
+ "muadDibSignetRing": {
+  "files": [
+   "muadDibSignetRing__1042.png",
+   "muadDibSignetRing__1126.png"
+  ],
+  "names": [
+   "Signet Ring",
+   "Chevalière"
+  ]
+ },
+ "muadDibThreatenSpiceProduction": {
+  "files": [
+   "muadDibThreatenSpiceProduction__1042.png",
+   "muadDibThreatenSpiceProduction__1126.png"
+  ],
+  "names": [
+   "Threaten Spice Production",
+   "Menacer la production d’épice"
+  ]
+ },
+ "muadDibUsul": {
+  "files": [
+   "muadDibUsul__1042.png",
+   "muadDibUsul__1126.png"
+  ],
+  "names": [
+   "Usul"
+  ]
+ },
+ "negotiatedWithdrawal": {
+  "files": [
+   "negotiatedWithdrawal__1043.png",
+   "negotiatedWithdrawal__1129.png"
+  ],
+  "names": [
+   "Negotiated Withdrawal",
+   "Retait négocié"
+  ]
+ },
+ "nothernWatermaster": {
+  "files": [
+   "nothernWatermaster__1046.png",
+   "nothernWatermaster__1131.png"
+  ],
+  "names": [
+   "Nothern Watermaster",
+   "Maître de l’Eau du Nord"
+  ]
+ },
+ "occupation": {
+  "files": [
+   "occupation__1045.png",
+   "occupation__1130.png"
+  ],
+  "names": [
+   "Occupation"
+  ]
+ },
+ "opportunism": {
+  "files": [
+   "opportunism__1059.png",
+   "opportunism__1144.png"
+  ],
+  "names": [
+   "Opportunism",
+   "Opportunisme"
+  ]
+ },
+ "opulence": {
+  "files": [
+   "opulence__1044.png",
+   "opulence__1128.png"
+  ],
+  "names": [
+   "Opulence"
+  ]
+ },
+ "organMerchants": {
+  "files": [
+   "organMerchants__1045.png",
+   "organMerchants__1130.png"
+  ],
+  "names": [
+   "Organ Merchants",
+   "Marchands d’organes"
+  ]
+ },
+ "ornithopter": {
+  "files": [
+   "ornithopter__1059.png",
+   "ornithopter__1144.png"
+  ],
+  "names": [
+   "Ornithopter",
+   "Ornithoptère"
+  ]
+ },
+ "ornithopter1to3p": {
+  "files": [
+   "ornithopter1to3p__1062.png",
+   "ornithopter1to3p__1147.png"
+  ],
+  "names": [
+   "Ornithopter",
+   "Ornithoptère"
+  ]
+ },
+ "otherMemory": {
+  "files": [
+   "otherMemory__1044.png",
+   "otherMemory__1128.png"
+  ],
+  "names": [
+   "Other Memory",
+   "Mémoire seconde"
+  ]
+ },
+ "overthrow": {
+  "files": [
+   "overthrow__1046.png",
+   "overthrow__1131.png"
+  ],
+  "names": [
+   "Overthrow",
+   "Renversement"
+  ]
+ },
+ "paracompass": {
+  "files": [
+   "paracompass__1046.png",
+   "paracompass__1131.png"
+  ],
+  "names": [
+   "Paracompass",
+   "Paracompas"
+  ]
+ },
+ "paulAtreides": {
+  "files": [
+   "paulAtreides__1098.png",
+   "paulAtreides__1183.png"
+  ],
+  "names": [
+   "Paul Atreides",
+   "Paul Atréides"
+  ]
+ },
+ "paulAtreides_com": {
+  "files": [
+   "paulAtreides_com__1997.png"
+  ],
+  "names": [
+   "Paul Atreides"
+  ]
+ },
+ "piterDeVries": {
+  "files": [
+   "piterDeVries__1044.png",
+   "piterDeVries__1128.png"
+  ],
+  "names": [
+   "Piter de Vries"
+  ]
+ },
+ "piterGeniusAdvisor": {
+  "files": [
+   "piterGeniusAdvisor__1054.png",
+   "piterGeniusAdvisor__1139.png"
+  ],
+  "names": [
+   "Piter Genius Advisor",
+   "Piter, conseiller de génie"
+  ]
+ },
+ "placeSpyBlue": {
+  "files": [
+   "placeSpyBlue__1088.png",
+   "placeSpyBlue__1173.png"
+  ],
+  "names": [
+   "Place Spy",
+   "Placer un espion"
+  ]
+ },
+ "placeSpyGreen": {
+  "files": [
+   "placeSpyGreen__1088.png",
+   "placeSpyGreen__1173.png"
+  ],
+  "names": [
+   "Place Spy",
+   "Placer un espion"
+  ]
+ },
+ "placeSpyYellow": {
+  "files": [
+   "placeSpyYellow__1088.png",
+   "placeSpyYellow__1173.png"
+  ],
+  "names": [
+   "Place Spy",
+   "Placer un espion"
+  ]
+ },
+ "plannedCoupling": {
+  "files": [
+   "plannedCoupling__1045.png",
+   "plannedCoupling__1130.png"
+  ],
+  "names": [
+   "Planned Coupling",
+   "Mariage arrangé"
+  ]
+ },
+ "plansWithinPlans": {
+  "files": [
+   "plansWithinPlans__1056.png",
+   "plansWithinPlans__1141.png"
+  ],
+  "names": [
+   "Plans within Plans",
+   "Des plans dans des plans"
+  ]
+ },
+ "poisonSnooper": {
+  "files": [
+   "poisonSnooper__1056.png",
+   "poisonSnooper__1141.png"
+  ],
+  "names": [
+   "PoisonS nooper",
+   "Goûte-poison"
+  ]
+ },
+ "powerPlay": {
+  "files": [
+   "powerPlay__1044.png",
+   "powerPlay__1128.png"
+  ],
+  "names": [
+   "Power Play",
+   "Jeu de pouvoir"
+  ]
+ },
+ "prepareTheWay": {
+  "files": [
+   "prepareTheWay__1051.png"
+  ],
+  "names": [
+   "Prepare the Way"
+  ]
+ },
+ "priceIsNoObject": {
+  "files": [
+   "priceIsNoObject__1046.png",
+   "priceIsNoObject__1131.png"
+  ],
+  "names": [
+   "Price is no Object",
+   "L’argent n’est pas un problème"
+  ]
+ },
+ "priorityContracts": {
+  "files": [
+   "priorityContracts__1047.png",
+   "priorityContracts__1132.png"
+  ],
+  "names": [
+   "Priority Contracts",
+   "Contrats prioritaires"
+  ]
+ },
+ "privateArmy": {
+  "files": [
+   "privateArmy__1056.png",
+   "privateArmy__1141.png"
+  ],
+  "names": [
+   "Private Army",
+   "Armée privée"
+  ]
+ },
+ "propaganda": {
+  "files": [
+   "propaganda__1085.png",
+   "propaganda__1170.png"
+  ],
+  "names": [
+   "Propaganda",
+   "Propagande"
+  ]
+ },
+ "protectTheSietches": {
+  "files": [
+   "protectTheSietches__1084.png",
+   "protectTheSietches__1169.png"
+  ],
+  "names": [
+   "Protect the Sietches",
+   "Protéger les sietchs"
+  ]
+ },
+ "publicSpectable": {
+  "files": [
+   "publicSpectable__1046.png",
+   "publicSpectable__1131.png"
+  ],
+  "names": [
+   "Public Spectable",
+   "Spectacle public"
+  ]
+ },
+ "questionableMethods": {
+  "files": [
+   "questionableMethods__1059.png",
+   "questionableMethods__1144.png"
+  ],
+  "names": [
+   "Questionable Methods",
+   "Méthodes douteuses"
+  ]
+ },
+ "quidProQuo": {
+  "files": [
+   "quidProQuo__1057.png",
+   "quidProQuo__1142.png"
+  ],
+  "names": [
+   "Quid Pro Quo"
+  ]
+ },
+ "rapidMobilization": {
+  "files": [
+   "rapidMobilization__1056.png",
+   "rapidMobilization__1141.png"
+  ],
+  "names": [
+   "Rapid Mobilization",
+   "Mobilisation éclair"
+  ]
+ },
+ "reachAgreement": {
+  "files": [
+   "reachAgreement__1060.png",
+   "reachAgreement__1145.png"
+  ],
+  "names": [
+   "{reachAgreement}"
+  ]
+ },
+ "rebelSupplier": {
+  "files": [
+   "rebelSupplier__1046.png",
+   "rebelSupplier__1131.png"
+  ],
+  "names": [
+   "Rebel Supplier",
+   "Fournisseur rebelle"
+  ]
+ },
+ "reclaimedForces": {
+  "files": [
+   "reclaimedForces__1050.png"
+  ],
+  "names": [
+   "Reclaimed Forces"
+  ]
+ },
+ "reconnaissance": {
+  "files": [
+   "reconnaissance__101.png",
+   "reconnaissance__1120.png"
+  ],
+  "names": [
+   "Reconnaissance"
+  ]
+ },
+ "recruitmentMission": {
+  "files": [
+   "recruitmentMission__1056.png",
+   "recruitmentMission__1141.png"
+  ],
+  "names": [
+   "Recruitment Mission",
+   "Mission de recrutement"
+  ]
+ },
+ "refocus": {
+  "files": [
+   "refocus__1056.png",
+   "refocus__1141.png"
+  ],
+  "names": [
+   "Refocus",
+   "recentrage"
+  ]
+ },
+ "reinforcements": {
+  "files": [
+   "reinforcements__1056.png",
+   "reinforcements__1141.png"
+  ],
+  "names": [
+   "Reinforcements",
+   "Renforts"
+  ]
+ },
+ "reliableInformant": {
+  "files": [
+   "reliableInformant__1046.png",
+   "reliableInformant__1131.png"
+  ],
+  "names": [
+   "Reliable Informant",
+   "Informateur fiable"
+  ]
+ },
+ "replacementEyes": {
+  "files": [
+   "replacementEyes__1045.png",
+   "replacementEyes__1130.png"
+  ],
+  "names": [
+   "Replacement Eyes",
+   "Yeux de rechange"
+  ]
+ },
+ "researchStation": {
+  "files": [
+   "researchStation__1088.png",
+   "researchStation__1173.png"
+  ],
+  "names": [
+   "Research Station",
+   "Station de recherche"
+  ]
+ },
+ "researchStationImmortality": {
+  "files": [
+   "researchStationImmortality__1091.png",
+   "researchStationImmortality__1176.png"
+  ],
+  "names": [
+   "Research Station",
+   "Station de recherche"
+  ]
+ },
+ "reshuffle": {
+  "files": [
+   "reshuffle__1089.png",
+   "reshuffle__1174.png"
+  ],
+  "names": [
+   "Reshuffle",
+   "Rémélanger"
+  ]
+ },
+ "restrictedOrdnance": {
+  "files": [
+   "restrictedOrdnance__1065.png",
+   "restrictedOrdnance__1150.png"
+  ],
+  "names": [
+   "Restricted Ordnance",
+   "Ordonnance restrictive"
+  ]
+ },
+ "reverendMotherMohiam": {
+  "files": [
+   "reverendMotherMohiam__1044.png",
+   "reverendMotherMohiam__1128.png"
+  ],
+  "names": [
+   "Reverend Mother Mohiam",
+   "Révérende mère Mohiam"
+  ]
+ },
+ "rhomburVernius": {
+  "files": [
+   "rhomburVernius__1103.png",
+   "rhomburVernius__1188.png"
+  ],
+  "names": [
+   "Prince Rhombur Vernius"
+  ]
+ },
+ "rhomburVernius_com": {
+  "files": [
+   "rhomburVernius_com__1999.png"
+  ],
+  "names": [
+   "Prince Rhombur Vernius"
+  ]
+ },
+ "sardaukar": {
+  "files": [
+   "sardaukar__1088.png",
+   "sardaukar__1173.png"
+  ],
+  "names": [
+   "Sardaukar"
+  ]
+ },
+ "sardaukarCoordination": {
+  "files": [
+   "sardaukarCoordination__1046.png",
+   "sardaukarCoordination__1131.png"
+  ],
+  "names": [
+   "Sardaukar Coordination",
+   "Coordination Sardaukar"
+  ]
+ },
+ "sardaukarInfantry": {
+  "files": [
+   "sardaukarInfantry__1044.png",
+   "sardaukarInfantry__1128.png"
+  ],
+  "names": [
+   "Sardaukar Infantry",
+   "Infantrie Sardaukar"
+  ]
+ },
+ "sardaukarInfantry_com": {
+  "files": [
+   "sardaukarInfantry_com__2003.png"
+  ],
+  "names": [
+   "Sardaukar Infantry"
+  ]
+ },
+ "sardaukarLegion": {
+  "files": [
+   "sardaukarLegion__1044.png",
+   "sardaukarLegion__1128.png"
+  ],
+  "names": [
+   "Sardaukar Legion",
+   "Légion Sardaukar"
+  ]
+ },
+ "sardaukarQuartermaster": {
+  "files": [
+   "sardaukarQuartermaster__1045.png",
+   "sardaukarQuartermaster__1130.png"
+  ],
+  "names": [
+   "Sardaukar Quartermaster",
+   "Quartier-maître Sardaukar"
+  ]
+ },
+ "sardaukarSoldier": {
+  "files": [
+   "sardaukarSoldier__1046.png",
+   "sardaukarSoldier__1131.png"
+  ],
+  "names": [
+   "Sardaukar Soldier",
+   "Soldat Sardaukar"
+  ]
+ },
+ "sardaukarSoldier_com": {
+  "files": [
+   "sardaukarSoldier_com__2004.png"
+  ],
+  "names": [
+   "Sardaukar Soldier"
+  ]
+ },
+ "satelliteBan": {
+  "files": [
+   "satelliteBan__1043.png",
+   "satelliteBan__1129.png"
+  ],
+  "names": [
+   "Satellite Ban",
+   "Ban satellitaire"
+  ]
+ },
+ "sayyadina": {
+  "files": [
+   "sayyadina__1043.png",
+   "sayyadina__1129.png"
+  ],
+  "names": [
+   "Sayyadina"
+  ]
+ },
+ "sc_Canny": {
+  "files": [
+   "sc_Canny__1671.png",
+   "sc_Canny__1671.png"
+  ],
+  "names": [
+   "Canny"
+  ]
+ },
+ "sc_Charismatic": {
+  "files": [
+   "sc_Charismatic__1671.png",
+   "sc_Charismatic__1671.png"
+  ],
+  "names": [
+   "Charismatic"
+  ]
+ },
+ "sc_Desperate": {
+  "files": [
+   "sc_Desperate__1671.png",
+   "sc_Desperate__1671.png"
+  ],
+  "names": [
+   "Desperate"
+  ]
+ },
+ "sc_Driven": {
+  "files": [
+   "sc_Driven__1671.png",
+   "sc_Driven__1671.png"
+  ],
+  "names": [
+   "Driven"
+  ]
+ },
+ "sc_Fierce": {
+  "files": [
+   "sc_Fierce__1671.png",
+   "sc_Fierce__1671.png"
+  ],
+  "names": [
+   "Fierce"
+  ]
+ },
+ "sc_Hardy": {
+  "files": [
+   "sc_Hardy__1671.png",
+   "sc_Hardy__1671.png"
+  ],
+  "names": [
+   "Hardy"
+  ]
+ },
+ "sc_Loyal": {
+  "files": [
+   "sc_Loyal__1671.png",
+   "sc_Loyal__1671.png"
+  ],
+  "names": [
+   "Loyal"
+  ]
+ },
+ "scientificBreakthrough": {
+  "files": [
+   "scientificBreakthrough__1054.png",
+   "scientificBreakthrough__1139.png"
+  ],
+  "names": [
+   "Scientific Breakthrough",
+   "Percée scientifique"
+  ]
+ },
+ "scout": {
+  "files": [
+   "scout__1044.png",
+   "scout__1128.png"
+  ],
+  "names": [
+   "Scout",
+   "Éclaireur"
+  ]
+ },
+ "secondWave": {
+  "files": [
+   "secondWave__1057.png",
+   "secondWave__1142.png"
+  ],
+  "names": [
+   "Second Wave",
+   "Second vague"
+  ]
+ },
+ "secretForces": {
+  "files": [
+   "secretForces__1057.png",
+   "secretForces__1142.png"
+  ],
+  "names": [
+   "Secret Forces",
+   "Forces secrètes"
+  ]
+ },
+ "secretOfTheSisterhood": {
+  "files": [
+   "secretOfTheSisterhood__1056.png",
+   "secretOfTheSisterhood__1141.png"
+  ],
+  "names": [
+   "Secret of the Sisterhood",
+   "Secret de la sororité"
+  ]
+ },
+ "secrets": {
+  "files": [
+   "secrets__1088.png",
+   "secrets__1173.png"
+  ],
+  "names": [
+   "Secrets"
+  ]
+ },
+ "secureImperialBasin": {
+  "files": [
+   "secureImperialBasin__1084.png",
+   "secureImperialBasin__1169.png"
+  ],
+  "names": [
+   "Secure Imperial Basin",
+   "Sécuriser le bassin impérial"
+  ]
+ },
+ "secureSpiceTrade": {
+  "files": [
+   "secureSpiceTrade__1059.png",
+   "secureSpiceTrade__1144.png"
+  ],
+  "names": [
+   "Secure Spice Trade",
+   "Sécuriser le commerce de l’épice"
+  ]
+ },
+ "secureSpiceTrade_com": {
+  "files": [
+   "secureSpiceTrade_com__2008.png"
+  ],
+  "names": [
+   "Secure Spice Trade"
+  ]
+ },
+ "seekAllies": {
+  "files": [
+   "seekAllies__101.png",
+   "seekAllies__1120.png"
+  ],
+  "names": [
+   "Seek Allies",
+   "À la recherche d’alliés"
+  ]
+ },
+ "seizeSpiceRefinery": {
+  "files": [
+   "seizeSpiceRefinery__1084.png",
+   "seizeSpiceRefinery__1169.png"
+  ],
+  "names": [
+   "Seize Spice Refinery",
+   "Capturer la raffinerie d’épice"
+  ]
+ },
+ "shaddamCorrino": {
+  "files": [
+   "shaddamCorrino__1114.png",
+   "shaddamCorrino__1199.png"
+  ],
+  "names": [
+   "Shaddam IV"
+  ]
+ },
+ "shaddamFavor": {
+  "files": [
+   "shaddamFavor__1059.png",
+   "shaddamFavor__1144.png"
+  ],
+  "names": [
+   "Shaddam Favor",
+   "Faveur de Shaddam"
+  ]
+ },
+ "shadoutMapes": {
+  "files": [
+   "shadoutMapes__1045.png",
+   "shadoutMapes__1130.png"
+  ],
+  "names": [
+   "Shadout Mapes"
+  ]
+ },
+ "shadowAlliance": {
+  "files": [
+   "shadowAlliance__1059.png",
+   "shadowAlliance__1144.png"
+  ],
+  "names": [
+   "Shadow Alliance",
+   "Alliance de l’ombre"
+  ]
+ },
+ "shadowContest": {
+  "files": [
+   "shadowContest__1084.png",
+   "shadowContest__1169.png"
+  ],
+  "names": [
+   "Shadow Contest",
+   "Épreuve de l’ombre"
+  ]
+ },
+ "shadowyBargain": {
+  "files": [
+   "shadowyBargain__1058.png",
+   "shadowyBargain__1143.png"
+  ],
+  "names": [
+   "Shadowy Bargain",
+   "Combine foireuse"
+  ]
+ },
+ "shaiHulud": {
+  "files": [
+   "shaiHulud__1043.png",
+   "shaiHulud__1129.png"
+  ],
+  "names": [
+   "Shai Hulud"
+  ]
+ },
+ "shiftingAllegiances": {
+  "files": [
+   "shiftingAllegiances__1044.png",
+   "shiftingAllegiances__1128.png"
+  ],
+  "names": [
+   "Shifting Allegiances",
+   "Allégiances changeantes"
+  ]
+ },
+ "shishakli": {
+  "files": [
+   "shishakli__1046.png",
+   "shishakli__1131.png"
+  ],
+  "names": [
+   "Shishakli"
+  ]
+ },
+ "showOfStrength": {
+  "files": [
+   "showOfStrength__1045.png",
+   "showOfStrength__1130.png"
+  ],
+  "names": [
+   "Show of Strength",
+   "Démonstration de force"
+  ]
+ },
+ "shuttleFleet": {
+  "files": [
+   "shuttleFleet__1074.png",
+   "shuttleFleet__1159.png"
+  ],
+  "names": [
+   "Shuttle Fleet",
+   "Flotte de navettes"
+  ]
+ },
+ "siegeOfArrakeen": {
+  "files": [
+   "siegeOfArrakeen__1084.png",
+   "siegeOfArrakeen__1169.png"
+  ],
+  "names": [
+   "Siege of Arrakeen",
+   "Siège d’Arrakeen"
+  ]
+ },
+ "sietchReverendMother": {
+  "files": [
+   "sietchReverendMother__1044.png",
+   "sietchReverendMother__1128.png"
+  ],
+  "names": [
+   "Sietch Reverend Mother",
+   "Révérende mère de sietch"
+  ]
+ },
+ "sietchRitual": {
+  "files": [
+   "sietchRitual__1059.png",
+   "sietchRitual__1144.png"
+  ],
+  "names": [
+   "Sietch Ritual",
+   "Rituel du sietch"
+  ]
+ },
+ "sietchTabr": {
+  "files": [
+   "sietchTabr__1088.png",
+   "sietchTabr__1173.png"
+  ],
+  "names": [
+   "Sietch Tabr"
+  ]
+ },
+ "signetRing": {
+  "files": [
+   "signetRing__101.png",
+   "signetRing__1120.png"
+  ],
+  "names": [
+   "Signet Ring",
+   "Chevalière"
+  ]
+ },
+ "skirmishA": {
+  "files": [
+   "skirmishA__1083.png",
+   "skirmishA__1168.png"
+  ],
+  "names": [
+   "Skirmish",
+   "Escarmouche"
+  ]
+ },
+ "skirmishB": {
+  "files": [
+   "skirmishB__1083.png",
+   "skirmishB__1168.png"
+  ],
+  "names": [
+   "Skirmish",
+   "Escarmouche"
+  ]
+ },
+ "skirmishC": {
+  "files": [
+   "skirmishC__1083.png",
+   "skirmishC__1168.png"
+  ],
+  "names": [
+   "Skirmish",
+   "Escarmouche"
+  ]
+ },
+ "sligFarmer": {
+  "files": [
+   "sligFarmer__1054.png",
+   "sligFarmer__1139.png"
+  ],
+  "names": [
+   "Slig Farmer",
+   "Éleveur de limachons"
+  ]
+ },
+ "smugglerHarvester": {
+  "files": [
+   "smugglerHarvester__1046.png",
+   "smugglerHarvester__1131.png"
+  ],
+  "names": [
+   "Smuggler Harvester",
+   "Moissonneur de contrebande"
+  ]
+ },
+ "smugglerHarvester_com": {
+  "files": [
+   "smugglerHarvester_com__2000.png"
+  ],
+  "names": [
+   "Smuggler's Harvester"
+  ]
+ },
+ "smugglerHaven": {
+  "files": [
+   "smugglerHaven__1046.png",
+   "smugglerHaven__1131.png"
+  ],
+  "names": [
+   "Smuggler Haven",
+   "Repaire de contrebandiers"
+  ]
+ },
+ "smugglersThopter": {
+  "files": [
+   "smugglersThopter__1044.png",
+   "smugglersThopter__1128.png"
+  ],
+  "names": [
+   "Smuggler's Thopter",
+   "Orni de contrebandiers"
+  ]
+ },
+ "smugglingAndInterstellarShipping": {
+  "files": [
+   "smugglingAndInterstellarShipping__1090.png",
+   "smugglingAndInterstellarShipping__1175.png"
+  ],
+  "names": [
+   "Smuggling / Interstellar Shipping",
+   "Contrebande / Livraison interstellaire"
+  ]
+ },
+ "sonicSnoopers": {
+  "files": [
+   "sonicSnoopers__1077.png",
+   "sonicSnoopers__1162.png"
+  ],
+  "names": [
+   "Sonic Snoopers",
+   "Fouineurs soniques"
+  ]
+ },
+ "southernElders": {
+  "files": [
+   "southernElders__1046.png",
+   "southernElders__1131.png"
+  ],
+  "names": [
+   "Southern Elders",
+   "Aînés du Sud"
+  ]
+ },
+ "spaceTimeFolding": {
+  "files": [
+   "spaceTimeFolding__1046.png",
+   "spaceTimeFolding__1131.png"
+  ],
+  "names": [
+   "Space Time Folding",
+   "Replier l’espace-temps"
+  ]
+ },
+ "spaceTravel": {
+  "files": [
+   "spaceTravel__1044.png",
+   "spaceTravel__1128.png"
+  ],
+  "names": [
+   "Space Travel",
+   "Voyage spatial"
+  ]
+ },
+ "spaceport": {
+  "files": [
+   "spaceport__1064.png",
+   "spaceport__1149.png"
+  ],
+  "names": [
+   "Spaceport",
+   "Spatioport"
+  ]
+ },
+ "spacingGuildFavor": {
+  "files": [
+   "spacingGuildFavor__1046.png",
+   "spacingGuildFavor__1131.png"
+  ],
+  "names": [
+   "Spacing Guild Favor",
+   "Faveur de la Guilde"
+  ]
+ },
+ "specialMission": {
+  "files": [
+   "specialMission__1059.png",
+   "specialMission__1144.png"
+  ],
+  "names": [
+   "Special Mission",
+   "Mission spéciale"
+  ]
+ },
+ "spiceFreighters": {
+  "files": [
+   "spiceFreighters__1084.png",
+   "spiceFreighters__1169.png"
+  ],
+  "names": [
+   "Spice Freighters",
+   "Camtars d’épice"
+  ]
+ },
+ "spiceHunter": {
+  "files": [
+   "spiceHunter__1044.png",
+   "spiceHunter__1128.png"
+  ],
+  "names": [
+   "Spice Hunter",
+   "Chasseur d’épice"
+  ]
+ },
+ "spiceIsPower": {
+  "files": [
+   "spiceIsPower__1059.png",
+   "spiceIsPower__1144.png"
+  ],
+  "names": [
+   "Spice is Power",
+   "L’épice, c’est le pouvoir"
+  ]
+ },
+ "spiceRefinery": {
+  "files": [
+   "spiceRefinery__1088.png",
+   "spiceRefinery__1173.png"
+  ],
+  "names": [
+   "Spice Refinery",
+   "Raffinerie d’épice"
+  ]
+ },
+ "spiceSmugglers": {
+  "files": [
+   "spiceSmugglers__1044.png",
+   "spiceSmugglers__1128.png"
+  ],
+  "names": [
+   "Spice Smugglers",
+   "Contrebandier d’épice"
+  ]
+ },
+ "spiceTrader": {
+  "files": [
+   "spiceTrader__1043.png",
+   "spiceTrader__1129.png"
+  ],
+  "names": [
+   "Spice Trader",
+   "Vendeur d’épice"
+  ]
+ },
+ "spiritualFervor": {
+  "files": [
+   "spiritualFervor__1045.png",
+   "spiritualFervor__1130.png"
+  ],
+  "names": [
+   "Spiritual Fervor",
+   "Ferveur spirituel"
+  ]
+ },
+ "springTheTrap": {
+  "files": [
+   "springTheTrap__1059.png",
+   "springTheTrap__1144.png"
+  ],
+  "names": [
+   "Spring the Trap",
+   "Déclencher le piège"
+  ]
+ },
+ "spyNetwork": {
+  "files": [
+   "spyNetwork__1046.png",
+   "spyNetwork__1131.png"
+  ],
+  "names": [
+   "Spy Network",
+   "Réseau d’espionnage"
+  ]
+ },
+ "spySatellites": {
+  "files": [
+   "spySatellites__1075.png",
+   "spySatellites__1160.png"
+  ],
+  "names": [
+   "Spy Satellites",
+   "Satellites espions"
+  ]
+ },
+ "stabanTuek": {
+  "files": [
+   "stabanTuek__1107.png",
+   "stabanTuek__1117.png",
+   "stabanTuek__1192.png",
+   "stabanTuek__1202.png"
+  ],
+  "names": [
+   "Staban Tuek"
+  ]
+ },
+ "stagedIncident": {
+  "files": [
+   "stagedIncident__1056.png",
+   "stagedIncident__1141.png"
+  ],
+  "names": [
+   "Staged Incident",
+   "Incident mise en scène"
+  ]
+ },
+ "steersman": {
+  "files": [
+   "steersman__1046.png",
+   "steersman__1131.png"
+  ],
+  "names": [
+   "Steersman",
+   "Timonier"
+  ]
+ },
+ "stilgar": {
+  "files": [
+   "stilgar__1044.png",
+   "stilgar__1128.png"
+  ],
+  "names": [
+   "Stilgar"
+  ]
+ },
+ "stilgarTheDevoted": {
+  "files": [
+   "stilgarTheDevoted__1046.png",
+   "stilgarTheDevoted__1131.png"
+  ],
+  "names": [
+   "Stilgar the Devoted",
+   "Stilgar, le dévoué"
+  ]
+ },
+ "stillsuitManufacturer": {
+  "files": [
+   "stillsuitManufacturer__1045.png",
+   "stillsuitManufacturer__1130.png"
+  ],
+  "names": [
+   "Stillsuit Manufacturer",
+   "Fabricant de distilles"
+  ]
+ },
+ "stitchedHorror": {
+  "files": [
+   "stitchedHorror__1054.png",
+   "stitchedHorror__1139.png"
+  ],
+  "names": [
+   "Stitched Horror",
+   "Amalgame horrifique"
+  ]
+ },
+ "strategicPush": {
+  "files": [
+   "strategicPush__1057.png",
+   "strategicPush__1142.png"
+  ],
+  "names": [
+   "Strategic Push",
+   "Poussée stratégique"
+  ]
+ },
+ "strategicStockpiling": {
+  "files": [
+   "strategicStockpiling__1059.png",
+   "strategicStockpiling__1144.png"
+  ],
+  "names": [
+   "Strategic Stockpiling",
+   "Constitution de stocks stratégiques"
+  ]
+ },
+ "strikeFleet": {
+  "files": [
+   "strikeFleet__1046.png",
+   "strikeFleet__1131.png"
+  ],
+  "names": [
+   "Strike Fleet",
+   "Flotte de frappe"
+  ]
+ },
+ "strongarm": {
+  "files": [
+   "strongarm__1057.png",
+   "strongarm__1142.png"
+  ],
+  "names": [
+   "Strongarm",
+   "Rapport de force"
+  ]
+ },
+ "studyMelange": {
+  "files": [
+   "studyMelange__1058.png",
+   "studyMelange__1143.png"
+  ],
+  "names": [
+   "Study Melange",
+   "Étudier le mélange"
+  ]
+ },
+ "subjectX137": {
+  "files": [
+   "subjectX137__1054.png",
+   "subjectX137__1139.png"
+  ],
+  "names": [
+   "Subject X-137",
+   "Sujet X-137"
+  ]
+ },
+ "subversiveAdvisor": {
+  "files": [
+   "subversiveAdvisor__1046.png",
+   "subversiveAdvisor__1131.png"
+  ],
+  "names": [
+   "Subversive Advisor",
+   "Conseiller subversif"
+  ]
+ },
+ "tacticalOption": {
+  "files": [
+   "tacticalOption__1059.png",
+   "tacticalOption__1144.png"
+  ],
+  "names": [
+   "Tactical Option",
+   "Option tactique"
+  ]
+ },
+ "techNegotiation": {
+  "files": [
+   "techNegotiation__1090.png",
+   "techNegotiation__1175.png"
+  ],
+  "names": [
+   "Tech Negotiation",
+   "Négociation tech."
+  ]
+ },
+ "tessiaVernius": {
+  "files": [
+   "tessiaVernius__1104.png",
+   "tessiaVernius__1189.png"
+  ],
+  "names": [
+   "Tessia Vernius"
+  ]
+ },
+ "testOfHumanity": {
+  "files": [
+   "testOfHumanity__1044.png",
+   "testOfHumanity__1128.png"
+  ],
+  "names": [
+   "Test of Humanity",
+   "Test d’humanité"
+  ]
+ },
+ "testOfLoyalty": {
+  "files": [
+   "testOfLoyalty__1084.png",
+   "testOfLoyalty__1169.png"
+  ],
+  "names": [
+   "Test of Loyalty",
+   "Test de loyauté"
+  ]
+ },
+ "theBeastSpoils": {
+  "files": [
+   "theBeastSpoils__1046.png",
+   "theBeastSpoils__1131.png"
+  ],
+  "names": [
+   "The Beast Spoils",
+   "Le butin de la bête"
+  ]
+ },
+ "theSleeperMustAwaken": {
+  "files": [
+   "theSleeperMustAwaken__1056.png",
+   "theSleeperMustAwaken__1141.png"
+  ],
+  "names": [
+   "The Sleeper must Awaken",
+   "Le dormeur doit se réveiller"
+  ]
+ },
+ "theSpiceMustFlow": {
+  "files": [
+   "theSpiceMustFlow__1052.png",
+   "theSpiceMustFlow__1137.png"
+  ],
+  "names": [
+   "The Spice must Flow",
+   "L’épice doit couler"
+  ]
+ },
+ "theVoice": {
+  "files": [
+   "theVoice__1044.png",
+   "theVoice__1128.png"
+  ],
+  "names": [
+   "The Voice",
+   "La Voix"
+  ]
+ },
+ "throneRoomPolitics": {
+  "files": [
+   "throneRoomPolitics__1045.png",
+   "throneRoomPolitics__1130.png"
+  ],
+  "names": [
+   "Throne Room Politics",
+   "Réunion du conseil"
+  ]
+ },
+ "thufirHawat": {
+  "files": [
+   "thufirHawat__1044.png",
+   "thufirHawat__1128.png"
+  ],
+  "names": [
+   "Thufir Hawat"
+  ]
+ },
+ "thumper": {
+  "files": [
+   "thumper__1046.png",
+   "thumper__1131.png"
+  ],
+  "names": [
+   "thumper",
+   "Marteleur"
+  ]
+ },
+ "tiebreaker": {
+  "files": [
+   "tiebreaker__1056.png",
+   "tiebreaker__1141.png"
+  ],
+  "names": [
+   "Tiebreaker",
+   "tir au but"
+  ]
+ },
+ "tleilaxuBonus1": {
+  "files": [
+   "tleilaxuBonus1__1091.png",
+   "tleilaxuBonus1__1176.png"
+  ],
+  "names": [
+   "Tleilaxu Bonus",
+   "Bonus Tleilaxu"
+  ]
+ },
+ "tleilaxuBonus2": {
+  "files": [
+   "tleilaxuBonus2__1091.png",
+   "tleilaxuBonus2__1176.png"
+  ],
+  "names": [
+   "Tleilaxu Bonus",
+   "Bonus Tleilaxu"
+  ]
+ },
+ "tleilaxuBonus3": {
+  "files": [
+   "tleilaxuBonus3__1091.png",
+   "tleilaxuBonus3__1176.png"
+  ],
+  "names": [
+   "Tleilaxu Bonus",
+   "Bonus Tleilaxu"
+  ]
+ },
+ "tleilaxuInfiltrator": {
+  "files": [
+   "tleilaxuInfiltrator__1054.png",
+   "tleilaxuInfiltrator__1139.png"
+  ],
+  "names": [
+   "Tleilaxu Infiltrator",
+   "Infiltrateur tleilaxu"
+  ]
+ },
+ "tleilaxuMaster": {
+  "files": [
+   "tleilaxuMaster__1045.png",
+   "tleilaxuMaster__1130.png"
+  ],
+  "names": [
+   "Tleilaxu Master",
+   "Maître tleilaxu"
+  ]
+ },
+ "tleilaxuPuppet": {
+  "files": [
+   "tleilaxuPuppet__1058.png",
+   "tleilaxuPuppet__1143.png"
+  ],
+  "names": [
+   "Tleilaxu Puppet",
+   "Marionnette tleilaxu"
+  ]
+ },
+ "tleilaxuSurgeon": {
+  "files": [
+   "tleilaxuSurgeon__1045.png",
+   "tleilaxuSurgeon__1130.png"
+  ],
+  "names": [
+   "Tleilaxu Surgeon",
+   "Chirurgien tleilaxu"
+  ]
+ },
+ "toTheVictor": {
+  "files": [
+   "toTheVictor__1056.png",
+   "toTheVictor__1141.png"
+  ],
+  "names": [
+   "To the Victor",
+   "Au vainqueur"
+  ]
+ },
+ "tradeDispute": {
+  "files": [
+   "tradeDispute__1084.png",
+   "tradeDispute__1169.png"
+  ],
+  "names": [
+   "Trade Dispute",
+   "Différend commercial"
+  ]
+ },
+ "trainingDrones": {
+  "files": [
+   "trainingDrones__1078.png",
+   "trainingDrones__1163.png"
+  ],
+  "names": [
+   "Training Drones",
+   "Drones d’entraînement"
+  ]
+ },
+ "treachery": {
+  "files": [
+   "treachery__1043.png",
+   "treachery__1129.png"
+  ],
+  "names": [
+   "Treachery",
+   "Trahison"
+  ]
+ },
+ "treadInDarkness": {
+  "files": [
+   "treadInDarkness__1046.png",
+   "treadInDarkness__1131.png"
+  ],
+  "names": [
+   "Tread in Darkness",
+   "Avancer dans l’obscurité"
+  ]
+ },
+ "trecherousManeuver": {
+  "files": [
+   "trecherousManeuver__1046.png",
+   "trecherousManeuver__1131.png"
+  ],
+  "names": [
+   "Trecherous Maneuver",
+   "Manœuvre sournoise"
+  ]
+ },
+ "troopTransports": {
+  "files": [
+   "troopTransports__1079.png",
+   "troopTransports__1164.png"
+  ],
+  "names": [
+   "Troop Transports",
+   "Transports de troupes"
+  ]
+ },
+ "truthsayer": {
+  "files": [
+   "truthsayer__1043.png",
+   "truthsayer__1129.png"
+  ],
+  "names": [
+   "Truthsayer",
+   "Diseuse de vérité"
+  ]
+ },
+ "truthtrance": {
+  "files": [
+   "truthtrance__1046.png",
+   "truthtrance__1131.png"
+  ],
+  "names": [
+   "Truthtrance",
+   "Transe de vérité"
+  ]
+ },
+ "twistedMentat": {
+  "files": [
+   "twistedMentat__1054.png",
+   "twistedMentat__1139.png"
+  ],
+  "names": [
+   "Twisted Mentat",
+   "Mentat « tordu »"
+  ]
+ },
+ "undercoverAsset": {
+  "files": [
+   "undercoverAsset__1046.png",
+   "undercoverAsset__1131.png"
+  ],
+  "names": [
+   "Undercover Asset",
+   "Agent sous couverture"
+  ]
+ },
+ "unexpectedAllies": {
+  "files": [
+   "unexpectedAllies__1059.png",
+   "unexpectedAllies__1144.png"
+  ],
+  "names": [
+   "Unexpected Allies",
+   "Alliés inattendus"
+  ]
+ },
+ "unnaturalReflexes": {
+  "files": [
+   "unnaturalReflexes__1054.png",
+   "unnaturalReflexes__1139.png"
+  ],
+  "names": [
+   "Unnatural Reflexes",
+   "Réflexes anormaux"
+  ]
+ },
+ "unswervingLoyalty": {
+  "files": [
+   "unswervingLoyalty__1046.png",
+   "unswervingLoyalty__1131.png"
+  ],
+  "names": [
+   "Unswerving Loyalty",
+   "Loyauté indéfectible"
+  ]
+ },
+ "urgentMission": {
+  "files": [
+   "urgentMission__1056.png",
+   "urgentMission__1141.png"
+  ],
+  "names": [
+   "Urgent Mission",
+   "Mission urgente"
+  ]
+ },
+ "usurp": {
+  "files": [
+   "usurp__1054.png",
+   "usurp__1139.png"
+  ],
+  "names": [
+   "Usurp",
+   "Usurper"
+  ]
+ },
+ "viciousTalents": {
+  "files": [
+   "viciousTalents__1058.png",
+   "viciousTalents__1143.png"
+  ],
+  "names": [
+   "Vicious Talents",
+   "Talents vicieux"
+  ]
+ },
+ "vladimirHarkonnen": {
+  "files": [
+   "vladimirHarkonnen__1117.png",
+   "vladimirHarkonnen__1178.png",
+   "vladimirHarkonnen__1202.png",
+   "vladimirHarkonnen__1648.png"
+  ],
+  "names": [
+   "Baron Vladimir Harkonnen"
+  ]
+ },
+ "warChest": {
+  "files": [
+   "warChest__1057.png",
+   "warChest__1142.png"
+  ],
+  "names": [
+   "WarChest",
+   "Butin de guerre"
+  ]
+ },
+ "waterOfLife": {
+  "files": [
+   "waterOfLife__1056.png",
+   "waterOfLife__1141.png"
+  ],
+  "names": [
+   "Water of Life",
+   "Eau de la vie"
+  ]
+ },
+ "waterPeddler": {
+  "files": [
+   "waterPeddler__1043.png",
+   "waterPeddler__1129.png"
+  ],
+  "names": [
+   "Water Peddler",
+   "Porteuse d’eau"
+  ]
+ },
+ "waterPeddlersUnion": {
+  "files": [
+   "waterPeddlersUnion__1056.png",
+   "waterPeddlersUnion__1141.png"
+  ],
+  "names": [
+   "Water Peddlers Union",
+   "Syndicat des porteurs d’eau"
+  ]
+ },
+ "webOfPower": {
+  "files": [
+   "webOfPower__1043.png",
+   "webOfPower__1129.png"
+  ],
+  "names": [
+   "Web of Power",
+   "Toile du pouvoir"
+  ]
+ },
+ "weirdingCombat": {
+  "files": [
+   "weirdingCombat__1059.png",
+   "weirdingCombat__1144.png"
+  ],
+  "names": [
+   "Weirding Combat",
+   "Combat étrange"
+  ]
+ },
+ "weirdingWay": {
+  "files": [
+   "weirdingWay__1043.png",
+   "weirdingWay__1129.png"
+  ],
+  "names": [
+   "Weirding Way",
+   "Art étrange"
+  ]
+ },
+ "weirdingWoman": {
+  "files": [
+   "weirdingWoman__1046.png",
+   "weirdingWoman__1131.png"
+  ],
+  "names": [
+   "Weirding Woman",
+   "Femme de l’art étrange"
+  ]
+ },
+ "wheelsWithinWheels": {
+  "files": [
+   "wheelsWithinWheels__1046.png",
+   "wheelsWithinWheels__1131.png"
+  ],
+  "names": [
+   "Wheels within Wheels",
+   "Des rouages dans les rouages"
+  ]
+ },
+ "windfall": {
+  "files": [
+   "windfall__1056.png",
+   "windfall__1141.png"
+  ],
+  "names": [
+   "Windfall",
+   "Aubaine"
+  ]
+ },
+ "windtraps": {
+  "files": [
+   "windtraps__1070.png",
+   "windtraps__1155.png"
+  ],
+  "names": [
+   "Windtraps",
+   "Pièges à vent"
+  ]
+ },
+ "wormRiders": {
+  "files": [
+   "wormRiders__1044.png",
+   "wormRiders__1128.png"
+  ],
+  "names": [
+   "Worm Riders",
+   "Chevaucheurs de ver"
+  ]
+ },
+ "yunaMoritani": {
+  "files": [
+   "yunaMoritani__1105.png",
+   "yunaMoritani__1190.png"
+  ],
+  "names": [
+   "\"Princess\" Yuna Moritani",
+   "« Princesse » Yuna Moritani"
+  ]
+ }
+}
