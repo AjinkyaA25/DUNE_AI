@@ -11,13 +11,20 @@ train_run.log
 # IDE
 .idea/
 
-# Binary reference assets — kept local, not tracked in git
-/cards/
-/base_cards/
-/intrigue_cards/
-conflicts/
-contracts/
+# Binary files (screenshots, video frames, rulebook PDFs) stay local...
 *.pdf
 *.png
 *.jpg
 *.jpeg
+*.PNG
+*.JPG
+# ...except the card / tile images the game and UI need, which are tracked
+# so a fresh clone has them.
+!/cards/**
+!/base_cards/**
+!/intrigue_cards/**
+!/conflicts/**
+!/contracts/**
+!/Tech tiles/**
+!/sard_skills/**
+!/video_scrape/cards/**
