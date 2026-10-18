@@ -20,7 +20,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from src.game.gameState import GameState, GameAction, ActionType, MAX_ROUNDS
+from src.game.gameState import GameState, GameAction, ActionType, MAX_ROUNDS, INFLUENCE_4_BONUS
 from src.ai.features import encode_state
 from src.ai.value_model import ValueModel
 from src.ai.opening_book import OpeningBook
@@ -44,6 +44,20 @@ _RES_VALUE = {
 # `tuning` dict applies its own values at the start of every score() call.
 _BASE_RES_VALUE = dict(_RES_VALUE)
 TUNE_DEFAULTS = {
+    # Spy posts (user, 2026-10-16: "doesn't know which spy spots are better"):
+    # overall scale, worth of each extra space a post covers, and the weight
+    # of a bordering combat space while a Conflict is live
+    "spy_post": 0.5, "spy_multi": 0.35, "spy_combat": 0.6,
+    # troops kept for the next Conflict; how much Intrigue cards are worth
+    "deploy_hold": 0.4, "intrigue_love": 1.0,
+    # tech_love: multiplies what owning a tech tile is worth (tech persona)
+    "tech_love": 1.0,
+    # contract_stack: bonus per extra contract one Agent move completes, and
+    # for taking a contract that completes where a held one does (persona)
+    "contract_stack": 0.0,
+    # leader_play: how much the Leader passives that depend on where an Agent
+    # goes count (Jessica's flip, Reverend Mother repeats); 0 = old behaviour
+    "leader_play": 1.0,
     # multipliers on _RES_VALUE entries
     "res_contract": 1.0, "res_spy": 1.0, "res_intrigue": 1.0, "res_draw": 1.0,
     "res_solari": 1.0, "res_spice": 1.0, "res_water": 1.0, "res_troops": 1.0,
@@ -61,6 +75,10 @@ TUNE_DEFAULTS = {
     # holding value: a troop kept in the garrison / an intrigue kept in hand
     # is worth this multiple of its default future value (fight_ev model)
     "troop_hold": 1.0, "ci_hold": 1.0, "plot_hold": 0.6,
+    # user, 2026-10-17: troops sent into a Conflict where you finish out of
+    # the rewards (4th of 4) are lost for nothing - each one expected to be
+    # lost that way costs this many troop-values (fight_ev). 0 = off
+    "out_of_rewards": 0.0,
     "fight_model": 1,        # 0 = the old deploy / combat-intrigue scoring (for A/B)
     # deck_model 1: value a buy by how it changes the average card you draw
     # for the rest of the game (dilution), not in isolation; deck_k scales it
@@ -70,6 +88,29 @@ TUNE_DEFAULTS = {
     # play Dagger to Assembly Hall, ...); trash_dagger: Daggers are normal
     # trash targets while another Landsraad-access card remains
     "buy_plan": 0.0, "trash_dagger": 0,
+    # trash_model: trash by what thinning is worth to THIS deck (see
+    # _trash_value) instead of a fixed list of weak starters
+    "trash_model": 0,
+    # cmd_choice: pick troops vs Sardaukar commanders on a deploy by skills
+    # (0 = old fixed rule, commanders first; A/B baseline only)
+    "cmd_choice": 1,
+    # opp_pool: opponents' reveal swords from the cards that can still be in
+    # their hand (owned minus discard / in play, all public) instead of a flat 2
+    "opp_pool": 0,
+    # deny: weight on taking a row card that opponents still to Reveal this
+    # round are likely to afford and want (buying power from public info)
+    "deny": 0.0,
+    # hl_keep: late game (round 7+), decline a Conflict's "spice -> VP" when
+    # paying would drop below the 5 spice a Heighliner costs next round
+    "hl_keep": 0.0,
+    "wall_future": 0.0,
+    # tsmf_goal: strong players acquire ~2 The Spice Must Flow a game. While
+    # short of 2, bonus a TSMF buy, value persuasion on bought cards, and
+    # value agent moves that keep 9+ persuasion for the Reveal turn
+    "tsmf_goal": 0.0,
+    # pers_w: extra value per persuasion point on a card (buying it, keeping
+    # it out of the trash) - persuasion is what reaches 9 for TSMF
+    "pers_w": 0.0,
     # card_play: an agent move also counts the played card's own agent box
     # (Imperial Spymaster's Intrigue on a Spy recall, In High Places' Spy +
     # draw, ...) and what that card would have added on the Reveal turn, so
@@ -134,6 +175,21 @@ TUNE_DEFAULTS = {
     # it opens for rivals with Maker Hooks. 0 = old scoring; 2 = only the
     # summon / wall values; 3 = only the doubled conflict value.
     "worm_model": 0.0,
+    # deck_plan (2026-10-11): play the strategy the owned cards call for.
+    # Cards gated on a condition (Bene Gesserit friendship, 2 Spies on the
+    # board, an alliance, Fremen Bond, another Bene Gesserit card in play)
+    # make meeting it worth (value of the gated effect) x (plays of those
+    # cards left): influence toward the faction, Spies, and buying cards
+    # with the tag / faction access all gain that much. Cards that give
+    # influence for a faction count as access to it (alliance pursuit).
+    # 0 = off, else a multiplier.
+    "deck_plan": 0.0,
+    # worm_bonus (2026-10-12): flat bonus for a maker-space sandworm summon.
+    # The worm audit (src/selfplay/worm_audit.py, 1,946 decisions played out
+    # 64x each way) found summoning beat the heuristic's best other move by
+    # +0.02-0.05 win share whenever the heuristic rated that move up to ~10
+    # points above the worm, and was a coin flip beyond that.
+    "worm_bonus": 0.0,
 }
 # Situational tuning: a key "<phase>.<knob>" overrides <knob> in that phase
 # only. Phases follow how the game is played: early = rounds 1-3 (build
@@ -160,6 +216,9 @@ def split_phases(tuning: Optional[dict]) -> Dict[str, dict]:
 
 _TUNE = dict(TUNE_DEFAULTS)
 
+# value a knob that is off (0) starts from when a mutation / Leader weight turns it on
+SEED_ON = {"maker_bonus": 0.5, "alliance": 0.5, "contract_stack": 1.0, "out_of_rewards": 1.0}
+
 
 def _apply_tuning(t: dict) -> None:
     global _TUNE, _RES_VALUE
@@ -171,6 +230,8 @@ def _apply_tuning(t: dict) -> None:
             for key in list(res):
                 if key == name or (name == "spy" and key.startswith("spy")):
                     res[key] = _BASE_RES_VALUE[key] * v
+    # the Intrigue-loving persona: every Intrigue card (gained, stolen, kept) is worth more
+    res["intrigue"] = res.get("intrigue", 1.3) * t.get("intrigue_love", 1.0)
     _RES_VALUE = res
 
 
@@ -213,11 +274,19 @@ def _faction_access_strength(gs: GameState, pid: int, fac: str) -> float:
     if not all_cards:
         return 0.0
     n = 0
+    dp_on = _TUNE.get("deck_plan", 0.0)
     for c in all_cards:
-        for sym in getattr(c, "access_symbols", ()):
-            if getattr(sym, "value", sym) == fac:
+        if any(getattr(sym, "value", sym) == fac for sym in getattr(c, "access_symbols", ())):
+            n += 1
+        elif dp_on:
+            fl = {}
+            for e in (getattr(c, "agent_effects", []) or []) + (getattr(c, "reveal_effects", []) or []):
+                for kk, vv in _flatten(e).items():
+                    fl[kk] = fl.get(kk, 0) + vv
+            if fl.get("influence_" + fac, 0) > 0:
                 n += 1
-                break
+            elif fl.get("influence_any", 0) > 0:
+                n += 0.5
     return n / max(1, len(all_cards))
 
 
@@ -291,10 +360,11 @@ def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> floa
             alliance_mult = (1.0 + 1.5 * access) * _TUNE.get("alliance", 1.0)
             holder = gs.alliance_holder.get(fac)
             v += (10.0 if (holder is not None and holder != pid) else 7.5) * urgency * alliance_mult
+            v += _effect_value(gs, pid, dict(INFLUENCE_4_BONUS[fac]))   # 4th-space reward
         elif cur >= 4 and gs.alliance_holder.get(fac) == pid \
                 and any(q.influence.get(fac, 0) >= cur - 1 for q in gs.players if q.id != pid):
             v += 1.5 * amt * urgency
-        return v
+        return v + _dp_influence_bonus(gs, pid, fac, cur, new)
 
     # faction_focus: value each influence point by how it moves you toward the
     # NEXT unreached threshold, so the AI spreads to four friendships (4 clean
@@ -312,6 +382,8 @@ def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> floa
         alliance_mult = (1.0 + 1.5 * access) * _TUNE.get("alliance", 1.0)
         holder = gs.alliance_holder.get(fac)
         v += (10.0 if (holder is not None and holder != pid) else 7.5) * urgency * alliance_mult
+        # the 4th space's own reward (Fremen water / BG Intrigue / Guild 3 solari / Emperor Spy)
+        v += _effect_value(gs, pid, dict(INFLUENCE_4_BONUS[fac]))
     # per-point "down payment" on points that DON'T cross a threshold this gain
     for pos in range(cur + 1, new + 1):
         if pos == 2 or pos == 4:
@@ -331,7 +403,7 @@ def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> floa
     if cur >= 4 and gs.alliance_holder.get(fac) == pid \
             and any(q.influence.get(fac, 0) >= cur - 1 for q in gs.players if q.id != pid):
         v += 1.5 * amt * urgency                      # defend a contested alliance
-    return v * _TUNE["influence"]
+    return v * _TUNE["influence"] + _dp_influence_bonus(gs, pid, fac, cur, new)
 
 
 # ---------------------------------------------------------------------------
@@ -355,7 +427,11 @@ def _effect_value(gs: GameState, pid: int, eff: dict) -> float:
             v += _wall_break_value(gs, pid, with_worm=any(x in eff for x in _SANDWORM_KEYS)) * amt
         elif k in _SANDWORM_KEYS:
             v += _sandworm_value(gs, pid, wall_open=any(x in eff for x in _WALL_BREAK_KEYS)) * amt
+        elif k == "trash" and amt > 0 and _TUNE.get("trash_model", 0):
+            v += 0.6 * _best_trash_value(gs, pid) * amt
         else:
+            if k == "spy" and amt > 0:
+                v += _dp_spy_bonus(gs, pid) * amt
             val = _RES_VALUE.get(k, 0.3)
             sat = _TUNE.get("sat_" + k, 0.0)
             if sat and amt > 0:
@@ -423,6 +499,13 @@ def _cond_weight(gs: GameState, pid: int, key: str) -> float:
             return 1.0
         return max(0.10, 0.40 - 0.10 * (need - cur))
     if key.startswith("tag_other_"):
+        if _TUNE.get("deck_plan", 0.0):
+            tag = next((t for t, sh in _TAG_SHORT.items() if sh == key[10:]), None)
+            owned = [c for z in (p.deck, p.discard, p.hand, p.in_play) for c in z]
+            if tag and owned:
+                share = sum(1 for c in owned if any(getattr(x, "value", x) == tag
+                                                    for x in getattr(c, "tags", ()))) / len(owned)
+                return max(0.10, min(0.95, 1.0 - (1.0 - share) ** 4))
         return 0.30                                  # rarely true yet, some upside
     if key.startswith("contracts_"):
         need = int(key[10:]) if key[10:].isdigit() else 2
@@ -502,6 +585,8 @@ def _card_effect_value(gs: GameState, pid: int, eff: dict, w: float = 1.0) -> fl
             else:
                 from src.ai.bloodlines_heuristic import BL_RES_VALUE
                 v += w * _RES_VALUE.get(k, BL_RES_VALUE.get(k, 0.3)) * sub
+                if k == "spy" and sub > 0:
+                    v += w * _dp_spy_bonus(gs, pid) * sub
         # other nested dicts (unrecognized structure) contribute nothing,
         # same as before — but recognized ones are no longer invisible.
     return v
@@ -544,11 +629,126 @@ def _faction_cards_owned(p, fac: str) -> int:
     return n
 
 
+# --- deck_plan: the strategy the owned cards call for -----------------------
+_DP_CACHE: dict = {}
+_DP_BUSY = False
+_TAG_SHORT = {"bene_gesserit": "bene", "fremen": "fremen", "emperor": "emperor",
+              "spacing_guild": "spacing"}
+
+
+def _walk_conds(gs: GameState, pid: int, eff, out: dict, w: float) -> None:
+    if not isinstance(eff, dict):
+        return
+    for k, sub in eff.items():
+        if not isinstance(sub, dict):
+            continue
+        if k.startswith("if_"):
+            out[k[3:]] = out.get(k[3:], 0.0) + w * _card_effect_value(gs, pid, sub)
+        _walk_conds(gs, pid, sub, out, w)
+
+
+def _deck_plan(gs: GameState, pid: int) -> dict:
+    """What the owned cards ask for: {condition: value per play of the
+    effects gated on it} and how often each owned card is still played."""
+    global _DP_BUSY
+    p = gs.players[pid]
+    owned = [c for z in (p.deck, p.discard, p.hand, p.in_play) for c in z]
+    key = (id(_TUNE), pid, gs.round, tuple(sorted(c.name for c in owned)),
+           tuple(sorted(p.influence.items())), sum(p.spies_on_board.values()))
+    hit = _DP_CACHE.get(key)
+    if hit is not None:
+        return hit
+    if len(_DP_CACHE) > 20000:
+        _DP_CACHE.clear()
+    conds: dict = {}
+    _DP_BUSY = True
+    try:
+        for c in owned:
+            for e in (getattr(c, "agent_effects", []) or []) + (getattr(c, "reveal_effects", []) or []):
+                _walk_conds(gs, pid, e, conds, 0.8)
+    finally:
+        _DP_BUSY = False
+    plays = max(0.0, 9.5 - gs.round) * 5.0 / max(1, len(owned))
+    dp = {"conds": conds, "plays": plays, "n": len(owned),
+          "tags": {t: sum(1 for c in owned if any(getattr(x, "value", x) == t
+                                                  for x in getattr(c, "tags", ())))
+                   for t in _TAG_SHORT}}
+    _DP_CACHE[key] = dp
+    return dp
+
+
+def _dp_influence_bonus(gs: GameState, pid: int, fac: str, cur: int, new: int) -> float:
+    """deck_plan: influence that meets (or moves toward) a faction condition
+    the player's own cards are gated on."""
+    k = _TUNE.get("deck_plan", 0.0)
+    if not k or _DP_BUSY or new <= cur:
+        return 0.0
+    dp = _deck_plan(gs, pid)
+    tot = 0.0
+    for cond, u in dp["conds"].items():
+        if cond == "alliance_" + fac:
+            need = 4
+        elif cond.startswith("influence_" + fac + "_"):
+            n = cond.rsplit("_", 1)[1]
+            need = int(n) if n.isdigit() else 2
+        elif cond == "fremen_bond" and fac == "fremen":
+            need = 2
+        else:
+            continue
+        if cur >= need:
+            continue
+        gain = u * dp["plays"]
+        tot += gain if new >= need else 0.5 * gain * (new - cur) / need
+    return k * tot
+
+
+def _dp_spy_bonus(gs: GameState, pid: int) -> float:
+    """deck_plan: one more Spy on the board, for cards that pay off with
+    2+ Spies (Bene Gesserit Operative, Spy Network) or on recalling one."""
+    k = _TUNE.get("deck_plan", 0.0)
+    if not k or _DP_BUSY:
+        return 0.0
+    dp = _deck_plan(gs, pid)
+    have = sum(gs.players[pid].spies_on_board.values())
+    tot = 0.0
+    for cond, u in dp["conds"].items():
+        if cond.startswith("spies_"):
+            n = cond[6:]
+            need = int(n) if n.isdigit() else 2
+            if have < need:
+                tot += u * dp["plays"] / (need - have)
+        elif cond == "spy_recalled":
+            tot += u * dp["plays"] * (0.5 if have == 0 else 0.15)
+    return k * tot
+
+
+def _dp_buy_bonus(gs: GameState, pid: int, card) -> float:
+    """deck_plan: a bought card that feeds owned cards' conditions - its tag
+    (another Bene Gesserit card in play) or access to a faction whose
+    friendship they need."""
+    k = _TUNE.get("deck_plan", 0.0)
+    if not k:
+        return 0.0
+    dp = _deck_plan(gs, pid)
+    p = gs.players[pid]
+    hand_share = min(1.0, 4.0 / max(1, dp["n"]))      # chance it shares a turn with one
+    v = 0.0
+    for t in getattr(card, "tags", ()):
+        u = dp["conds"].get("tag_other_" + _TAG_SHORT.get(getattr(t, "value", t), "?"), 0.0)
+        v += 0.5 * hand_share * u * dp["plays"]
+    for sym in getattr(card, "access_symbols", ()):
+        fac = getattr(sym, "value", sym)
+        if fac in _FACTIONS:
+            cur = p.influence.get(fac, 0)
+            v += 0.3 * _dp_influence_bonus(gs, pid, fac, cur, cur + 1) / k
+    return k * v
+
+
 def _card_play_quality(gs: GameState, pid: int, card) -> float:
     """What a card is worth each time it is drawn and played: persuasion,
     swords, agent + reveal effects, faction access (flat). The same
     yardstick for owned cards and Row cards."""
-    q = 1.5 * (card.persuasion or 0) + 0.9 * (card.swords or 0)
+    q = (1.5 + _TUNE.get("pers_w", 0.0)) * (card.persuasion or 0) + 0.9 * (card.swords or 0)
     for e in getattr(card, "agent_effects", []) + getattr(card, "reveal_effects", []):
         q += 0.8 * _card_effect_value(gs, pid, e)
     q += 0.6 * sum(1 for s_ in getattr(card, "access_symbols", ())
@@ -586,7 +786,7 @@ def _acquire_card_value(gs: GameState, pid: int, card, lean: bool = False) -> fl
     `acquire_effects` (free Spies, contracts, intrigue, influence, VP...) —
     both are folded in here now.
     """
-    s = 1.5 * card.persuasion + 0.9 * card.swords
+    s = (1.5 + _TUNE.get("pers_w", 0.0)) * card.persuasion + 0.9 * card.swords
     for e in (getattr(card, "agent_effects", []) +
               getattr(card, "reveal_effects", []) +
               getattr(card, "acquire_effects", [])):
@@ -652,6 +852,7 @@ def _acquire_card_value(gs: GameState, pid: int, card, lean: bool = False) -> fl
     # "buy only when it's an actual upgrade, otherwise bank the turn".
     if lean:
         s -= _dilution_penalty(gs, p)
+    s += _dp_buy_bonus(gs, pid, card)
     return s
 
 
@@ -736,7 +937,16 @@ def _opp_fight(gs: GameState, q: int):
         if p.agents_available > 0 and p.troops_garrison > 0:
             pot += 2.0 * min(p.troops_garrison, 2 + p.agents_available) * 0.45
         if q not in gs.players_revealed:
-            pot += 2.0                                   # reveal swords, on average
+            if _TUNE.get("opp_pool", 0):
+                # public: q's owned cards minus discard / played / trashed =
+                # what hand + deck hold. Cards left to reveal = hand minus
+                # the ones still going out with agents.
+                pool = p.hand + p.deck
+                if pool:
+                    mean = sum(getattr(c, "swords", 0) or 0 for c in pool) / len(pool)
+                    pot += mean * max(0, len(p.hand) - p.agents_available)
+            else:
+                pot += 2.0                               # reveal swords, on average
     pot += 1.2 * min(len(p.intrigue_cards), 3) * 0.5     # combat intrigues maybe
     vis += _skill_swords(gs, q)
     bl = getattr(gs, "bl", None)
@@ -770,19 +980,74 @@ def fight_ev(gs: GameState, pid: int, my_strength: float, my_units: int,
             nd[k] += pk * (1 - pa)
             nd[k + 1] += pk * pa
         dist = nd
-    return sum(pk * (rewards[k] if k < len(rewards) else 0.0) for k, pk in enumerate(dist))
+    ev = sum(pk * (rewards[k] if k < len(rewards) else 0.0) for k, pk in enumerate(dist))
+    pen = _TUNE.get("out_of_rewards", 0.0)
+    if pen:
+        # finishing below every rewarded place: the units in the fight are wasted
+        paid = sum(1 for r in rewards if r > 0)
+        p_out = sum(dist[paid:])
+        ev -= pen * p_out * my_units * _RES_VALUE["troops"] * min(1.0, _rounds_left(gs) / 3.0)
+    return ev
 
 
-def _my_strength(gs: GameState, pid: int, add_troops: int = 0, add_swords: float = 0.0):
+def _my_strength(gs: GameState, pid: int, add_troops: int = 0, add_swords: float = 0.0,
+                 add_cmd: Optional[int] = None):
     t = gs.troops_in_conflict.get(pid, 0) + add_troops
     w = gs.sandworms_in_conflict.get(pid, 0)
     sw = gs.swords_this_reveal.get(pid, 0) + add_swords
     if gs.phase.name != "COMBAT" and pid not in gs.players_revealed:
         sw += sum(getattr(c, "swords", 0) or 0 for c in gs.players[pid].hand) * 0.7
-    # deployed units leave the garrison commanders-first
-    sw += _skill_swords(gs, pid, assume_commander=add_troops > 0
-                        and getattr(gs.players[pid], "commanders_garrison", 0) > 0)
+    # add_cmd: how many of the added units are commanders (None: commanders first)
+    sends_cmd = (add_cmd > 0) if add_cmd is not None else (
+        add_troops > 0 and getattr(gs.players[pid], "commanders_garrison", 0) > 0)
+    sw += _skill_swords(gs, pid, assume_commander=sends_cmd)
     return 2 * t + 3 * w + sw, t + w
+
+
+_DENY_CACHE: Dict[tuple, Dict[str, float]] = {}
+
+
+def _deny_value(gs: GameState, pid: int, card, lean: bool = False) -> float:
+    """Taking `card` keeps it from opponents who still Reveal this round:
+    sum over them of P(they'd buy it) x their value for it. Their buying
+    power comes from public info only (src/ai/opp_model.py)."""
+    from src.ai.opp_model import p_buys
+    if gs.phase.name == "COMBAT":
+        return 0.0
+    tot = 0.0
+    for q in range(gs.num_players):
+        if q == pid or q in gs.players_revealed:
+            continue
+        qp = gs.players[q]
+        key = (id(gs), gs.round, q, len(qp.deck), len(qp.discard), len(qp.hand),
+               tuple(c.name for c in gs.imperium_row))
+        vals = _DENY_CACHE.get(key)
+        if vals is None:
+            vals = {c.name: _acquire_card_value(gs, q, c, lean) for c in gs.imperium_row}
+            if len(_DENY_CACHE) > 2048:
+                _DENY_CACHE.clear()
+            _DENY_CACHE[key] = vals
+        tot += p_buys(gs, q, card, vals) * max(0.0, vals.get(card.name, 0.0))
+    return tot
+
+
+def _cmd_deploy_adj(gs: GameState, pid: int, a: GameAction) -> float:
+    """Troops or commanders: the first commander in the Conflict switches the
+    reveal skills on (sword skills are counted in _my_strength), but every
+    commander sent goes to the commander supply after the fight and costs
+    a re-recruit, where a plain troop is just a troop."""
+    c = a.deploy_cmd
+    bl = getattr(gs, "bl", None)
+    if not c or bl is None:
+        return 0.0
+    p = gs.players[pid]
+    s = 0.0
+    if not bl.commanders_in_conflict.get(pid, 0) and pid not in gs.players_revealed:
+        sk = getattr(p, "skills", set())
+        s += (_RES_VALUE["troops"] * ("Hardy" in sk) + _RES_VALUE["spice"] * ("Driven" in sk)
+              + _RES_VALUE["persuasion"] * ("Charismatic" in sk) + 1.5 * ("Desperate" in sk))
+    s -= c * 0.4 * _RES_VALUE["solari"] * bl.commander_cost(pid) * min(1.0, _rounds_left(gs) / 3.0)
+    return s
 
 
 def _card_swords(ic) -> float:
@@ -799,6 +1064,13 @@ def _card_swords(ic) -> float:
 
 def _troop_hold_value(gs: GameState) -> float:
     return _RES_VALUE["troops"] * _TUNE.get("troop_hold", 1.0) * min(1.0, _rounds_left(gs) / 3.0)
+
+
+def _tsmf_short(gs: GameState, pid: int) -> int:
+    """TSMF copies still missing from the 2-a-game goal (0 once the stack is empty)."""
+    if not gs.reserve_spice_must_flow:
+        return 0
+    return max(0, 2 - getattr(gs.players[pid], "tsmf_acquired", 0))
 
 
 _STARTERS = frozenset(("Reconnaissance", "Diplomacy", "Dune, the Desert Planet",
@@ -852,6 +1124,102 @@ def _landsraad_access_owned(p) -> int:
     return n
 
 
+_STRONG_Q = 4.0      # beats every starter card (Diplomacy is 3.9)
+_TRASH_BUSY = False
+
+
+def _trash_quality(gs: GameState, pid: int, card) -> float:
+    """_card_play_quality plus the board access it ignores (Landsraad, city,
+    desert), so Signet Ring ranks above Reconnaissance and Dune."""
+    q = _card_play_quality(gs, pid, card)
+    q += 0.3 * sum(1 for s_ in getattr(card, "access_symbols", ())
+                   if getattr(s_, "value", s_) in ("landsraad", "city", "desert"))
+    if card.name == "Signet Ring":                 # trashing it ends the Leader's ability
+        q += 0.5 * _signet_value(gs, pid, None) * max(0, MAX_ROUNDS - gs.round)
+    return q
+
+
+def _trash_values(gs: GameState, pid: int) -> Dict[str, float]:
+    """trash_model: {card name: value of trashing it} for the player's cards.
+    Thinning card X means every other card is drawn more often for the rest
+    of the game. Over D draws left in a deck of n cards that is worth
+    (D / n) x (mean quality of the other cards - quality of X). It only pays
+    once the deck holds strong cards you will keep drawing, so a deck with
+    none gets a quarter of it, rising to full at two."""
+    global _TRASH_BUSY
+    p = gs.players[pid]
+    owned = [c for z in (p.deck, p.discard, p.hand, p.in_play) for c in z]
+    if len(owned) < 2 or _TRASH_BUSY:
+        return {}
+    _TRASH_BUSY = True                # card quality values a card's own "trash" effect
+    try:
+        qs = [_trash_quality(gs, pid, c) for c in owned]
+    finally:
+        _TRASH_BUSY = False
+    tot = sum(qs)
+    n_strong = sum(1 for q in qs if q >= _STRONG_Q)
+    draws_left = max(0.0, 9.5 - gs.round) * 5.0
+    last_landsraad = _landsraad_access_owned(p) < 2
+    k = _TUNE.get("trash_model", 0)
+    n_tsmf = sum(1 for c in owned if c.name == "The Spice Must Flow")
+    tsmf_payoff = (any(i.name == "Secure Spice Trade" for i in p.intrigue_cards)
+                   or any(t.name == "Holtzman Engine" for t in getattr(p, "techs", ())))
+    out: Dict[str, float] = {}
+    for card, qx in zip(owned, qs):
+        if card.name in out:
+            continue
+        if card.name in ("Signet Ring", "Diplomacy"):
+            out[card.name] = -1.0   # leader ability / the only lasting faction access
+            continue
+        if last_landsraad and any(getattr(sy, "value", sy) == "landsraad"
+                                  for sy in getattr(card, "access_symbols", ())):
+            out[card.name] = -2.0   # the last way to Swordmaster / High Council
+            continue
+        if card.name == "The Spice Must Flow" and tsmf_payoff:
+            if n_tsmf <= 2:
+                out[card.name] = -3.0   # Secure Spice Trade / Holtzman Engine need 2 in the deck
+                continue
+        mean_o = (tot - qx) / (len(owned) - 1)
+        strong = n_strong - (1 if qx >= _STRONG_Q else 0)
+        gate = 0.25 + 0.75 * min(1.0, strong / 2.0)
+        if card.name == "The Spice Must Flow":
+            gate = 1.0          # its VP came on acquire; the card itself is 1 spice
+        v = gate * draws_left / len(owned) * (mean_o - qx)
+        if card.name == "The Spice Must Flow" and not tsmf_payoff:
+            v += 1.0
+        if (getattr(card, "cost", 0) or 0) > 0 and card.name not in ("The Spice Must Flow", "Prepare the Way"):
+            v -= 2.0     # a bought card: the play-quality yardstick misses conditional effects
+        if card in p.hand and pid not in gs.players_revealed:
+            v -= _card_reveal_worth(gs, pid, card)    # it won't be revealed this round
+        out[card.name] = v * k
+    return out
+
+
+def _trash_value(gs: GameState, pid: int, name: Optional[str]) -> float:
+    if name is None:
+        return 0.0
+    return _trash_values(gs, pid).get(name, -1.0)
+
+
+def _best_trash_value(gs: GameState, pid: int) -> float:
+    """What a 'you may trash a card' effect is worth: the best trash now."""
+    return max([0.0] + list(_trash_values(gs, pid).values()))
+
+
+def _influence_loss_value(gs: GameState, pid: int, fac: str) -> float:
+    """Cost of losing 1 influence = the worth of regaining it from one below
+    (2 -> 1 loses a friendship VP; 1 -> 0 or 3 -> 2 costs little)."""
+    p = gs.players[pid]
+    cur = p.influence.get(fac, 0)
+    if cur <= 0:
+        return 0.0
+    p.influence[fac] = cur - 1
+    try:
+        return _influence_gain_value(gs, pid, fac, 1)
+    finally:
+        p.influence[fac] = cur
+
+
 def _choice_option_value(gs: GameState, pid: int, eff: dict) -> float:
     """Value of one option of a 'choose' decision (src/game/choices.py):
     its normal effects, any nested choice at its best, and the '_' keys."""
@@ -866,6 +1234,28 @@ def _choice_option_value(gs: GameState, pid: int, eff: dict) -> float:
             built = CH.build(gs, p, k, eff[k])
             if built:
                 v += max(_choice_option_value(gs, pid, o[2]) for o in built[2])
+    lf = eff.get("_leader_fx")
+    if lf and lf[0] in ("lose_troops", "lose_conflict_troops") and gs.current_conflict is not None:
+        n = int(lf[1])
+        from_conflict = n if lf[0] == "lose_conflict_troops" else max(0, n - p.troops_garrison)
+        v -= 2.5 * from_conflict                 # 2 strength each, maybe a lost placement
+    for q in eff.get("_recall_posts", []) + ([eff["_recall_post"]] if "_recall_post" in eff else []):
+        v -= 0.8 * _spy_post_value(gs, pid, q)          # keep the better-placed Spies
+    if lf and lf[0] in ("trash_in_play", "trash_hand", "trash_zone"):
+        v += _trash_value(gs, pid, lf[2] if lf[0] == "trash_zone" else lf[1])
+    if lf and lf[0] == "jessica_flip":
+        v += _TUNE.get("leader_play", 1.0) * _jessica_flip_worth(gs, pid)
+    if lf and lf[0] == "rm_repeat":                # the space's effects once more
+        v += _space_repeat_value(gs, pid, lf[1], lf[2] if len(lf) > 2 else None)
+    if lf and lf[0] == "lose_split" and gs.current_conflict is not None:
+        v -= 2.5 * int(lf[2])                    # troops taken out of the Conflict
+    if "_v" in eff:                      # Leader / Twisted option: its value hint
+        hint = _flatten(dict(eff["_v"]))
+        v += _effect_value(gs, pid, hint) + 0.9 * hint.get("swords", 0)
+    if "_swap_intrigue" in eff:          # Imperial Privilege: swap a weak Intrigue
+        ic = next((c for c in p.intrigue_cards if c.name == eff["_swap_intrigue"]), None)
+        if ic is not None:
+            v += 0.8 * (0.55 - max(-2.0, _intrigue_value(gs, pid, ic)))   # 0.55 = avg Intrigue
     if eff.get("_draw_top") and p.deck:
         v += 0.5 if p.deck[-1].name in _STARTERS else 1.4
     if eff.get("_trash_top") and p.deck:
@@ -876,10 +1266,18 @@ def _choice_option_value(gs: GameState, pid: int, eff: dict) -> float:
         card = next((c for c in gs.imperium_row if c.name == eff["_acquire_named"]["card"]), None)
         if card is not None:
             v += _acquire_card_value(gs, pid, card) + (0.8 if eff["_acquire_named"].get("to_hand") else 0.0)
-    for f in eff.get("_gain_influences", []):
+    same = "_lose_influence" in eff and eff.get("_gain_influences") == [eff["_lose_influence"]]
+    for f in ([] if same else eff.get("_gain_influences", [])):
         v += _influence_gain_value(gs, pid, f, 1)
-    for f in eff.get("_lose_influences", []) + ([eff["_lose_influence"]] if "_lose_influence" in eff else []):
-        v -= 0.9 * _influence_gain_value(gs, pid, f, 1)
+    for f in [] if same else (eff.get("_lose_influences", [])
+                              + ([eff["_lose_influence"]] if "_lose_influence" in eff else [])):
+        v -= _influence_loss_value(gs, pid, f)
+    ld = getattr(p, "leader", None)
+    lf_ = eff.get("_lose_influence")
+    if (ld is not None and ld.name == "Steersman Y'rkoon" and lf_ is not None
+            and eff.get("_gain_influences") == [lf_] and p.influence.get(lf_, 0) == 2
+            and ld.state.get("nav_next", 0) < len(ld.state.get("nav", []))):
+        v += 3.0                    # 2 -> 1 -> 2 reaches 2 again: plays the next Navigation card
     if "_manipulate" in eff:
         card = next((c for c in gs.imperium_row if c.name == eff["_manipulate"]), None)
         if card is not None:
@@ -931,6 +1329,38 @@ def _effect_with_choices_value(gs: GameState, pid: int, e: dict) -> float:
     return _choice_option_value(gs, pid, e)
 
 
+def _endgame_chance(gs: GameState, pid: int, cond: str) -> float:
+    """Chance the endgame condition holds when the game ends (techs_3, water_3...)."""
+    p = gs.players[pid]
+    try:
+        what, need = cond.rsplit("_", 1)
+        need = int(need)
+    except ValueError:
+        return 0.5
+    have = len(getattr(p, "techs", []) or []) if what == "techs" else getattr(p, what, 0)
+    if not isinstance(have, (int, float)):
+        return 0.5
+    if have >= need:
+        return 0.95
+    short = need - have
+    left = _rounds_left(gs)
+    return max(0.05, min(0.8, 0.45 * left / (2.0 * short)))
+
+
+def _endgame_hold_value(gs: GameState, pid: int, ic) -> float:
+    """What keeping an Intrigue with an endgame VP part is worth: P(qualify) x
+    the VP (Battlefield Research with 3 techs is a near-certain point)."""
+    v = 0.0
+    vp1 = _effect_value(gs, pid, {"vp": 1})
+    for e in ic.effects:
+        if not isinstance(e, dict):
+            continue
+        for k, sub in e.items():
+            if k.startswith("if_bl_endgame_") and isinstance(sub, dict) and sub.get("vp"):
+                v += _endgame_chance(gs, pid, k[len("if_bl_endgame_"):]) * sub["vp"] * (vp1 + 1.0)
+    return v
+
+
 def _intrigue_value(gs: GameState, pid: int, ic) -> float:
     """How good is it to play this Intrigue right now?"""
     p = gs.players[pid]
@@ -959,7 +1389,7 @@ def _intrigue_value(gs: GameState, pid: int, ic) -> float:
         else:
             v -= 3.0                            # save combat intrigues for combat
     if IntrigueTiming.ENDGAME in ts and not gs.game_over:
-        v -= 5.0                                # never waste an endgame card early
+        v -= max(5.0, _endgame_hold_value(gs, pid, ic))   # never waste an endgame card early
     if list(ts) == [IntrigueTiming.PLOT] and not in_combat:
         v -= _TUNE.get("plot_hold", 0.6)        # keeping a plot intrigue has value
     if _TUNE.get("contracts", 0) and not in_combat \
@@ -1102,6 +1532,15 @@ def _wall_break_value(gs: GameState, pid: int, with_worm: bool = False) -> float
     cc = gs.current_conflict
     if not gs.shield_wall_intact:
         return 0.0
+    # wall_future (user, 2026-10-14): with Maker Hooks from round 5 on, opening
+    # the wall pays later too - the round 7+ VP battles (Imperial Basin,
+    # Arrakeen, Spice Refinery) are the protected ones, and a worm doubles them
+    wf = _TUNE.get("wall_future", 0.0)
+    if wf and p.has_maker_hooks and gs.round >= 5:
+        later = wf * (1.0 + 0.3 * (gs.round - 4))
+        if cc is None or cc.location not in SHIELD_WALL_PROTECTED:
+            return later
+        return later + 2.5 * _game_urgency(gs, pid)
     if _TUNE.get("worm_model", 0) in (1, 2) and cc is not None:
         if cc.location not in SHIELD_WALL_PROTECTED:
             # nothing to open this round; later protected conflicts open for
@@ -1132,6 +1571,8 @@ def _sandworm_value(gs: GameState, pid: int, wall_open: bool = False) -> float:
     beating them denies their double, is one of the best plays available
     (`_conflict_worth` already prices both of those situations in).
     """
+    if getattr(gs.players[pid], "no_deploy_this_turn", False):
+        return 0.0                                # Shaddam's Signet turn: the worm can't come
     if _TUNE.get("worm_model", 0) in (1, 2):
         return _worm_gain(gs, pid, wall_open=wall_open)
     worth = _conflict_worth(gs, pid)
@@ -1146,6 +1587,78 @@ def _card_reveal_worth(gs: GameState, pid: int, card) -> float:
     for e in getattr(card, "reveal_effects", []) or []:
         v += 0.6 * _card_effect_value(gs, pid, e)
     return v
+
+
+# Rough worth of each Leader's Signet Ring ability (src/game/leader/LEADERS.md),
+# as an effect dict the heuristic already knows how to value.
+_SIGNET_VALUE = {
+    "Gurney Halleck": {"troops": 1}, "Feyd-Rautha Harkonnen": {"spy": 1},
+    "Lady Amber Metulli": {"solari": 1}, "Lady Jessica": {"intrigue": 1},
+    "Reverend Mother Jessica": {"water": 0.6}, "Lady Margot Fenring": {"spy": 1},
+    "Muad'Dib": {"draw": 1}, "Princess Irulan": {"spice": 1}, "Shaddam Corrino IV": {"solari": 1, "troops": 1},
+    "Staban Tuek": {"spy": 1, "solari": 1}, "Chani": {"draw": 1}, "Count Hasimir Fenring": {"solari": 1},
+    "Duncan Idaho": {"swords": 2}, "Esmar Tuek": {"spice": 1}, "Gaius Helen Mohiam": {"spy": 1},
+    "Kota Odax of Ix": {"spice": 1}, "Liet Kynes": {"solari": 0.7}, "Piter De Vries": {"troops": 0.6},
+}
+
+
+def _signet_value(gs: GameState, pid: int, space: str) -> float:
+    p = gs.players[pid]
+    ld = getattr(p, "leader", None)
+    if ld is None or ld.signet is None:
+        return 0.0
+    eff = dict(_SIGNET_VALUE.get(ld.name, {}))
+    if ld.name == "Duncan Idaho" and gs.current_conflict is None:
+        eff = {}
+    if ld.name == "Lady Amber Metulli" and any(p.alliances.values()):
+        eff["spice"] = 1
+    if ld.name == "Liet Kynes":                  # depends on where the Agent goes
+        from src.game.board.board import SPACE_ICONS
+        icon = SPACE_ICONS.get(space)
+        eff = {"city": {"solari": 1}, "desert": {"spice": 1}}.get(icon, {})
+        if icon == "landsraad" and p.influence.get("emperor", 0) >= 2:
+            eff = {"water": 1}
+    if ld.name == "Feyd-Rautha Harkonnen" and ld.state.get("feyd") == "end":
+        eff = {}
+    fe = _flatten(eff)
+    v = _effect_value(gs, pid, fe) + 0.9 * fe.get("swords", 0)
+    if ld.name == "Lady Jessica" and p.spice >= 1 and _rounds_left(gs) >= 1:
+        v += _TUNE.get("leader_play", 1.0) * 0.5 * _effect_value(gs, pid, {"draw": 1})
+    return v
+
+
+def _space_repeat_value(gs: GameState, pid: int, space: str, option=None) -> float:
+    """Worth of the effects printed on a space (Reverend Mother repeats them)."""
+    return sum(_effect_value(gs, pid, e) for e in gs.get_space_effects_preview(space, option))
+
+
+def _jessica_flip_worth(gs: GameState, pid: int) -> float:
+    """Becoming Reverend Mother: a water-paid repeat of Bene Gesserit / Fremen
+    spaces each turn from now on (beyond the memories' draws and troops)."""
+    return min(4.0, 0.7 * _rounds_left(gs))
+
+
+def _leader_space_value(gs: GameState, pid: int, a) -> float:
+    """Leader passives that depend on where the Agent goes (user, 2026-10-17:
+    the AI rarely took Jessica to the Bene Gesserit, so she seldom flipped)."""
+    p = gs.players[pid]
+    ld = getattr(p, "leader", None)
+    if ld is None:
+        return 0.0
+    from src.game.board.board import SPACE_ICONS, SPACE_MANDATORY_COSTS
+    icon = SPACE_ICONS.get(a.space_name)
+    if ld.name == "Lady Jessica" and not ld.state.get("flipped"):
+        n = ld.state.get("memories", 0)
+        if icon == "bene_gesserit" and n > 0:
+            return _effect_value(gs, pid, {"draw": n, "troops": n}) + _jessica_flip_worth(gs, pid)
+        return 0.0
+    if (ld.name == "Reverend Mother Jessica" and icon in ("bene_gesserit", "fremen")
+            and not ld._per_turn_flags.get("rm")):
+        need = 1 + SPACE_MANDATORY_COSTS.get(a.space_name, {}).get("water", 0)
+        if p.water >= need:
+            rep = _space_repeat_value(gs, pid, a.space_name, a.space_option) - _RES_VALUE.get("water", 1.0)
+            return max(0.0, rep)
+    return 0.0
 
 
 def _card_agent_play_value(gs: GameState, pid: int, a) -> float:
@@ -1172,6 +1685,8 @@ def _card_agent_play_value(gs: GameState, pid: int, a) -> float:
     _PLAY_CTX = ctx
     try:
         v = sum(_card_effect_value(gs, pid, e) for e in card.agent_effects or [])
+        if card.name == "Signet Ring":
+            v += _signet_value(gs, pid, a.space_name)
     finally:
         _PLAY_CTX = None
     lost = _card_reveal_worth(gs, pid, card)
@@ -1240,7 +1755,12 @@ def _take_contract_value(gs: GameState, pid: int, ct=None) -> float:
     """Taking a contract: a specific one, or the best one on the board (else
     the 2 solari you get when none are left)."""
     if ct is not None:
-        return _contract_finish_chance(gs, pid, ct) * _contract_reward_value(gs, pid, ct)
+        v = _contract_finish_chance(gs, pid, ct) * _contract_reward_value(gs, pid, ct)
+        stack = _TUNE.get("contract_stack", 0.0)
+        key = _contract_key(ct)
+        if stack and key is not None:            # completes together with a held one
+            v += stack * sum(_contract_key(c) == key for c in gs.players[pid].contracts_active)
+        return v
     pool = list(getattr(gs, "contracts_on_board", []) or [])
     if not getattr(gs, "use_choam", False) or not pool:
         return 2 * _RES_VALUE["solari"]
@@ -1273,17 +1793,30 @@ def _contract_completion_value(gs: GameState, pid: int, a) -> float:
         return 0.0
     v = 0.0
     spice = None
+    done = 0
     for ct in p.contracts_active:
         kind = ct.contract_type.value
         if kind == "board_space":
             if ct.trigger_condition.get("board_space") == a.space_name:
                 v += _contract_reward_value(gs, pid, ct)
+                done += 1
         elif kind == "harvest" and a.space_name in MAKER_SPACES:
             if spice is None:
                 spice = _turn_spice_estimate(gs, pid, a)
             if spice >= ct.trigger_condition.get("min_spice", 3):
                 v += _contract_reward_value(gs, pid, ct)
+                done += 1
+    if done >= 2:
+        v += 2.0 * _TUNE.get("contract_stack", 0.0) * (done - 1)
     return v
+
+
+def _contract_key(ct):
+    """Where a contract completes: its board space, or 'harvest'."""
+    kind = ct.contract_type.value
+    if kind == "board_space":
+        return ct.trigger_condition.get("board_space")
+    return kind if kind == "harvest" else None
 
 
 def _spy_post_value(gs: GameState, pid: int, post: Optional[str]) -> float:
@@ -1303,7 +1836,7 @@ def _spy_post_value(gs: GameState, pid: int, post: Optional[str]) -> float:
     spaces = OBSERVATION_POST_CONNECTIONS.get(post, ())
     if not spaces:
         return 0.5
-    best = 0.0
+    vals = []
     for sp_name in spaces:
         sp = UPRISING_BOARD.get(sp_name)
         if sp is None:
@@ -1311,15 +1844,22 @@ def _spy_post_value(gs: GameState, pid: int, post: Optional[str]) -> float:
         v = sum(_effect_value(gs, pid, eff)
                 for eff in gs.get_space_effects_preview(sp_name))
         if sp.is_combat_space and gs.current_conflict is not None:
-            v += 0.6 * _conflict_worth(gs, pid)
+            v += _TUNE.get("spy_combat", 0.6) * _conflict_worth(gs, pid)
         fac = gs._faction_for_space(sp_name)
         if fac:
             v += 0.5 * _influence_gain_value(gs, pid, fac, 1)
-        best = max(best, v)
-    # a spy is a durable, reusable asset (repeated Spy-icon sends, or a
-    # later Infiltrate/Gather Intelligence) — a floor plus the best thing
-    # it currently reaches.
-    return 1.0 + 0.5 * best
+        occ = gs.agent_on_space.get(sp_name)
+        if occ is not None and occ != pid:
+            v += 0.5                   # taken this round: the Spy is the way in (Infiltrate)
+        vals.append(v)
+    if not vals:
+        return 0.5
+    vals.sort(reverse=True)
+    # a spy is a durable, reusable asset (repeated Spy-icon sends, or a later
+    # Infiltrate / Gather Intelligence): a floor, plus the best space it
+    # reaches, plus part of every other space it also covers (flexibility).
+    score = vals[0] + _TUNE.get("spy_multi", 0.35) * sum(vals[1:])
+    return 1.0 + _TUNE.get("spy_post", 0.5) * score
 
 
 def _combat_build_strength(gs: GameState, pid: int) -> float:
@@ -1419,10 +1959,22 @@ class HeuristicAgent(Agent):
                  opening_book: Optional[OpeningBook] = None,
                  temperature: float = 0.0, lean_deck: bool = False,
                  sm_boost: bool = True, faction_focus: bool = True,
-                 bloodlines: bool = True, tuning: Optional[dict] = None):
+                 bloodlines: bool = True, tuning: Optional[dict] = None,
+                 near: float = 0.0):
         self.rng = random.Random(seed)
+        # near > 0 (`heuristic:N<x>`): pick uniformly among the moves scored
+        # within x points of the best - many Dune moves are about equally
+        # good, so the AI shouldn't always play the single top score
+        self.near = near
         self.tuning = {**TUNE_DEFAULTS, **(tuning or {})}
         self._phase_tuning = split_phases(tuning)
+        # per-Leader weight multipliers, "L.<Leader>.<knob>": x (evolved per Leader)
+        self._leader_mult: Dict[str, Dict[str, float]] = {}
+        for k, v in (tuning or {}).items():
+            if k.startswith("L.") and k.count(".") >= 2:
+                _, ld, knob = k.split(".", 2)
+                self._leader_mult.setdefault(ld, {})[knob] = float(v)
+        self._leader_cache: Dict[tuple, dict] = {}
         # bloodlines=False (`heuristic:nobl`): decline every tech / commander /
         # activation - the baseline for checking the Bloodlines scoring pays off
         self.bloodlines = bloodlines
@@ -1452,7 +2004,19 @@ class HeuristicAgent(Agent):
     # -- per-action score ----------------------------------------------
 
     def score(self, gs: GameState, pid: int, a: GameAction) -> float:
-        s = self._score_core(gs, pid, a)
+        p = gs.players[pid]
+        ld = getattr(p, "leader", None)
+        if (a.action_type == ActionType.AGENT_TURN and a.card_name == "Signet Ring"
+                and ld is not None and ld.name == "Shaddam Corrino IV"
+                and not getattr(p, "no_deploy_this_turn", False)):
+            # his Signet turn deploys nothing: no Conflict, worm or deploy value
+            p.no_deploy_this_turn = True
+            try:
+                s = self._score_core(gs, pid, a)
+            finally:
+                p.no_deploy_this_turn = False
+        else:
+            s = self._score_core(gs, pid, a)
         if getattr(gs, "bl", None) is not None:
             k = _TUNE.get("style", 0.0)
             if k:
@@ -1465,16 +2029,46 @@ class HeuristicAgent(Agent):
             m = _TUNE.get("buy_mult", 1.0)
             if m != 1.0 and s > 0:
                 s *= m
-            if _TUNE.get("tsmf", 0.0) and (
-                    a.acquire_card_name == "The Spice Must Flow"
-                    or a.reserve_type == "spice_must_flow"):
+            is_tsmf = (a.acquire_card_name == "The Spice Must Flow"
+                       or a.reserve_type == "spice_must_flow")
+            if _TUNE.get("tsmf", 0.0) and is_tsmf:
                 s += _TUNE["tsmf"]
+            g = _TUNE.get("tsmf_goal", 0.0)
+            if g:
+                short = _tsmf_short(gs, pid)
+                if is_tsmf:
+                    s += g * short / 2.0
+                elif short and gs.round <= 7 and a.action_type == ActionType.ACQUIRE_CARD:
+                    card = next((c for c in gs.imperium_row if c.name == a.acquire_card_name), None)
+                    if card is not None:      # persuasion that funds a 9-cost buy later
+                        s += 0.1 * g * (card.persuasion or 0) * min(short, 1.5)
+        if a.trash_from == "hand" and a.trash_card_name and pid not in gs.players_revealed:
+            # a copy still in hand can be played or revealed this round: trash
+            # one from the discard / play area first
+            c = next((c for c in gs.players[pid].hand if c.name == a.trash_card_name), None)
+            if c is not None:
+                s -= 0.3 + 0.25 * ((c.persuasion or 0) + (c.swords or 0))
+        if a.deploy_cmd is not None and not _TUNE.get("cmd_choice", 1):
+            # A/B baseline: the old fixed rule, commanders deploy first
+            if a.deploy_cmd != min(a.deploy_count, gs.players[pid].commanders_garrison):
+                s -= 100.0
         return s
 
     def _score_core(self, gs: GameState, pid: int, a: GameAction) -> float:
         global _FACTION_FOCUS
         _FACTION_FOCUS = self.faction_focus
-        t = self._phase_tuning[phase_of(gs.round)]
+        ph = phase_of(gs.round)
+        t = self._phase_tuning[ph]
+        ld = getattr(gs.players[pid], "leader", None)
+        if self._leader_mult and ld is not None and ld.name in self._leader_mult:
+            key = (ph, ld.name)
+            lt = self._leader_cache.get(key)
+            if lt is None:
+                lt = dict(t)
+                for knob, m in self._leader_mult[ld.name].items():
+                    lt[knob] = (lt.get(knob) or SEED_ON.get(knob, 0.0)) * m
+                self._leader_cache[key] = lt
+            t = lt
         if _TUNE is not t:
             _apply_tuning(t)
         p = gs.players[pid]
@@ -1533,9 +2127,22 @@ class HeuristicAgent(Agent):
                         if isinstance(e.get("solari"), (int, float)) and e["solari"] > 0)
                     if solari_here:
                         s += _TUNE["sm_solari"] * min(solari_here, gap)
-            if sp.is_combat_space and gs.current_conflict is not None:
+            if (sp.is_combat_space and gs.current_conflict is not None
+                    and not getattr(p, "no_deploy_this_turn", False)):
                 s += _TUNE["combat"] * _conflict_worth(gs, pid) * (1.0 + 0.3 * min(p.troops_garrison, 4)
                                                   + 0.5 * _combat_build_strength(gs, pid))
+            if _TUNE.get("leader_play", 1.0):
+                s += _TUNE.get("leader_play", 1.0) * _leader_space_value(gs, pid, a)
+            if a.space_name == "Tuek's Sietch":
+                s += max(_effect_value(gs, pid, {"spice": 1}), _effect_value(gs, pid, {"draw": 1}))
+                if not _TUNE.get("maker_bonus", 0):
+                    s += _effect_value(gs, pid, {"spice": gs.maker_bonus_spice.get(a.space_name, 0)})
+                if p.leader is not None and p.leader.name == "Esmar Tuek":
+                    s += _effect_value(gs, pid, {"solari": 1})
+                elif any(q.leader is not None and q.leader.name == "Esmar Tuek" for q in gs.players):
+                    s -= 0.5                     # Esmar gets an Intrigue card
+            if a.space_option == "sandworm":
+                s += _TUNE.get("worm_bonus", 0.0)
             if a.space_option == "pay_spice" and p.spice < 3:
                 s -= 1.0
             if a.use_gather_intelligence:
@@ -1557,6 +2164,9 @@ class HeuristicAgent(Agent):
             if _TUNE.get("buy_plan", 0.0) and gs.round <= 8:
                 s += _TUNE["buy_plan"] * 0.3 * _best_buy_value(
                     gs, pid, _reveal_persuasion_after(gs, pid, a))
+            g = _TUNE.get("tsmf_goal", 0.0)
+            if g and gs.round >= 3 and _tsmf_short(gs, pid)                     and _reveal_persuasion_after(gs, pid, a) >= 9:
+                s += 0.5 * g          # this move keeps a TSMF buy on the Reveal turn
             # discourage wasting the last agent on a weak play
             s += 0.5
 
@@ -1569,6 +2179,8 @@ class HeuristicAgent(Agent):
             if card:
                 s += _acquire_card_value(gs, pid, card, self.lean_deck)
                 s += 5.0 * self.book.bonus(gs, pid, a)
+                if _TUNE.get("deny", 0.0):
+                    s += _TUNE["deny"] * _deny_value(gs, pid, card, self.lean_deck)
 
         elif at == ActionType.ACQUIRE_RESERVE:
             stack = (gs.reserve_spice_must_flow if a.reserve_type == "spice_must_flow"
@@ -1660,6 +2272,9 @@ class HeuristicAgent(Agent):
             s -= 0.20 * n * max(0, 3 - gs.round)       # early troops are precious
             if p.troops_garrison - n < 1 and worth < 2.0:
                 s -= 1.5                                # don't empty the garrison cheaply
+            if a.deploy_cmd:
+                s += _cmd_deploy_adj(gs, pid, a) + 0.3 * worth * (0.0 if gs.bl.commanders_in_conflict.get(
+                    pid, 0) else _skill_swords(gs, pid, assume_commander=True))
 
         elif at == ActionType.RESOLVE_DEPLOY:
             # deploy only what changes the expected Conflict reward by more
@@ -1667,19 +2282,30 @@ class HeuristicAgent(Agent):
             # Conflict go back to supply after the fight)
             n = a.deploy_count
             mine0, u0 = _my_strength(gs, pid)
-            mine, u = _my_strength(gs, pid, add_troops=n)
+            mine, u = _my_strength(gs, pid, add_troops=n, add_cmd=a.deploy_cmd)
             own_ci = _own_combat_intrigue_swords(gs, pid) * 0.6
             ev = fight_ev(gs, pid, mine + own_ci, u)
             ev0 = fight_ev(gs, pid, mine0 + own_ci, u0)
-            s = (ev - ev0) - n * _troop_hold_value(gs)
+            s = (ev - ev0) - n * _troop_hold_value(gs) + _cmd_deploy_adj(gs, pid, a)
             if p.troops_garrison - n <= 0 and n > 0 and _rounds_left(gs) > 1:
                 s -= 0.3                                # keep some flexibility
+            # troops held back fight the NEXT Conflict (user, 2026-10-16: the AI
+            # max-deploys too often): each one deployed gives that up
+            if n > 0 and _rounds_left(gs) >= 1:
+                s -= n * _TUNE.get("deploy_hold", 0.4) * min(1.0, _rounds_left(gs) / 2.0)
+
+        elif at == ActionType.RESOLVE_TRASH and _TUNE.get("trash_model", 0):
+            s = _trash_value(gs, pid, a.trash_card_name)
 
         elif at == ActionType.RESOLVE_TRASH:
             # thin the weak starter cards; keep bought cards
-            if a.trash_card_name in ("Reconnaissance", "Diplomacy",
-                                     "Dune, the Desert Planet"):
+            if a.trash_card_name in ("Reconnaissance", "Dune, the Desert Planet"):
                 s = 2.0
+            elif a.trash_card_name == "Diplomacy":
+                # the only starter that keeps reaching faction spaces (Seek
+                # Allies trashes itself): influence and VP — keep it.
+                # trash_diplomacy=1 restores the old "weak starter" score.
+                s = 2.0 if _TUNE.get("trash_diplomacy", 0) else 0.0
             elif a.trash_card_name == "Dagger":
                 # Dagger + Signet Ring are the ONLY 2 Landsraad-access cards
                 # in the whole 10-card starter deck. Trashing both copies of
@@ -1702,8 +2328,13 @@ class HeuristicAgent(Agent):
             s = _influence_gain_value(gs, pid, a.influence_faction, 1)
 
         elif at == ActionType.RESOLVE_CONTRACT:
-            ct = (gs.contracts_on_board[a.contract_index]
-                  if a.contract_index < len(gs.contracts_on_board) else None)
+            aside = getattr(gs, "shaddam_contracts", {}).get(pid, [])
+            if a.contract_index >= 100:
+                k = a.contract_index - 100
+                ct = aside[k] if k < len(aside) else None
+            else:
+                ct = (gs.contracts_on_board[a.contract_index]
+                      if a.contract_index < len(gs.contracts_on_board) else None)
             s = 1.0
             if ct is not None and _TUNE.get("contracts", 0):
                 s += _take_contract_value(gs, pid, ct)
@@ -1716,6 +2347,8 @@ class HeuristicAgent(Agent):
 
         elif at == ActionType.RESOLVE_SPY:
             s = _spy_post_value(gs, pid, a.spy_post_name)
+            if a.choice and a.choice.startswith("recall:"):     # the Spy that comes back
+                s -= 0.8 * _spy_post_value(gs, pid, a.choice[7:])
         elif at == ActionType.RESOLVE_UPLIFT:
             s = 2.0
         elif at == ActionType.RESOLVE_INTRIGUE_TRASH:
@@ -1731,7 +2364,20 @@ class HeuristicAgent(Agent):
                 gain = _effect_value(gs, pid, op.reward)
                 cost = sum(_RES_VALUE.get(k, 0.3) * v for k, v in op.cost.items())
                 cost += 1.1 * op.discard                  # a discarded card ~ 1 draw
+                if a.choice and a.choice.startswith("recall:"):  # which Spies come back
+                    cost += sum(0.8 * _spy_post_value(gs, pid, q) - _RES_VALUE.get("recall_spy", 0.3)
+                                for q in a.choice[7:].split("|"))
                 s = gain - cost
+                k = _TUNE.get("hl_keep", 0.0)
+                pl = gs.players[pid]
+                if (k and op.label == "conflict_vp" and op.cost.get("spice")
+                        and gs.round >= 7 and _rounds_left(gs) >= 1
+                        and pl.spice >= 5 > pl.spice - op.cost["spice"]):
+                    s -= k                                # keep the 5 for a Heighliner
+        elif at == ActionType.RESOLVE_CHOICE and a.choice and a.choice.startswith(("recruit:", "techbuy:")):
+            from src.ai.bloodlines_heuristic import score_bl_choice
+            ch = a.choice[8:] if a.choice.startswith("recruit:") else "stack:" + a.choice[8:]
+            s = score_bl_choice(gs, pid, ch) if self.bloodlines else -1.0
         elif at == ActionType.RESOLVE_CHOICE:
             pc = gs.pending_choice_for(pid)
             opt = next((o for o in pc.options if o[0] == a.choice), None) if pc else None
@@ -1751,6 +2397,12 @@ class HeuristicAgent(Agent):
 
     def select_action(self, gs, pid, valid_actions):
         scores = [self.score(gs, pid, a) for a in valid_actions]
+        if self.near > 0:
+            top = max(scores)
+            pool = [a for a, s in zip(valid_actions, scores)
+                    if s >= top - self.near and a.action_type != ActionType.NO_OP]
+            if pool:
+                return self.rng.choice(pool)
         if self.temperature <= 0:
             best = max(range(len(valid_actions)), key=lambda i: scores[i])
             return valid_actions[best]
@@ -1813,6 +2465,9 @@ class CombatBullyAgent(HeuristicAgent):
                 s += 2.0
             if p.troops_garrison - n < 1 and n > 0:
                 s += 1.0                              # emptying the garrison is fine here
+            if a.deploy_cmd:
+                s += _cmd_deploy_adj(gs, pid, a) + 0.5 * (0.0 if gs.bl.commanders_in_conflict.get(
+                    pid, 0) else _skill_swords(gs, pid, assume_commander=True))
         elif at == ActionType.AGENT_TURN:
             if a.space_name in _BULLY_TROOP_SPACES:
                 s += 3.0 * urg
@@ -2114,9 +2769,12 @@ def make_agent(spec: str, seed: Optional[int] = None,
         faction_focus = True
         bloodlines = True
         tuning = None
+        near = 0.0
         for p in parts[1:]:
             if p.startswith("T"):
                 temp = float(p[1:])
+            elif p.startswith("N") and p[1:].replace(".", "", 1).isdigit():
+                near = float(p[1:])
             elif p in ("lean", "L1"):
                 lean = True
             elif p == "sm0":
@@ -2132,7 +2790,21 @@ def make_agent(spec: str, seed: Optional[int] = None,
         return HeuristicAgent(seed=seed, opening_book=opening_book,
                               temperature=temp, lean_deck=lean, sm_boost=sm_boost,
                               faction_focus=faction_focus, bloodlines=bloodlines,
-                              tuning=tuning)
+                              tuning=tuning, near=near)
+    if kind == "az":
+        # az[:S<sims>][:net=<path.npz>]: AlphaZero net + search (src/az/agent.py)
+        from src.az.agent import AZAgent
+        kw = {"sims": 32, "net_path": None}
+        for p in parts[1:]:
+            if p.startswith("S"):
+                kw["sims"] = int(p[1:])
+            elif p.startswith("net="):
+                kw["net_path"] = p[4:]
+            elif p.startswith("style="):
+                kw["style"] = p[6:]
+            elif p == "coach" or p.startswith("coach="):
+                kw["coach"] = float(p[6:]) if "=" in p else 1.0
+        return AZAgent(seed=seed, **kw)
     if kind == "styleselect":
         # styleselect[:<model.npz>] (default config/style_select.npz)
         from src.ai.style_select import StyleSelectAgent
@@ -2175,6 +2847,26 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 with open(p[6:], encoding="utf-8") as _f:
                     kw["tuning"] = _json.load(_f)
         return RoundSearchAgent(seed=seed, opening_book=opening_book, **kw)
+    if kind == "look":
+        # look[:D<depth>][:K<k>][:M<m>][:LW<look_w>][:ev=<npz>][:tuned=<json>] (src/ai/lookahead.py)
+        from src.ai.lookahead import LookaheadAgent
+        kw = {}
+        for p in parts[1:]:
+            if p.startswith("LW"):
+                kw["look_w"] = float(p[2:])
+            elif p.startswith("D"):
+                kw["depth"] = int(p[1:])
+            elif p.startswith("K"):
+                kw["k"] = int(p[1:])
+            elif p.startswith("M"):
+                kw["m"] = int(p[1:])
+            elif p.startswith("ev="):
+                kw["evaluator"] = p[3:]
+            elif p.startswith("tuned="):
+                import json as _json
+                with open(p[6:], encoding="utf-8") as _f:
+                    kw["tuning"] = _json.load(_f)
+        return LookaheadAgent(seed=seed, opening_book=opening_book, **kw)
     if kind == "bully":
         temp = 0.0
         for p in parts[1:]:

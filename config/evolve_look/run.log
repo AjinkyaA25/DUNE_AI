@@ -1,0 +1,151 @@
+bench gen 0: champion 45.5% vs start | VP r6 4.69 (start 4.471) | rounds 9.2
+gen 1: champion 27.0% (fit 0.331) | mutants 26.3% (0.307) 23.0% (0.286) 23.7% (0.288) -> champion stays | rounds 9.153
+gen 2: champion 28.0% (fit 0.338) | mutants 23.0% (0.277) 23.3% (0.276) 25.7% (0.318) -> champion stays | rounds 9.167
+gen 3: champion 25.7% (fit 0.316) | mutants 24.0% (0.302) 24.3% (0.286) 26.0% (0.317) -> champion stays | rounds 9.12
+gen 4: champion 25.0% (fit 0.301) | mutants 25.7% (0.310) 21.7% (0.262) 27.7% (0.341) -> champion stays | rounds 9.147
+gen 5: champion 23.7% (fit 0.294) | mutants 25.0% (0.306) 22.7% (0.272) 28.7% (0.347) -> mutant 3 wins {'res_draw': 1.106718} | rounds 9.123
+bench gen 5: champion 44.0% vs start | VP r6 4.537 (start 4.499) | rounds 9.2
+gen 6: champion 25.0% (fit 0.302) | mutants 25.0% (0.310) 28.7% (0.343) 21.3% (0.267) -> mutant 2 wins {'ci_hold': 0.548272} | rounds 9.117
+gen 7: champion 25.0% (fit 0.309) | mutants 22.3% (0.275) 26.0% (0.315) 26.7% (0.326) -> champion stays | rounds 9.1
+gen 8: champion 28.3% (fit 0.344) | mutants 25.0% (0.318) 24.3% (0.293) 22.3% (0.268) -> champion stays | rounds 9.103
+gen 9: champion 28.0% (fit 0.340) | mutants 23.0% (0.282) 25.0% (0.302) 24.0% (0.278) -> champion stays | rounds 9.193
+gen 10: champion 26.7% (fit 0.315) | mutants 23.7% (0.298) 22.3% (0.269) 27.3% (0.337) -> champion stays | rounds 9.123
+bench gen 10: champion 45.0% vs start | VP r6 4.747 (start 4.488) | rounds 9.2
+gen 11: champion 22.0% (fit 0.259) | mutants 26.3% (0.321) 24.0% (0.296) 27.7% (0.326) -> mutant 3 wins {'look_w': 0.205056, 'late.res_solari': 0.453114, 'alliance': 0.487847} | rounds 9.193
+gen 12: champion 28.0% (fit 0.348) | mutants 22.0% (0.263) 23.0% (0.274) 27.0% (0.329) -> champion stays | rounds 9.143
+gen 13: champion 24.3% (fit 0.300) | mutants 23.0% (0.278) 27.0% (0.335) 25.7% (0.301) -> champion stays | rounds 9.147
+gen 14: champion 26.0% (fit 0.320) | mutants 21.3% (0.253) 24.3% (0.286) 28.3% (0.347) -> champion stays | rounds 9.173
+gen 15: champion 29.3% (fit 0.352) | mutants 24.0% (0.283) 22.0% (0.263) 24.7% (0.298) -> champion stays | rounds 9.21
+bench gen 15: champion 46.5% vs start | VP r6 4.562 (start 4.486) | rounds 9.27
+gen 16: champion 21.7% (fit 0.261) | mutants 24.3% (0.301) 24.0% (0.293) 30.0% (0.359) -> mutant 3 wins {'res_spy': 1.754284, 'look_w': 0.232021, 'combat': 0.418496} | rounds 9.143
+gen 17: champion 22.3% (fit 0.265) | mutants 26.3% (0.307) 24.3% (0.296) 27.0% (0.329) -> mutant 3 wins {'res_intrigue': 0.918712, 'res_draw': 1.184663} | rounds 9.21
+gen 18: champion 22.7% (fit 0.267) | mutants 25.7% (0.306) 20.7% (0.246) 31.0% (0.379) -> mutant 3 wins {'contracts': 1.948839, 'early.influence': 3.282618} | rounds 9.21
+gen 19: champion 27.7% (fit 0.325) | mutants 22.0% (0.262) 22.0% (0.264) 28.3% (0.334) -> champion stays | rounds 9.26
+gen 20: champion 24.3% (fit 0.297) | mutants 24.0% (0.290) 26.0% (0.312) 25.7% (0.295) -> champion stays | rounds 9.227
+bench gen 20: champion 43.8% vs start | VP r6 4.72 (start 4.454) | rounds 9.102
+gen 21: champion 29.7% (fit 0.362) | mutants 25.0% (0.307) 22.7% (0.273) 22.7% (0.278) -> champion stays | rounds 9.123
+gen 22: champion 27.3% (fit 0.334) | mutants 20.0% (0.247) 25.0% (0.304) 27.7% (0.342) -> champion stays | rounds 9.09
+gen 23: champion 24.3% (fit 0.301) | mutants 27.3% (0.338) 23.3% (0.282) 25.0% (0.297) -> champion stays | rounds 9.127
+gen 24: champion 25.7% (fit 0.312) | mutants 25.3% (0.312) 26.0% (0.323) 23.0% (0.272) -> champion stays | rounds 9.127
+gen 25: champion 24.7% (fit 0.292) | mutants 32.3% (0.388) 21.7% (0.259) 21.3% (0.257) -> mutant 1 wins {'plot_hold': 0.859679} | rounds 9.217
+bench gen 25: champion 42.8% vs start | VP r6 4.673 (start 4.417) | rounds 9.102
+gen 26: champion 22.0% (fit 0.268) | mutants 26.0% (0.314) 22.7% (0.283) 29.3% (0.354) -> mutant 3 wins {'res_contract': 0.948312, 'alliance': 0.453654, 'ci_hold': 0.509468} | rounds 9.12
+gen 27: champion 28.3% (fit 0.338) | mutants 22.7% (0.278) 27.3% (0.330) 21.7% (0.258) -> champion stays | rounds 9.183
+gen 28: champion 24.7% (fit 0.301) | mutants 25.7% (0.302) 23.7% (0.292) 26.0% (0.314) -> champion stays | rounds 9.163
+gen 29: champion 22.0% (fit 0.272) | mutants 28.3% (0.343) 25.7% (0.306) 24.0% (0.288) -> mutant 1 wins {'res_spice': 0.586479, 'alliance': 0.393565} | rounds 9.163
+gen 30: champion 23.3% (fit 0.283) | mutants 27.7% (0.331) 24.3% (0.281) 24.7% (0.282) -> mutant 1 wins {'late.res_water': 4.175225, 'look_w': 0.29033, 'buy_mult': 0.861801} | rounds 9.29
+bench gen 30: champion 51.2% vs start | VP r6 4.71 (start 4.416) | rounds 9.193
+gen 31: champion 23.3% (fit 0.280) | mutants 23.0% (0.277) 23.7% (0.287) 30.0% (0.358) -> mutant 3 wins {'combat': 0.483241, 'ci_hold': 0.494916} | rounds 9.193
+gen 32: champion 24.3% (fit 0.297) | mutants 23.3% (0.278) 30.7% (0.375) 21.7% (0.258) -> mutant 2 wins {'res_solari': 2.330415} | rounds 9.17
+gen 33: champion 28.3% (fit 0.333) | mutants 23.3% (0.282) 26.0% (0.307) 22.3% (0.270) -> champion stays | rounds 9.23
+gen 34: champion 27.7% (fit 0.321) | mutants 26.3% (0.318) 22.3% (0.274) 23.7% (0.278) -> champion stays | rounds 9.233
+gen 35: champion 27.7% (fit 0.334) | mutants 23.3% (0.287) 22.7% (0.276) 26.3% (0.318) -> champion stays | rounds 9.143
+bench gen 35: champion 44.5% vs start | VP r6 4.7 (start 4.481) | rounds 9.158
+gen 36: champion 24.0% (fit 0.294) | mutants 24.3% (0.295) 27.0% (0.332) 24.7% (0.295) -> champion stays | rounds 9.137
+gen 37: champion 24.0% (fit 0.294) | mutants 23.0% (0.273) 23.3% (0.277) 29.7% (0.367) -> mutant 3 wins {'buy_mult': 0.776887} | rounds 9.157
+gen 38: champion 23.3% (fit 0.271) | mutants 23.3% (0.288) 28.7% (0.346) 24.7% (0.294) -> mutant 2 wins {'ptw_tax': 5.681815, 'res_spy': 1.388844} | rounds 9.203
+gen 39: champion 22.0% (fit 0.273) | mutants 18.7% (0.226) 29.0% (0.337) 30.3% (0.364) -> mutant 3 wins {'deck_k': 1.063494, 'alliance': 0.421279, 'card_play': 1.174505} | rounds 9.203
+gen 40: champion 20.0% (fit 0.235) | mutants 23.0% (0.269) 29.7% (0.347) 27.3% (0.333) -> mutant 2 wins {'combat': 0.470593, 'res_water': 1.096309} | rounds 9.263
+bench gen 40: champion 45.5% vs start | VP r6 4.508 (start 4.415) | rounds 9.182
+gen 41: champion 22.7% (fit 0.267) | mutants 25.7% (0.305) 28.7% (0.343) 23.0% (0.273) -> mutant 2 wins {'ptw_tax': 6.736374, 'alliance': 0.330494} | rounds 9.247
+gen 42: champion 24.7% (fit 0.297) | mutants 21.7% (0.263) 27.0% (0.323) 26.7% (0.318) -> champion stays | rounds 9.2
+gen 43: champion 26.0% (fit 0.311) | mutants 25.3% (0.309) 25.3% (0.295) 23.3% (0.271) -> champion stays | rounds 9.257
+gen 44: champion 25.3% (fit 0.304) | mutants 23.3% (0.278) 25.7% (0.322) 25.7% (0.319) -> champion stays | rounds 9.107
+gen 45: champion 23.0% (fit 0.271) | mutants 26.0% (0.318) 25.0% (0.298) 26.0% (0.315) -> mutant 1 wins {'ci_hold': 0.513711} | rounds 9.19
+bench gen 45: champion 43.2% vs start | VP r6 4.575 (start 4.457) | rounds 9.185
+gen 46: champion 23.7% (fit 0.281) | mutants 22.3% (0.273) 23.3% (0.284) 30.7% (0.367) -> mutant 3 wins {'res_draw': 1.356661, 'late.res_solari': 0.467774} | rounds 9.18
+gen 47: champion 26.7% (fit 0.317) | mutants 23.3% (0.282) 26.7% (0.344) 23.3% (0.282) -> champion stays | rounds 9.103
+gen 48: champion 23.3% (fit 0.288) | mutants 25.3% (0.287) 26.7% (0.321) 24.7% (0.301) -> champion stays | rounds 9.21
+gen 49: champion 24.0% (fit 0.286) | mutants 24.0% (0.297) 27.0% (0.322) 25.0% (0.292) -> champion stays | rounds 9.21
+gen 50: champion 26.7% (fit 0.323) | mutants 23.7% (0.285) 29.3% (0.358) 20.3% (0.259) -> champion stays | rounds 9.097
+bench gen 50: champion 40.5% vs start | VP r6 4.6 (start 4.434) | rounds 9.182
+gen 51: champion 24.7% (fit 0.296) | mutants 24.7% (0.298) 24.0% (0.296) 26.7% (0.329) -> champion stays | rounds 9.123
+gen 52: champion 27.3% (fit 0.346) | mutants 23.3% (0.278) 18.3% (0.212) 31.0% (0.358) -> champion stays | rounds 9.223
+gen 53: champion 23.7% (fit 0.292) | mutants 24.3% (0.280) 21.3% (0.260) 30.7% (0.374) -> mutant 3 wins {'worm_bonus': 7.371349} | rounds 9.177
+gen 54: champion 19.7% (fit 0.247) | mutants 27.3% (0.313) 29.7% (0.365) 23.3% (0.276) -> mutant 2 wins {'ci_hold': 0.592312} | rounds 9.193
+gen 55: champion 26.7% (fit 0.326) | mutants 25.0% (0.308) 25.0% (0.303) 23.3% (0.284) -> champion stays | rounds 9.113
+bench gen 55: champion 48.0% vs start | VP r6 4.745 (start 4.435) | rounds 9.225
+gen 56: champion 28.0% (fit 0.334) | mutants 24.3% (0.287) 22.3% (0.278) 25.3% (0.305) -> champion stays | rounds 9.183
+gen 57: champion 24.0% (fit 0.287) | mutants 29.7% (0.350) 21.7% (0.256) 24.7% (0.295) -> mutant 1 wins {'deck_plan': 1.001784, 'res_troops': 0.321197, 'res_spy': 1.233444} | rounds 9.247
+gen 58: champion 27.3% (fit 0.327) | mutants 25.7% (0.323) 29.0% (0.348) 18.0% (0.216) -> champion stays | rounds 9.143
+gen 59: champion 22.0% (fit 0.263) | mutants 25.0% (0.297) 25.0% (0.313) 28.0% (0.339) -> mutant 3 wins {'sm_solari': 0.323725} | rounds 9.147
+gen 60: champion 28.7% (fit 0.352) | mutants 25.7% (0.334) 22.0% (0.277) 23.7% (0.280) -> champion stays | rounds 9.03
+bench gen 60: champion 46.8% vs start | VP r6 4.612 (start 4.426) | rounds 9.205
+gen 61: champion 24.0% (fit 0.291) | mutants 25.7% (0.309) 28.0% (0.351) 22.3% (0.276) -> mutant 2 wins {'res_troops': 0.309023} | rounds 9.093
+gen 62: champion 28.3% (fit 0.339) | mutants 22.0% (0.265) 24.0% (0.292) 25.7% (0.305) -> champion stays | rounds 9.193
+resuming at generation 62
+bench gen 62: champion 46.5% vs start | VP r6 4.585 (start 4.461) | rounds 9.145
+gen 63: champion 27.0% (fit 0.335) | mutants 23.3% (0.286) 25.0% (0.298) 24.7% (0.296) -> champion stays | rounds 9.14
+gen 64: champion 24.7% (fit 0.290) | mutants 27.3% (0.318) 27.0% (0.325) 21.0% (0.247) -> champion stays | rounds 9.277
+gen 65: champion 25.0% (fit 0.295) | mutants 27.0% (0.322) 20.3% (0.246) 27.7% (0.325) -> champion stays | rounds 9.25
+bench gen 65: champion 43.5% vs start | VP r6 4.638 (start 4.395) | rounds 9.172
+gen 66: champion 28.0% (fit 0.328) | mutants 22.3% (0.278) 25.0% (0.302) 24.7% (0.301) -> champion stays | rounds 9.163
+gen 67: champion 23.7% (fit 0.277) | mutants 26.3% (0.323) 26.3% (0.312) 23.7% (0.292) -> mutant 1 wins {'tsmf': 3.348607} | rounds 9.183
+gen 68: champion 23.7% (fit 0.272) | mutants 28.0% (0.328) 25.3% (0.316) 23.0% (0.275) -> mutant 1 wins {'style': 124.894866, 'look_w': 0.354972, 'buy_mult': 0.916653} | rounds 9.237
+gen 69: champion 24.7% (fit 0.285) | mutants 27.3% (0.325) 25.3% (0.306) 22.7% (0.274) -> mutant 1 wins {'buy_mult': 0.77809, 'res_troops': 0.316585, 'res_contract': 0.811687} | rounds 9.24
+gen 70: champion 24.0% (fit 0.281) | mutants 28.7% (0.340) 23.7% (0.288) 23.7% (0.282) -> mutant 1 wins {'troop_hold': 1.279776, 'deck_plan': 1.058243} | rounds 9.233
+bench gen 70: champion 44.0% vs start | VP r6 4.603 (start 4.498) | rounds 9.18
+gen 71: champion 23.3% (fit 0.268) | mutants 30.3% (0.372) 24.7% (0.284) 21.7% (0.260) -> mutant 1 wins {'skills': 12.457819, 'troop_hold': 1.125422, 'late.res_water': 4.317243} | rounds 9.26
+gen 72: champion 23.7% (fit 0.288) | mutants 26.3% (0.325) 23.3% (0.280) 26.7% (0.304) -> champion stays | rounds 9.21
+gen 73: champion 24.7% (fit 0.291) | mutants 24.0% (0.284) 25.7% (0.308) 25.7% (0.314) -> champion stays | rounds 9.21
+gen 74: champion 27.7% (fit 0.346) | mutants 27.0% (0.320) 22.7% (0.268) 22.7% (0.282) -> champion stays | rounds 9.133
+gen 75: champion 22.3% (fit 0.275) | mutants 22.3% (0.269) 28.7% (0.357) 26.7% (0.314) -> mutant 2 wins {'res_troops': 0.351363, 'style': 135.684362} | rounds 9.137
+bench gen 75: champion 44.5% vs start | VP r6 4.73 (start 4.466) | rounds 9.17
+gen 76: champion 23.0% (fit 0.273) | mutants 25.3% (0.309) 21.7% (0.266) 30.0% (0.369) -> mutant 3 wins {'res_troops': 0.351962, 'res_spice': 0.622589} | rounds 9.13
+gen 77: champion 27.7% (fit 0.328) | mutants 22.7% (0.268) 24.7% (0.298) 25.0% (0.298) -> champion stays | rounds 9.233
+gen 78: champion 28.0% (fit 0.346) | mutants 25.3% (0.307) 23.0% (0.279) 23.7% (0.278) -> champion stays | rounds 9.163
+gen 79: champion 26.0% (fit 0.315) | mutants 23.3% (0.289) 26.3% (0.319) 24.3% (0.302) -> champion stays | rounds 9.1
+gen 80: champion 24.7% (fit 0.293) | mutants 30.7% (0.383) 27.7% (0.323) 17.0% (0.198) -> mutant 1 wins {'res_troops': 0.352085} | rounds 9.213
+bench gen 80: champion 46.2% vs start | VP r6 4.75 (start 4.452) | rounds 9.195
+gen 81: champion 26.7% (fit 0.323) | mutants 23.0% (0.284) 28.0% (0.343) 22.3% (0.279) -> champion stays | rounds 9.083
+gen 82: champion 19.7% (fit 0.242) | mutants 27.7% (0.334) 24.0% (0.282) 28.7% (0.349) -> mutant 3 wins {'deck_plan': 1.001211} | rounds 9.173
+gen 83: champion 27.7% (fit 0.340) | mutants 25.3% (0.313) 21.3% (0.264) 25.7% (0.315) -> champion stays | rounds 9.07
+gen 84: champion 24.0% (fit 0.279) | mutants 26.0% (0.306) 25.0% (0.299) 25.0% (0.308) -> champion stays | rounds 9.23
+gen 85: champion 21.3% (fit 0.253) | mutants 25.7% (0.307) 22.7% (0.273) 30.3% (0.369) -> mutant 3 wins {'res_water': 1.062555, 'early.res_troops': 1.310025, 'sm_solari': 0.275174} | rounds 9.197
+bench gen 85: champion 46.8% vs start | VP r6 4.678 (start 4.441) | rounds 9.158
+gen 86: champion 23.3% (fit 0.294) | mutants 24.3% (0.292) 27.7% (0.340) 24.7% (0.282) -> mutant 2 wins {'look_w': 0.347397} | rounds 9.167
+gen 87: champion 23.7% (fit 0.282) | mutants 22.3% (0.259) 29.3% (0.356) 24.7% (0.302) -> mutant 2 wins {'res_intrigue': 0.914973} | rounds 9.207
+gen 88: champion 23.7% (fit 0.280) | mutants 24.0% (0.282) 25.3% (0.297) 27.0% (0.343) -> mutant 3 wins {'deck_k': 1.204036, 'contracts': 1.885507, 'look_w': 0.378223} | rounds 9.187
+gen 89: champion 24.3% (fit 0.294) | mutants 27.3% (0.331) 23.7% (0.287) 24.7% (0.299) -> champion stays | rounds 9.153
+gen 90: champion 26.0% (fit 0.310) | mutants 24.7% (0.286) 27.7% (0.337) 21.7% (0.273) -> champion stays | rounds 9.18
+bench gen 90: champion 43.5% vs start | VP r6 4.665 (start 4.423) | rounds 9.162
+gen 91: champion 25.3% (fit 0.315) | mutants 23.0% (0.274) 24.7% (0.299) 27.0% (0.325) -> champion stays | rounds 9.147
+gen 92: champion 21.7% (fit 0.266) | mutants 26.7% (0.320) 24.7% (0.304) 27.0% (0.325) -> mutant 3 wins {'deck_k': 1.060084, 'influence': 1.948661} | rounds 9.14
+gen 93: champion 26.3% (fit 0.309) | mutants 22.7% (0.267) 25.0% (0.302) 26.0% (0.304) -> champion stays | rounds 9.27
+gen 94: champion 25.3% (fit 0.304) | mutants 26.7% (0.326) 21.7% (0.266) 26.3% (0.309) -> champion stays | rounds 9.18
+gen 95: champion 22.0% (fit 0.264) | mutants 26.7% (0.321) 23.3% (0.286) 28.0% (0.348) -> mutant 3 wins {'tsmf': 3.195753} | rounds 9.123
+bench gen 95: champion 47.0% vs start | VP r6 4.688 (start 4.469) | rounds 9.168
+gen 96: champion 23.0% (fit 0.282) | mutants 24.3% (0.299) 23.7% (0.280) 29.0% (0.346) -> mutant 3 wins {'late.res_solari': 0.497013, 'influence': 2.143385} | rounds 9.173
+gen 97: champion 24.0% (fit 0.287) | mutants 26.3% (0.318) 26.0% (0.314) 23.7% (0.289) -> champion stays | rounds 9.163
+gen 98: champion 19.7% (fit 0.253) | mutants 23.7% (0.270) 25.3% (0.308) 31.3% (0.380) -> mutant 3 wins {'deck_k': 1.256044} | rounds 9.153
+gen 99: champion 29.3% (fit 0.357) | mutants 22.0% (0.268) 24.3% (0.307) 24.3% (0.297) -> champion stays | rounds 9.08
+gen 100: champion 25.3% (fit 0.303) | mutants 25.0% (0.306) 25.0% (0.298) 24.7% (0.298) -> champion stays | rounds 9.177
+bench gen 100: champion 47.5% vs start | VP r6 4.75 (start 4.385) | rounds 9.207
+gen 101: champion 31.0% (fit 0.373) | mutants 24.3% (0.287) 23.3% (0.286) 21.3% (0.261) -> champion stays | rounds 9.17
+gen 102: champion 25.0% (fit 0.308) | mutants 26.7% (0.324) 24.7% (0.297) 23.7% (0.275) -> champion stays | rounds 9.18
+gen 103: champion 24.7% (fit 0.299) | mutants 26.3% (0.319) 25.0% (0.309) 24.0% (0.293) -> champion stays | rounds 9.117
+resuming at generation 103
+bench gen 103: champion 49.8% vs start | VP r6 4.707 (start 4.42) | rounds 9.185
+gen 104: champion 28.0% (fit 0.330) | mutants 17.0% (0.206) 29.3% (0.351) 25.7% (0.309) -> champion stays | rounds 9.217
+gen 105: champion 24.3% (fit 0.293) | mutants 25.7% (0.306) 22.7% (0.271) 27.3% (0.315) -> champion stays | rounds 9.26
+bench gen 105: champion 54.8% vs start | VP r6 4.735 (start 4.421) | rounds 9.125
+gen 106: champion 27.3% (fit 0.322) | mutants 24.7% (0.294) 22.0% (0.275) 26.0% (0.311) -> champion stays | rounds 9.193
+gen 107: champion 25.0% (fit 0.318) | mutants 25.3% (0.300) 24.3% (0.298) 25.3% (0.296) -> champion stays | rounds 9.153
+gen 108: champion 20.7% (fit 0.253) | mutants 31.3% (0.365) 22.7% (0.273) 25.3% (0.307) -> mutant 1 wins {'deck_plan': 1.057556, 'late.res_solari': 0.563995, 'res_water': 1.669673} | rounds 9.213
+gen 109: champion 29.7% (fit 0.362) | mutants 24.7% (0.291) 22.7% (0.279) 23.0% (0.271) -> champion stays | rounds 9.19
+gen 110: champion 25.0% (fit 0.303) | mutants 24.3% (0.293) 27.3% (0.332) 23.3% (0.286) -> champion stays | rounds 9.143
+bench gen 110: champion 52.8% vs start | VP r6 4.86 (start 4.45) | rounds 9.092
+gen 111: champion 24.0% (fit 0.286) | mutants 22.0% (0.263) 26.3% (0.324) 27.7% (0.318) -> champion stays | rounds 9.233
+gen 112: champion 29.0% (fit 0.352) | mutants 22.7% (0.272) 22.3% (0.273) 26.0% (0.306) -> champion stays | rounds 9.193
+gen 113: champion 20.7% (fit 0.249) | mutants 23.7% (0.276) 29.7% (0.365) 26.0% (0.318) -> mutant 2 wins {'early.res_troops': 1.267076, 'deploy_hold': 0.365961, 'troop_hold': 1.008155} | rounds 9.17
+gen 114: champion 24.0% (fit 0.292) | mutants 25.3% (0.315) 27.0% (0.343) 23.7% (0.287) -> mutant 2 wins {'look_w': 0.340908} | rounds 9.05
+gen 115: champion 27.7% (fit 0.330) | mutants 21.0% (0.237) 28.7% (0.343) 22.7% (0.275) -> champion stays | rounds 9.257
+bench gen 115: champion 52.2% vs start | VP r6 4.872 (start 4.377) | rounds 9.165
+gen 116: champion 24.0% (fit 0.295) | mutants 25.7% (0.300) 24.3% (0.295) 26.0% (0.307) -> champion stays | rounds 9.21
+gen 117: champion 25.0% (fit 0.301) | mutants 24.3% (0.305) 21.3% (0.268) 29.3% (0.343) -> mutant 3 wins {'intrigue_love': 1.565, 'res_intrigue': 1.2824} | rounds 9.137
+gen 118: champion 22.0% (fit 0.266) | mutants 25.0% (0.302) 29.3% (0.351) 23.7% (0.280) -> mutant 2 wins {'tsmf': 3.351498, 'sm_solari': 0.383945, 'troop_hold': 0.853652} | rounds 9.207
+gen 119: champion 29.3% (fit 0.362) | mutants 30.3% (0.373) 21.7% (0.268) 18.7% (0.214) -> champion stays | rounds 9.13
+gen 120: champion 22.0% (fit 0.258) | mutants 27.3% (0.334) 25.3% (0.311) 25.3% (0.303) -> mutant 1 wins {'skills': 14.322282, 'influence': 1.852691} | rounds 9.177
+bench gen 120: champion 48.8% vs start | VP r6 4.862 (start 4.377) | rounds 9.172
+gen 121: champion 29.7% (fit 0.353) | mutants 27.3% (0.326) 26.3% (0.313) 16.7% (0.199) -> champion stays | rounds 9.233
+gen 122: champion 24.0% (fit 0.294) | mutants 30.3% (0.367) 23.3% (0.274) 22.3% (0.258) -> mutant 1 wins {'plot_hold': 0.793635} | rounds 9.23

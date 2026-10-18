@@ -1,0 +1,11 @@
+# Render blueprint: the public Dune AI table (see Dockerfile).
+# render.com -> New -> Blueprint -> pick this repo.
+services:
+  - type: web
+    name: dune-ai
+    runtime: docker
+    plan: starter            # free works too, but sleeps when idle and thinks slowly
+    healthCheckPath: /api/options
+    envVars:
+      - key: DUNE_MAX_GAMES
+        value: "20"

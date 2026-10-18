@@ -170,6 +170,9 @@ class Bloodlines:
         elif c.kind == "tech_offer":
             live = {f"stack:{i}" for i in self.buyable_stacks(pid, c.discount)}
             c.options = [o for o in c.options if o in live or o == "decline"]
+        elif c.kind == "ada_spy":
+            p = self._p(pid)
+            c.options = [o for o in c.options if p.spies_on_board.get(o.split(":", 1)[1], 0) > 0]
         elif c.kind == "effect":
             c.options = [o for o in c.options
                          if self.option_legal(pid, c.payloads[o])]
@@ -208,6 +211,28 @@ class Bloodlines:
         elif c.kind == "plasteel":
             self._trash_tile(pid, "Plasteel Blades")
             self.take_skill(pid, choice.split(":", 1)[1])
+        elif c.kind == "ada_spy":
+            self._trash_spy(pid, choice.split(":", 1)[1])
+        elif c.kind == "complete_contract":
+            p = self._p(pid)
+            ct = next((x for x in p.contracts_active if x.name == choice.split(":", 1)[1]), None)
+            if ct is not None:
+                self.gs.complete_contract(pid, ct)
+        elif c.kind == "vault":
+            if choice == "intrigue":
+                self.gs.draw_intrigue_for_player(pid, 1)
+            else:
+                self.gs.draw_cards_for_player(pid, 1)
+        elif c.kind == "forbidden":
+            p = self._p(pid)
+            if choice == "swords":
+                self.gs.swords_this_reveal[pid] = self.gs.swords_this_reveal.get(pid, 0) + 3
+                if any(v > 0 for v in p.influence.values()):      # must lose one if you can
+                    EffectResolver.resolve_single_effect({"lose_influence_any": 1}, p, self.gs)
+            else:
+                p.spice = 0
+                self._trash_tile(pid, "Forbidden Weapons")
+            self.gs.update_combat_strength(pid)
         elif c.kind == "desperate":
             p = self._p(pid)
             p.skills.discard("Desperate")
@@ -228,6 +253,18 @@ class Bloodlines:
     def tech_price(self, pid: int, d, discount: int = 0) -> int:
         return max(0, d.cost - discount - (1 if self._p(pid).has_councilor else 0))
 
+    def kota_tile(self, pid: int):
+        """Kota Odax's face-down Secret Project tile (stack index -1)."""
+        return getattr(self, "kota_secret", {}).get(pid)
+
+    def tech_at(self, pid: int, i: int):
+        """(tech, extra discount) for a buy choice index: -1 = Kota's secret
+        tile (1 spice cheaper), else the top of tech stack i (None if empty)."""
+        if i < 0:
+            return self.kota_tile(pid), 1
+        stack = self.tech_stacks[i] if i < len(self.tech_stacks) else []
+        return (stack[0] if stack else None), 0
+
     def buyable_stacks(self, pid: int, discount: int = 0) -> List[int]:
         p = self._p(pid)
         out = []
@@ -240,24 +277,37 @@ class Bloodlines:
             if d.name == "Advanced Data Analysis" and not any(p.spies_on_board.values()):
                 continue
             out.append(i)
+        k = self.kota_tile(pid)                    # Kota: the secret tile costs 1 spice less
+        if k is not None and not self.has(pid, k.name) and p.spice >= self.tech_price(pid, k, discount + 1) \
+                and not (k.name == "Advanced Data Analysis" and not any(p.spies_on_board.values())):
+            out.append(-1)
         return out
 
     def buy_tech(self, pid: int, stack_idx: int, discount: int = 0) -> None:
         p = self._p(pid)
-        d = self.tech_stacks[stack_idx].pop(0)
+        if stack_idx == -1:                        # Kota Odax: the Secret Project tile
+            d = self.kota_secret.pop(pid)
+            discount += 1
+        else:
+            d = self.tech_stacks[stack_idx].pop(0)
         p.bl_tech_bought_this_turn = True
         p.spice -= self.tech_price(pid, d, discount)
-        if d.name == "Advanced Data Analysis":      # trash one of your Spies
-            post = next(k for k, v in p.spies_on_board.items() if v > 0)
-            p.spies_on_board[post] -= 1
-            if p.spies_on_board[post] == 0:
-                del p.spies_on_board[post]
+        if d.name == "Advanced Data Analysis":      # trash one of your Spies (your pick)
+            posts = sorted(k for k, v in p.spies_on_board.items() if v > 0)
+            if len(posts) == 1:
+                self._trash_spy(pid, posts[0])
+            else:
+                self.pending.append(PendingBLChoice(pid, "ada_spy", [f"post:{x}" for x in posts]))
+        if d.name == "Gene-Locked Vault":          # an Intrigue OR a card
+            self.pending.append(PendingBLChoice(pid, "vault", ["intrigue", "draw"]))
         p.techs.append(TechTile(d))
         if d.name == "Ornithopter Fleet":
             self.ornithopter_convert(pid)
         self._resolve(pid, d.acquire)
         if d.name == "Servo-Receivers" and p.leader is not None \
                 and getattr(p.leader, "signet", None) is not None:
+            if getattr(self.gs, "leader_log", None) is not None:
+                self.gs.leader_log.append((pid, p.leader.name, "signet (Servo-Receivers)"))
             p.leader.signet(p, self.gs)
 
     # ------------------------------------------------------------------
@@ -267,7 +317,9 @@ class Bloodlines:
         """After the space and card effects: offer a tech (green space) and a
         commander recruit (commander space)."""
         p = self._p(pid)
-        if card is not None and p.bl_shigawire and self._is_bene(card):
+        if getattr(p, "bl_shigawire_fresh", False):
+            p.bl_shigawire_fresh = False           # Shigawire itself doesn't get its bonus
+        elif card is not None and p.bl_shigawire and self._is_bene(card):
             p.bl_shigawire = False
             self.gs.draw_cards_for_player(pid, 1)
         p.bl_space_this_turn = space
@@ -484,15 +536,11 @@ class Bloodlines:
             elif t.name == "Restricted Ordnance" and p.has_councilor:
                 gs.swords_this_reveal[pid] = gs.swords_this_reveal.get(pid, 0) + 4
             elif t.name == "Forbidden Weapons":
-                # "you must choose": swords + lose an influence while you have
-                # one to lose, else lose all spice and trash the tile
-                if any(p.influence[f] > 0 for f in FACTIONS):
-                    gs.swords_this_reveal[pid] = gs.swords_this_reveal.get(pid, 0) + 3
-                    EffectResolver.resolve_single_effect(
-                        {"lose_influence_any": 1}, p, gs)
-                else:
-                    p.spice = 0
-                    self._trash_tile(pid, t.name)
+                # "you must choose": 3 swords and lose 1 influence, OR lose all
+                # your spice and trash this. No arrow: the swords option is
+                # always open - the influence loss applies only if you have
+                # influence to lose (user, 2026-10-15)
+                self.pending.append(PendingBLChoice(pid, "forbidden", ["swords", "spice"]))
         if getattr(p, "bl_reveal_bonus", 0):            # Recruitment Mission
             gs.gain_persuasion(pid, p.bl_reveal_bonus)
             p.bl_reveal_bonus = 0
@@ -601,7 +649,12 @@ class Bloodlines:
             return
         k = min(n, p.troops_supply)
         p.troops_supply -= k
+        if getattr(p, "no_deploy_this_turn", False):     # Shaddam's Signet: garrison
+            p.troops_garrison += k
+            return
         gs.troops_in_conflict[pid] = gs.troops_in_conflict.get(pid, 0) + k
+        gs.note_units_deployed(pid, k)
+        gs.update_combat_strength(pid)
 
     def battle_icon(self, pid: int, name: str) -> str:
         """Ornithopter Fleet (user rule, 2026-10-14): every battle icon you
@@ -617,6 +670,36 @@ class Bloodlines:
         if n >= 2:
             p.gain_vp(n // 2)
         p.battle_icons = ["ornithopter"] * (n % 2)
+
+    def _trash_spy(self, pid: int, post: str) -> None:
+        """Advanced Data Analysis: the Spy leaves the game (not back to supply),
+        so the player plays on with one Spy fewer."""
+        p = self._p(pid)
+        p.spies_on_board[post] -= 1
+        if p.spies_on_board[post] == 0:
+            del p.spies_on_board[post]
+
+    def _move_watching_spies(self, o, space: str) -> None:
+        """Holy War: an opponent's Spy on a post connected to `space` moves to
+        another post (not watching this space): a free post if there is one,
+        else one shared with another player; with nowhere to go it returns to
+        the supply. (The moving player's pick is automated.)"""
+        from src.game.board.board import OBSERVATION_POST_CONNECTIONS as POSTS
+        gs = self.gs
+        watching = [k for k, v in POSTS.items() if space in v and o.spies_on_board.get(k, 0) > 0]
+        for post in watching:
+            others = sorted(k for k, v in POSTS.items() if space not in v and o.spies_on_board.get(k, 0) == 0)
+            free = [k for k in others if not any(q.spies_on_board.get(k, 0) for q in gs.players)]
+            o.spies_on_board[post] -= 1
+            if o.spies_on_board[post] == 0:
+                del o.spies_on_board[post]
+            target = (free or others or [None])[0]
+            if target is None:
+                o.spies_available += 1
+                gs.note(f"P{o.id + 1}'s Spy on {post} returns to supply (Holy War)")
+            else:
+                o.spies_on_board[target] = o.spies_on_board.get(target, 0) + 1
+                gs.note(f"P{o.id + 1}'s Spy moves {post} -> {target} (Holy War)")
 
     def steal_protected(self, pid: int) -> bool:
         return self.has(pid, "Gene-Locked Vault") and len(self._p(pid).intrigue_cards) < 5
@@ -756,8 +839,18 @@ class Bloodlines:
                     p.id, {}, v["reward"], discard=v.get("n", 1), label="bl_discard_for",
                     discard_tag=v.get("tag"), tag_bonus=v.get("bonus"))
             elif k == "bl_complete_contract":
-                if p.contracts_active:
+                # CHOAM Demands: a reward like any other - on the Agent turn it
+                # waits until claimed, so a contract taken this turn (Dutiful
+                # Service, Accept Contract) can be the one completed (user)
+                if gs.defer_reward_for(p.id):
+                    gs.defer_reward(p.id, "effect", 0, effect={"bl_complete_contract": 1},
+                                    cond="has_contract")
+                elif len(p.contracts_active) == 1:
                     gs.complete_contract(p.id, p.contracts_active[0])
+                elif p.contracts_active:            # the player picks which
+                    self.pending.append(PendingBLChoice(
+                        p.id, "complete_contract",
+                        [f"contract:{c.name}" for c in p.contracts_active]))
             elif k == "bl_force_retreat":
                 self._force_retreat(p.id)
             elif k == "bl_trash_from_hand":
@@ -767,16 +860,36 @@ class Bloodlines:
                         sorted({c.name for c in p.hand}) + ["decline"],
                         bonus=v["bonus"], tag=v["tag"]))
             elif k == "bl_opponents_lose_troop":
+                # Holy War: each opponent loses a troop (a plain troop before a
+                # commander) and must move any Spy watching this space
+                from src.game.board.board import OBSERVATION_POST_CONNECTIONS
+                space = getattr(gs, "_current_agent_space", None)
                 for o in gs.players:
                     if o.id == p.id:
                         continue
+                    lost = o.troops_garrison > 0 or gs.troops_in_conflict.get(o.id, 0) > 0
+                    if lost:
+                        gs.note(f"P{o.id + 1} loses a troop (Holy War)")
+                        if o.leader is not None:            # Chani: any troop lost counts (user)
+                            o.leader.trigger("on_units_left_conflict", o, gs, 1)
                     if o.troops_garrison > 0:
                         o.troops_garrison -= 1
-                        o.troops_supply += 1
+                        if o.troops_garrison < getattr(o, "commanders_garrison", 0):
+                            o.commanders_garrison -= 1          # only commanders were left
+                            o.commanders_supply += 1
+                        else:
+                            o.troops_supply += 1
                     elif gs.troops_in_conflict.get(o.id, 0) > 0:
+                        cin = self.commanders_in_conflict.get(o.id, 0)
                         gs.troops_in_conflict[o.id] -= 1
-                        o.troops_supply += 1
+                        if gs.troops_in_conflict[o.id] < cin:
+                            self.commanders_in_conflict[o.id] -= 1
+                            o.commanders_supply += 1
+                        else:
+                            o.troops_supply += 1
                         gs.update_combat_strength(o.id)
+                    if space:
+                        self._move_watching_spies(o, space)
             elif k == "bl_after_turn":
                 p.bl_after_turn.append(v)
             elif k == "bl_conflict_bonus":
@@ -805,6 +918,7 @@ class Bloodlines:
                 p.bl_envoy = True
             elif k == "bl_shigawire":
                 p.bl_shigawire = True
+                p.bl_shigawire_fresh = True       # set by the card being played now
             elif k == "bl_commander_discount":
                 p.bl_commander_discount += int(v)
             elif k == "bl_tech_offer":

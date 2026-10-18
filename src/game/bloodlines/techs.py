@@ -75,10 +75,10 @@ TECHS: List[TechDef] = [
             note="Acquire: a troop and you may break the Shield Wall. Reveal "
                  "Turn: you must choose: 3 swords and lose 1 influence with any "
                  "faction, OR lose all your spice and trash this."),
-    TechDef("Gene-Locked Vault", 2, acquire=[{"intrigue": 1}],
-            note="Acquire: an Intrigue OR draw a card (engine takes the "
-                 "Intrigue). Your Intrigue cards can't be stolen unless you "
-                 "have five or more."),
+    TechDef("Gene-Locked Vault", 2,
+            note="Acquire: an Intrigue OR draw a card (the player's choice). "
+                 "Your Intrigue cards can't be stolen unless you have five "
+                 "or more."),
     TechDef("Glowglobes", 2, acquire=[{"influence_any": 1}],
             note="You may look at the top card of your deck at any time."),
     TechDef("Holoprojectors", 3,

@@ -42,8 +42,9 @@ def test_market_is_three_stacks_without_ix_only_tiles():
     stacks = gs.bl.tech_stacks
     assert len(stacks) == 3
     names = {d.name for s in stacks for d in s}
-    assert len(names) == 34
-    assert "Detonation Devices" not in names and "Troop Transports" not in names
+    # only the 18 Bloodlines tiles (Rise of Ix tiles are replay-only, user 2026-10-14)
+    from src.game.bloodlines.techs import BLOODLINES_TECHS
+    assert names == BLOODLINES_TECHS and len(names) == 18
 
 
 def test_green_space_offers_tech_and_council_seat_discounts_it():
@@ -136,7 +137,10 @@ def test_navigation_chamber_and_ornithopter_fleet():
     _give_tech(gs, p, "Ornithopter Fleet")
     p.battle_icons = []
     gs._award_battle_icon(p.id, "crysknife")
-    assert p.battle_icons == ["wild"]
+    assert p.battle_icons == ["ornithopter"]          # every icon is an Ornithopter (user)
+    vp = p.victory_points
+    gs._award_battle_icon(p.id, "wild")
+    assert p.battle_icons == [] and p.victory_points == vp + 1
 
 
 def test_chaumurky_wins_ties():

@@ -80,8 +80,12 @@ def _action_record(gs, a) -> Dict:
         rec["intrigue"] = a.intrigue_card_name
     elif at == ActionType.RESOLVE_DEPLOY:
         rec["deploy_count"] = a.deploy_count
+        if a.deploy_cmd is not None:
+            rec["deploy_cmd"] = a.deploy_cmd
     elif at == ActionType.RESOLVE_TRASH:
         rec["trash_card"] = a.trash_card_name
+        if a.trash_from:
+            rec["trash_from"] = a.trash_from
     elif at == ActionType.RESOLVE_INFLUENCE:
         rec["faction"] = a.influence_faction
     elif at == ActionType.RESOLVE_CONTRACT:

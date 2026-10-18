@@ -262,9 +262,12 @@ def create_imperium_cards() -> List[Card]:
                 "Reveal: 2 persuasion + 2 solari. Acquire: gain 2 solari."),
         m("Priority Contracts", 6, I, access=["landsraad", "desert"], tags=["spacing_guild"],
           agent={"contract": 1}, persuasion=0,
-          reveal={"choose_by_contracts": {"n": 4, "yes": {"vp": 1}, "no": {"spice": 2}}},
-          notes="No reveal persuasion. Reveal: gain 2 spice, OR — with 4+ "
-                "contracts completed — 1 VP instead (auto-takes the VP)."),
+          reveal={"choose_one": {"prompt": "Priority Contracts", "may": False, "options": [
+              {"label": "2 spice", "effect": {"spice": 2}},
+              {"label": "Trash this card -> 1 VP (4+ completed contracts)",
+               "effect": {"_need_contracts": 4, "_trash_in_play": "Priority Contracts", "vp": 1}}]}},
+          notes="No reveal persuasion. Reveal: 2 spice, OR with 4+ completed "
+                "contracts: trash this card -> 1 VP (the player's choice)."),
         m("Public Spectacle", 4, I, access=["spy"], tags=["emperor"],
           agent={"if_spy_recalled": {"influence_any": 1}}, persuasion=1,
           reveal={"spy": 1}),
@@ -560,7 +563,9 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         # (optional wall-break icon). Two copies in the deck.
         IC("Detonation", _PLOT, [_DETONATION]),
         IC("Detonation", _PLOT, [_DETONATION]),
-        IC("Distraction", _PLOT, [{"if_units_in_conflict_3": {"spy_special": 1}}]),
+        # Distraction: "When you deploy three or more units to the Conflict in a
+        # single turn: place a Spy (may share another player's post)".
+        IC("Distraction", _PLOT, [{"if_units_deployed_3": {"spy_special": 1}}]),
         IC("Imperium Politics", _PLOT,
            [{"pay_then": {"cost": {"solari": 1}, "influence_emperor_or_spacing": 1}}]),
         IC("Inspire Awe", _PLOT,
@@ -767,10 +772,8 @@ def setup_game(
     from src.game.leader.leader_definitions import assign_leaders
     assign_leaders(gs, leaders, neutral=neutral_leaders)
 
-    # Begin round 1 (deals 5 cards to each player, flips first conflict)
-    gs.start_new_round()
-
-    # All leaders start with 1 water, 0 solari, 0 spice (then leader setup tweaks)
+    # All leaders start with 1 water, 0 solari, 0 spice; then leader setup
+    # (before round 1, so round-start abilities - Piter's Twisted Intrigue - see it)
     for player in gs.players:
         player.water  = 1
         player.solari = 0
@@ -778,5 +781,15 @@ def setup_game(
     for player in gs.players:
         if getattr(player, "leader", None) is not None:
             player.leader.apply_setup(player, gs)
+
+    # Leader setup choices (Steersman's Navigation cards, Kota's Tech) come
+    # after every Leader is picked and BEFORE round 1: the Conflict isn't
+    # revealed and no cards are dealt until they're all made (step() starts it)
+    from src.game.gameState import Phase
+    if any(gs._has_mandatory_pending_for(q) for q in range(num_players)):
+        gs.phase = Phase.SETUP
+    else:
+        # Begin round 1 (deals 5 cards to each player, flips first conflict)
+        gs.start_new_round()
 
     return gs

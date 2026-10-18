@@ -1,2 +1,20 @@
 {"gen": 38, "change": "Tech market: 18 Bloodlines tiles only (Rise of Ix out); workers picked it up during gen 38-39"}
 {"gen": 39, "change": "Card pool: Uprising + Bloodlines + promos with printed copies (Imperium 106, Intrigue 62); community-pool cards out; workers picked it up during gen 39"}
+{"gen": 42, "change": "Ornithopter Fleet: every held battle icon (incl. ?) becomes an Ornithopter and pairs at once"}
+{"gen": 46, "change": "Conflict rewards: trash (Skirmish Wild) and influence of your choice are player decisions, not auto-picked"}
+{"gen": 46, "change": "Suspensor Suits bought on a turn that drew Intrigue (e.g. Assembly Hall) still deploys a troop per Intrigue"}
+{"gen": 46, "change": "Agent-turn rewards (card draws, Intrigues) are claimed when the player chooses: buy Suspensor Suits before the Intrigue, trash before drawing"}
+{"gen": 46, "change": "Each card / space draw-Intrigue reward claimed separately, only while its card condition still holds"}
+{"gen": 47, "change": "Unmet card conditions (e.g. Strike Fleet / Public Spectacle spy recall) can be met later in the turn and the reward claimed then"}
+{"gen": 47, "change": "Combat-space deploys open all turn (several, any time, incl. troops gained later); legal-move order fixed across processes"}
+{"gen": 47, "change": "Contract rewards claimable in any order; Intrigue costs mandatory (only playable if payable)"}
+{"gen": 47, "change": "BUG FIX: revealed swords stay in the Conflict (were lost on any later strength recalculation, e.g. 34 of 111 Combat Intrigues lowered strength); retreats choose troops/commanders"}
+{"gen": 48, "change": "Commanders re-recruited from supply on ANY Agent turn and on the Reveal turn (once per turn)"}
+{"gen": 48, "change": "Flip techs (e.g. Rapid Dropships) can be flipped later in the Agent turn; a late Dropships flip opens deploys"}
+{"gen": 48, "change": "Green-space tech buy / commander recruit open all Agent turn; Loyal valued only near 3 Emperor influence"}
+{"gen": 49, "change": "Influence track 4th-space bonuses: Fremen water, BG Intrigue, Guild 3 solari, Emperor Spy"}
+{"gen": 49, "change": "Reveal-turn deploys (Holy War, Ruthless Leadership, Adaptive Tactics): open all Reveal turn, 2 + troops gained that turn"}
+{"gen": 49, "change": "Intrigues playable if at least one ability is usable (Strategic Stockpiling, Change Allegiances same-faction swap)"}
+{"gen": 50, "change": "Tech audit: Navigation Chamber on all space costs, ADA spy choice, Forbidden Weapons / Gene-Locked Vault choices"}
+{"gen": 50, "change": "CHOAM Demands completion is a claimable reward (a contract taken that turn can be completed), player picks the contract"}
+{"gen": 50, "change": "Holy War: opponents' Spies watching that space move to another post; troop loss keeps commander counts right"}

@@ -361,8 +361,13 @@ def test_card_corrections_batch5():
     gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=False))
     assert sum(p.spies_on_board.values()) == 2 and len(p.intrigue_cards) == ig0
     EffectResolver.resolve_single_effect({"recall_spy_then": {"intrigue": 1}}, p, gs)
-    gs.step(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
+    # which Spy comes back is the player's choice (user, 2026-10-16)
+    acc = [a for a in gs.get_valid_actions(0) if a.action_type == ActionType.RESOLVE_OPTIONAL
+           and a.accept_optional]
+    assert {a.choice for a in acc} == {"recall:Emperor Post", "recall:Fremen Post"}
+    gs.step(next(a for a in acc if a.choice == "recall:Fremen Post"))
     assert sum(p.spies_on_board.values()) == 1 and len(p.intrigue_cards) == ig0 + 1
+    assert p.spies_on_board.get("Emperor Post") == 1
 
 
 def test_card_corrections_batch6():
@@ -385,21 +390,29 @@ def test_card_corrections_batch6():
                      second_place_reward={}, battle_icon=icon)
         gs.won_conflicts[0].append(c)
 
-    # Only a Desert Mouse icon -> just 1 spice.
-    _won(BattleIcon.DESERT_MOUSE)
+    # The Beast's Spoils pays per face-up (unmatched) battle icon you HOLD
+    # (user, 2026-10-16): only a Desert Mouse -> just 1 spice, no trash.
+    p.battle_icons = ["desert_mouse"]
     sp0 = p.spice
     EffectResolver.resolve_single_effect({"beast_spoils": 1}, p, gs)
     assert p.spice == sp0 + 1
     assert not any(t.player_id == 0 for t in gs.pending_trashes)
 
-    # Add Crysknife + Ornithopter -> spice, a trash choice, and a troop.
-    _won(BattleIcon.CRYSKNIFE)
-    _won(BattleIcon.ORNITHOPTER)
+    # Desert Mouse + Crysknife + Ornithopter -> spice, a trash choice, and a troop.
+    p.battle_icons = ["desert_mouse", "crysknife", "ornithopter"]
     sp0, tr0 = p.spice, p.troops_garrison
     EffectResolver.resolve_single_effect({"beast_spoils": 1}, p, gs)
     assert p.spice == sp0 + 1
     assert p.troops_garrison == tr0 + 1
     assert any(t.player_id == 0 for t in gs.pending_trashes)
+
+    # A won Conflict whose icon was already matched (not held) pays nothing.
+    gs.pending_trashes.clear()
+    _won(BattleIcon.CRYSKNIFE)
+    p.battle_icons = []
+    sp0, tr0 = p.spice, p.troops_garrison
+    EffectResolver.resolve_single_effect({"beast_spoils": 1}, p, gs)
+    assert (p.spice, p.troops_garrison) == (sp0, tr0) and not gs.pending_trashes
 
 
 def test_battle_icons():
@@ -836,6 +849,9 @@ def test_battle_for_arrakeen_recall_spies():
     p.place_spy("Emperor Post"); p.place_spy("Fremen Post"); p.place_spy("Green Post")
     vp0 = p.victory_points
     gs._apply_combat_reward(0, {"may_recall_spies_for_vp": {"count": 2, "vp": 1}}, bfa)
+    # the recall is the player's choice (user): accept it
+    from src.game.gameState import GameAction, ActionType
+    gs._step_resolve_optional(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
     assert p.victory_points == vp0 + 1
     assert sum(p.spies_on_board.values()) == 1        # 2 recalled
 
@@ -849,6 +865,8 @@ def test_battle_for_arrakeen_recall_spies():
     vpq = q.victory_points
     gs2._apply_combat_reward(
         0, {"may_recall_spies_for_vp": {"count": 2, "vp": 1, "times": 2}}, bfa)
+    while any(op.player_id == 0 for op in gs2.pending_optional_payments):   # accept each offer
+        gs2._step_resolve_optional(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
     assert q.victory_points == vpq + 1               # only one application affordable
     assert sum(q.spies_on_board.values()) == 1
 
@@ -860,12 +878,16 @@ def test_battle_for_arrakeen_recall_spies():
     r.spice = 5
     vpr = r.victory_points
     gs3._apply_combat_reward(0, {"may_pay_spice_for_vp": {"cost": 4, "vp": 1, "times": 2}}, bib)
+    while any(op.player_id == 0 for op in gs3.pending_optional_payments):
+        gs3._step_resolve_optional(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
     assert r.victory_points == vpr + 1 and r.spice == 1
     gs4 = GameState(num_players=4, seed=4)
     s = gs4.players[0]
     s.spice = 8
     vps = s.victory_points
     gs4._apply_combat_reward(0, {"may_pay_spice_for_vp": {"cost": 4, "vp": 1, "times": 2}}, bib)
+    while any(op.player_id == 0 for op in gs4.pending_optional_payments):
+        gs4._step_resolve_optional(GameAction(ActionType.RESOLVE_OPTIONAL, 0, accept_optional=True))
     assert s.victory_points == vps + 2 and s.spice == 0
 
 
@@ -964,13 +986,10 @@ def test_sardaukar_coordination_deploy_recruited_uncapped():
     p.troops_garrison = 5
     p.troops_recruited_this_turn = 4          # e.g. recruited at the Sardaukar space
     EffectResolver.resolve_single_effect({"deploy_recruited": 1}, p, gs)
-    pend = next(d for d in gs.pending_deployments if d.player_id == 0)
-    assert pend.max_deploy == 4               # all recruited troops, no 9/2 cap
+    assert gs.deploy_left(0) == 4             # all recruited troops, no 9/2 cap, no +2
     # garrison-bounded when fewer troops on hand
-    gs.pending_deployments.clear()
     p.troops_garrison = 2
-    EffectResolver.resolve_single_effect({"deploy_recruited": 1}, p, gs)
-    assert next(d for d in gs.pending_deployments if d.player_id == 0).max_deploy == 2
+    assert gs.deploy_left(0) == 2
 
 
 def _city_card():
@@ -1346,3 +1365,36 @@ def test_plot_intrigue_after_placing_agent():
     assert p.spice == sp + 1
     assert not any(ic.name == "Test Plot" for ic in p.intrigue_cards)
     assert gs.get_current_player_id() != pid       # nothing left to play: turn passes
+
+
+def test_questionable_methods_swords_count_in_combat():
+    """User bug (2026-10-16): the +4 swords from Questionable Methods' choice
+    were added after the card was played but combat strength was never
+    refreshed, so the Conflict was resolved on the old strength."""
+    from src.ai.agents import make_agent
+    from src.data.card_definitions import create_intrigue_deck
+    gs = setup_game(4, seed=21, neutral_leaders=True)
+    ag = [make_agent("heuristic", seed=i) for i in range(4)]
+    qm = next(c for c in create_intrigue_deck() if c.name == "Questionable Methods")
+    for _ in range(3000):
+        pid = gs.player_in_reveal_buy
+        pid = gs.get_current_player_id() if pid is None else pid
+        valid = gs.get_valid_actions(pid)
+        if gs.phase == Phase.COMBAT and gs.troops_in_conflict.get(pid, 0) > 0 \
+                and any(a.action_type == ActionType.COMBAT_PASS for a in valid):
+            break
+        gs.step(ag[pid].select_action(gs, pid, valid))
+    else:
+        pytest.skip("no combat turn reached")
+    p = gs.players[pid]
+    p.influence["fremen"] = max(p.influence["fremen"], 1)
+    p.intrigue_cards.append(qm)
+    before = gs.combat_strength.get(pid, 0)
+    play = next(a for a in gs.get_valid_actions(pid) if a.action_type == ActionType.PLAY_INTRIGUE
+                and a.intrigue_card_name == "Questionable Methods")
+    gs.step(play)
+    assert gs.combat_strength[pid] == before + 1
+    choose = next(a for a in gs.get_valid_actions(pid) if a.action_type == ActionType.RESOLVE_CHOICE
+                  and a.choice == "fremen")
+    gs.step(choose)
+    assert gs.combat_strength[pid] == before + 5

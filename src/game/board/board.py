@@ -189,8 +189,10 @@ def build_uprising_board() -> Dict[str, BoardSpace]:
                    [], special=True, mandatory_cost={"solari": 5}))
     add(BoardSpace("Swordmaster", L, "landsraad",
                    [], special=True, one_time_use=True))
+    # Imperial Privilege (user, 2026-10-16): draw a card, uplift an Agent, and
+    # you may trash an Intrigue card to gain an Intrigue card. Not a combat space.
     add(BoardSpace("Imperial Privilege", L, "landsraad",
-                   [{"uplift": 1, "draw": 1}],
+                   [{"uplift": 1, "draw": 1, "swap_intrigue": 1}],
                    influence_gate=("emperor", 2), mandatory_cost={"solari": 3}))
     add(BoardSpace("Assembly Hall", L, "landsraad",
                    [{"intrigue": 1}]))
@@ -215,6 +217,14 @@ def build_uprising_board() -> Dict[str, BoardSpace]:
                    [], special=True,          # bonus spice + (4 spice OR 2 sandworms)
                    is_combat_space=True, is_maker_space=True,
                    mandatory_cost={"water": 3}))
+    # Bloodlines: Tuek's Sietch is set out only for Esmar Tuek (GameState.leader_spaces).
+    # Spice Trade icon, a Maker space (gathers bonus spice), no observation post:
+    # 1 spice OR draw a card.
+    add(BoardSpace("Tuek's Sietch", D, "desert",
+                   [{"choose_one": {"prompt": "Tuek's Sietch: 1 spice or draw a card", "may": False,
+                                    "options": [{"label": "1 spice", "effect": {"spice": 1}},
+                                                {"label": "Draw a card", "effect": {"draw": 1}}]}}],
+                   is_maker_space=True))
 
     return spaces
 
@@ -300,6 +310,8 @@ MAKER_SPACES:      set = {n for n, s in UPRISING_BOARD.items() if s.is_maker_spa
 CONTROLLED_LOCATIONS: set = {n for n, s in UPRISING_BOARD.items() if s.is_controlled_location}
 SHIELD_WALL_PROTECTED: set = {n for n, s in UPRISING_BOARD.items() if s.shield_wall_protected}
 SPECIAL_SPACES:    set = {n for n, s in UPRISING_BOARD.items() if s.special}
+# spaces that exist only when a particular Leader is in the game
+LEADER_SPACES:     set = {"Tuek's Sietch"}
 INFLUENCE_GATED_SPACES: Dict[str, Tuple[str, int]] = {
     n: s.influence_gate for n, s in UPRISING_BOARD.items() if s.influence_gate
 }

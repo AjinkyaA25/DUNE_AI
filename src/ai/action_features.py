@@ -137,11 +137,10 @@ def _bloodlines_action(gs: GameState, pid: int, a: GameAction) -> list:
     if ch.startswith("stack:") and bl is not None:
         c = next((c for c in bl.pending if c.player_id == pid), None)
         i = int(ch.split(":")[1])
-        if c is not None and c.kind in ("tech_buy", "tech_offer") \
-                and i < len(bl.tech_stacks) and bl.tech_stacks[i]:
-            d = bl.tech_stacks[i][0]
+        d, extra = bl.tech_at(pid, i)
+        if c is not None and c.kind in ("tech_buy", "tech_offer") and d is not None:
             v[2] = 1.0
-            v[4] = bl.tech_price(pid, d, c.discount) / 6.0
+            v[4] = bl.tech_price(pid, d, c.discount + extra) / 6.0
             names = [t.name for t in TECHS]
             if d.name in names:
                 v[5 + len(SKILLS) + names.index(d.name)] = 1.0

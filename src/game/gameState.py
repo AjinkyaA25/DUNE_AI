@@ -44,6 +44,7 @@ from src.game.board.board import (
     SHIELD_WALL_PROTECTED,
     SPECIAL_SPACES,
     INFLUENCE_GATED_SPACES,
+    LEADER_SPACES,
     CONTROL_BONUS,
     MAKER_SPACE_OPTIONS,
     SWORDMASTER_COST_FIRST,
@@ -72,6 +73,7 @@ class AtomicBlockViolation(Exception):
 # ---------------------------------------------------------------------------
 
 class Phase(Enum):
+    SETUP        = "setup"          # Leader setup choices (Steersman, Kota) before round 1
     ROUND_START  = "round_start"
     PLAYER_TURNS = "player_turns"
     COMBAT       = "combat"
@@ -678,6 +680,8 @@ class GameState:
                             spy_mods = [(False, False)]
                             if can_gi:
                                 spy_mods.append((True, False))
+                                if p.leader is not None and p.leader.must_gather:
+                                    spy_mods.remove((False, False))     # Gaius: you must
                         if can_inf:
                             spy_mods.append((False, True))
                         # A Spy on BOTH posts bordering the space: one may
@@ -685,6 +689,10 @@ class GameState:
                         # (Never two Gather Intelligence — no double card draw.)
                         if can_inf and self._connected_spy_count(player_id, space) >= 2:
                             spy_mods.append((True, True))
+                        if (card.name == "Signet Ring" and p.leader is not None
+                                and p.leader.name == "Shaddam Corrino IV"):
+                            # his ring forbids deploying units this turn: no worms
+                            options = [o for o in options if o != "sandworm"] or options
                         for opt in options:
                             for gi, inf in spy_mods:
                                 actions.append(GameAction(
@@ -755,10 +763,29 @@ class GameState:
         if self.bl:
             self.bl.sync(bl_before)
 
+        # Combat strength is derived (units + revealed swords), so refresh it
+        # after anything done during the Combat phase: a choice inside a
+        # combat Intrigue (e.g. Questionable Methods' lose-influence -> +4
+        # swords) adds swords after the card itself was played.
+        if self.phase == Phase.COMBAT and self.current_conflict is not None:
+            for part in self.get_combat_participants():
+                self.update_combat_strength(part)
+
+        for p in self.players:
+            if p.leader is not None and p.leader.on_after_step is not None:
+                p.leader.on_after_step(p, self)
+
         # Deferred conditional reveal effects fire once the revealing player has
         # cleared their pending choices (so e.g. a Spy placed on the Reveal turn
         # is counted by a "2+ Spies" reveal condition).
         self._flush_reveal_conditionals()
+
+        # Withdrawn (Twisted Intrigue): pass this turn - play moves on
+        passer = getattr(self, "_pass_requested", None)
+        if passer is not None:
+            self._pass_requested = None
+            if self.phase == Phase.PLAYER_TURNS and self.get_current_player_id() == passer                     and not self._has_mandatory_pending_for(passer):
+                self.advance_to_next_player_turn()
 
         # An Agent turn = place ONE agent, then play passes to the next player
         # (once any follow-up choices — deploy, spy, ... — are resolved).
@@ -862,6 +889,10 @@ class GameState:
             self.draw_cards_for_player(pid, it["n"])
         elif it["kind"] == "intrigue":
             self.draw_intrigue_for_player(pid, it["n"])
+        elif it["kind"] == "nav":                    # Steersman's Navigation card, played when he likes
+            from src.game.leader.navigation import play_navigation
+            e = it["effect"]
+            play_navigation(self.players[pid], self, e["card"], slot=e["slot"], faction=e["faction"])
         elif it["kind"] == "effect" and it.get("effect"):
             from src.game.effects import EffectResolver
             EffectResolver.resolve_single_effect(dict(it["effect"]), self.players[pid], self)
@@ -878,7 +909,7 @@ class GameState:
     def in_own_turn(self, pid: int) -> bool:
         """pid is taking its Agent turn (incl. its follow-ups / window) or its
         Reveal turn - troops gained now are 'recruited this turn'."""
-        return (getattr(self, "_agent_turn_active", False) and getattr(self, "_agent_turn_owner", None) == pid) \
+        return (getattr(self, "_agent_turn_active", False) and getattr(self, "_agent_turn_owner", None) in (None, pid)) \
             or pid in (self._agent_turn_open, self._post_agent_window, self.player_in_reveal_buy,
                        getattr(self, "_revealing_pid", None))
 
@@ -886,12 +917,17 @@ class GameState:
         """Troops the player may still move to the Conflict this turn from a
         combat space: 2 (once) + every troop recruited this turn - deployed."""
         p = self.players[pid]
-        if not getattr(p, "deploy_icon_this_turn", False) or self.current_conflict is None:
+        icon = getattr(p, "deploy_icon_this_turn", False)
+        recruited = getattr(p, "deploy_recruited_this_turn", False)   # Sardaukar Coordination
+        if not (icon or recruited) or self.current_conflict is None:
             return 0
+        if getattr(p, "no_deploy_this_turn", False):
+            return 0                                   # Shaddam's Signet Ring
+        rec = getattr(p, "troops_recruited_this_turn", 0)
         budget = max(getattr(p, "deploy_budget_this_turn", 0),
-                     2 + getattr(p, "troops_recruited_this_turn", 0)
-                     + getattr(p, "deploy_extra_this_turn", 0))
-        return max(0, min(p.troops_garrison, budget - getattr(p, "deployed_this_turn", 0)))
+                     2 + rec + getattr(p, "deploy_extra_this_turn", 0) if icon else rec)
+        usable = p.troops_garrison - getattr(p, "undeployable_this_turn", 0)
+        return max(0, min(usable, budget - getattr(p, "deployed_this_turn", 0)))
 
     def _open_deploy_actions(self, pid: int) -> List["GameAction"]:
         hi = self.deploy_left(pid)
@@ -925,7 +961,8 @@ class GameState:
     def _turn_open_for(self, pid: int) -> bool:
         """Something optional is still available this turn: a reward to claim
         or troops to deploy."""
-        return bool(self.deferred(pid)) or self.deploy_left(pid) > 0
+        return bool(self.deferred(pid)) or self.deploy_left(pid) > 0 \
+            or bool(self.bl and self.bl.late_choices(pid))
 
     def _claim_actions(self, pid: int) -> List["GameAction"]:
         return [GameAction(ActionType.RESOLVE_CHOICE, pid, choice=f"claim:{i}")
@@ -1002,6 +1039,7 @@ class GameState:
             self._step_resolve_contract(action)
         elif at == ActionType.RESOLVE_OPTIONAL:
             self._step_resolve_optional(action)
+            self.update_combat_strength(action.player_id)
         elif at == ActionType.PLAY_INTRIGUE:
             self._step_play_intrigue(action)
         elif at == ActionType.COMBAT_PASS:
@@ -1040,7 +1078,9 @@ class GameState:
         p0.deploy_budget_this_turn = 0
         p0.deploy_extra_this_turn = 0
         p0.deployed_this_turn = 0
+        p0.units_deployed_this_turn = 0
         self._revealing_pid = pid
+        self._reveal_open = pid                   # until the Reveal turn ends
         # apply_reveal_turn() already accumulates persuasion into the pool:
         #   - each revealed card's .persuasion field and {"persuasion": n} effects
         #   - leader on_reveal hooks
@@ -1066,6 +1106,7 @@ class GameState:
         pid = action.player_id
         if self.player_in_reveal_buy != pid:
             return
+        self._reveal_open = None
         # Force any still-deferred conditional reveal effects to resolve now.
         keep = []
         for conds, p in self._pending_reveal_conditionals:
@@ -1144,12 +1185,13 @@ class GameState:
             raise ValueError(f"Cannot place spy at '{post}'")
         player = self.players[pid]
         if player.spies_available < 1:
-            # All 3 Spies are already on the board — Uprising errata makes
-            # placement mandatory anyway, so recall one to make room, then
-            # place the newly-gained Spy (regular/special/restricted, per the
-            # icon that triggered this) as normal.
+            # All 3 Spies are already on the board: recall one (the player's
+            # pick, action.choice = "recall:<post>") to make room, then place.
             if player.spies_on_board:
-                self.players[pid].recall_spy(next(iter(player.spies_on_board)))
+                src = (action.choice[7:] if action.choice and action.choice.startswith("recall:")
+                       else sorted(k for k, v in player.spies_on_board.items() if v > 0)[0])
+                self.players[pid].recall_spy(src)
+                player.recalled_spy_this_turn = True
         if not self.place_spy(pid, post, pending.allow_occupied):
             raise ValueError(f"Cannot place spy at '{post}'")
         pending.count -= 1
@@ -1198,6 +1240,8 @@ class GameState:
         reserve stack instead of the player's permanent trash pile."""
         if getattr(card, "cost", 0) >= 1:
             player.trashed_costly_card_this_round = True   # Tenuous Bond
+        if player.leader is not None:
+            player.leader.trigger("on_trash", player, self, card)
         if card.name == "The Spice Must Flow":
             self.reserve_spice_must_flow.append(card)
         elif card.name == "Prepare the Way":
@@ -1243,7 +1287,14 @@ class GameState:
                         if c.player_id == pid), None)
         if pending is None:
             raise ValueError("No pending contract choice for player")
-        if not self.contracts_on_board:
+        aside = getattr(self, "shaddam_contracts", {}).get(pid, [])
+        if action.contract_index >= 100 and action.contract_index - 100 < len(aside):
+            contract = aside.pop(action.contract_index - 100)
+            self.players[pid].take_contract(contract)
+            if contract.is_immediate() and (
+                    not contract.requires_intrigue() or self.players[pid].intrigue_cards):
+                self.complete_contract(pid, contract)
+        elif not self.contracts_on_board:
             self.players[pid].gain_solari(2)
         else:
             i = max(0, min(action.contract_index, len(self.contracts_on_board) - 1))
@@ -1271,9 +1322,14 @@ class GameState:
             return                                  # can't afford -> treat as decline
         for k, v in pending.cost.items():
             if k == "recall_spy":
-                for post in list(p.spies_on_board)[:v]:
-                    p.recall_spy(post)
-                p.recalled_spy_this_turn = True
+                if action.choice and action.choice.startswith("recall:"):
+                    for post in action.choice[7:].split("|"):
+                        p.recall_spy(post)
+                    p.recalled_spy_this_turn = True
+                else:                               # no pick given (API use): first posts
+                    for post in sorted(k for k, n in p.spies_on_board.items() if n > 0)[:v]:
+                        p.recall_spy(post)
+                    p.recalled_spy_this_turn = True
             else:
                 setattr(p, k, getattr(p, k) - v)
         if pending.discard == 1 and len({c.name for c in p.hand}) > 1:
@@ -1328,9 +1384,49 @@ class GameState:
         opt = next((o for o in pc.options if o[0] == action.choice), None)
         if opt is None:
             raise ValueError(f"'{action.choice}' is not an option of {pc.kind}")
+        from src.game.choices import affordable
+        if not affordable(self, self.players[pid], opt[2]):
+            raise ValueError(f"can't pay for '{action.choice}' any more")
         self.pending_choices.remove(pc)
         if opt[2]:
             EffectResolver.resolve_single_effect(dict(opt[2]), self.players[pid], self)
+
+    def turn_start_for(self, player_id: int) -> bool:
+        """The player's Agent turn has started and nothing was done yet."""
+        return (self.phase == Phase.PLAYER_TURNS and self.player_in_reveal_buy is None
+                and self._agent_turn_open is None and self._post_agent_window is None
+                and self.get_current_player_id() == player_id
+                and player_id not in self.players_revealed
+                and self.players[player_id].agents_available > 0)
+
+    def note_units_deployed(self, player_id: int, n: int) -> None:
+        """Units (troops, commanders, sandworms) sent to the Conflict this turn
+        (Distraction: 'when you deploy three or more units in a single turn')."""
+        if n > 0:
+            p = self.players[player_id]
+            p.units_deployed_this_turn = getattr(p, "units_deployed_this_turn", 0) + int(n)
+
+    def recall_spies_choice(self, player_id: int, n: int = 1) -> None:
+        """Recall n of the player's Spies - which ones is the player's choice
+        (a pending choice per Spy when more than one post is possible)."""
+        p = self.players[player_id]
+        p.recalled_spy_this_turn = True
+        for _ in range(int(n)):
+            posts = sorted(k for k, v in p.spies_on_board.items() if v > 0)
+            if not posts:
+                return
+            if len(posts) <= int(n) - _:          # every Spy goes: nothing to choose
+                p.recall_spy(posts[0])
+                continue
+            self.add_pending_choice(player_id, "recall_spy", "Choose which Spy to recall",
+                                    [(f"recall:{x}", f"Recall your Spy from {x}", {"_recall_post": x})
+                                     for x in posts])
+            return_left = int(n) - 1 - _
+            if return_left:
+                # further recalls are asked after this one is resolved
+                self._recall_queue = getattr(self, "_recall_queue", {})
+                self._recall_queue[player_id] = self._recall_queue.get(player_id, 0) + return_left
+            return
 
     def add_pending_choice(self, player_id: int, kind: str, prompt: str, options) -> None:
         """Queue a 'choose' decision (see src/game/choices.py)."""
@@ -1414,6 +1510,9 @@ class GameState:
     def _auto_advance(self) -> None:
         """Silently move through phases that need no player decisions."""
         # Makers and Recall auto-resolve; ROUND_START auto-triggers next round.
+        if self.phase == Phase.SETUP and not any(
+                self._has_mandatory_pending_for(q) for q in range(self.num_players)):
+            self.start_new_round()                 # every Leader setup choice is made
         safety = 0
         while safety < 20:
             safety += 1
@@ -1474,6 +1573,11 @@ class GameState:
             pit for pit in self.pending_intrigue_trashes
             if pit.player_id != player_id or p.intrigue_cards
         ]
+        from src.game.choices import affordable
+        self.pending_choices = [            # a choice with no payable option fizzles
+            pc for pc in getattr(self, "pending_choices", [])
+            if pc.player_id != player_id or any(affordable(self, p, o[2]) for o in pc.options)
+        ]
         self.pending_optional_payments = [
             op for op in self.pending_optional_payments
             if op.player_id != player_id or self._can_pay_optional(player_id, op)
@@ -1495,42 +1599,49 @@ class GameState:
 
     def _ability_usable(self, p, e) -> bool:
         """One ability (a top-level effect dict) of an Intrigue: usable now if
-        its condition holds and its costs can be paid."""
+        any of its parts can be used - a failed condition only blocks its own
+        reward (Shaddam's Favor: the troop with or without 3 Emperor
+        influence), and a cost blocks what it pays for."""
         from src.game.effects import EffectResolver
         if not isinstance(e, dict):
             return True
+        parts = []
         for k, v in e.items():
-            if k in ("bl_choose", "choose_one", "choose_by_combat", "options"):
-                continue                          # a choice: checked per option
-            if k.startswith("if_bl_"):
+            if k == "choose_one" and isinstance(v, dict) and v.get("may") is False:
+                from src.game.choices import affordable, _option_possible
+                parts.append(any(affordable(self, p, o.get("effect", {}))
+                                 and _option_possible(self, p, o.get("effect", {}))
+                                 for o in v.get("options", [])))
+            elif k in ("bl_choose", "choose_one", "choose_by_combat", "options"):
+                parts.append(True)                # a choice: checked per option
+            elif k == "_leader_fx":
+                from src.game.leader.twisted import playable
+                parts.append(playable(self, p, v))
+            elif k.startswith("if_bl_"):
                 try:
-                    if not self.bl or not self.bl.cond(k[6:], p):
-                        return False
+                    ok = bool(self.bl) and self.bl.cond(k[6:], p)
                 except Exception:
-                    pass
-                if not self._ability_usable(p, v):
-                    return False
+                    ok = True
+                parts.append(ok and self._ability_usable(p, v))
             elif k.startswith("if_"):
                 try:
-                    if not EffectResolver.cond_holds(k[3:], p, self):
-                        return False
+                    ok = EffectResolver.cond_holds(k[3:], p, self)
                 except Exception:
-                    pass
-                if not self._ability_usable(p, v):
-                    return False
+                    ok = True
+                parts.append(bool(ok) and self._ability_usable(p, v))
             elif k == "pay_then" and isinstance(v, dict):
                 cost = v.get("cost", {})
-                if any(getattr(p, r, 0) < n for r, n in cost.items() if r != "recall_spy"):
-                    return False
-                if cost.get("recall_spy", 0) > sum(p.spies_on_board.values()):
-                    return False
-            elif k == "discard_then" and len(p.hand) < 1:
-                return False
-            elif k == "trash_then" and not (p.hand or p.discard or p.in_play):
-                return False
-            elif k == "influence_swap" and not any(v2 > 0 for v2 in p.influence.values()):
-                return False
-        return True
+                parts.append(not (any(getattr(p, r, 0) < n for r, n in cost.items() if r != "recall_spy")
+                                  or cost.get("recall_spy", 0) > sum(p.spies_on_board.values())))
+            elif k == "discard_then":
+                parts.append(len(p.hand) >= 1)
+            elif k == "trash_then":
+                parts.append(bool(p.hand or p.discard or p.in_play))
+            elif k == "influence_swap":
+                parts.append(any(v2 > 0 for v2 in p.influence.values()))
+            else:
+                parts.append(True)
+        return any(parts) if parts else True
 
     def intrigue_abilities_usable(self, player_id: int, ic) -> int:
         p = self.players[player_id]
@@ -1568,10 +1679,16 @@ class GameState:
         for psp in self.pending_spy_placements:
             if psp.player_id != player_id:
                 continue
+            on_board = sorted(k for k, v in p.spies_on_board.items() if v > 0)
             for post in sorted(psp.allowed_posts or ALL_OBSERVATION_POSTS):
                 if self.can_place_spy(player_id, post, psp.allow_occupied):
-                    actions.append(GameAction(ActionType.RESOLVE_SPY,
-                                              player_id, spy_post_name=post))
+                    if p.spies_available > 0:
+                        actions.append(GameAction(ActionType.RESOLVE_SPY,
+                                                  player_id, spy_post_name=post))
+                    else:                       # none in supply: choose which Spy to recall
+                        for src in on_board:
+                            actions.append(GameAction(ActionType.RESOLVE_SPY, player_id,
+                                                      spy_post_name=post, choice=f"recall:{src}"))
 
         for pu in self.pending_uplifts:
             if pu.player_id != player_id:
@@ -1592,7 +1709,10 @@ class GameState:
                 continue
             budget_left = max(0, getattr(p, "deploy_budget_this_turn", 0)
                               - getattr(p, "deployed_this_turn", 0))
-            hi = min(pd.max_deploy, p.troops_garrison, budget_left)
+            hi = min(pd.max_deploy, p.troops_garrison - getattr(p, "undeployable_this_turn", 0),
+                     budget_left)
+            if getattr(p, "no_deploy_this_turn", False):
+                hi = 0
             cmd = getattr(p, "commanders_garrison", 0) if self.bl else 0
             plain = p.troops_garrison - cmd
             for n in range(0, hi + 1):
@@ -1623,8 +1743,17 @@ class GameState:
         for op in self.pending_optional_payments:
             if op.player_id != player_id:
                 continue
-            actions.append(GameAction(ActionType.RESOLVE_OPTIONAL, player_id,
-                                      accept_optional=True))
+            need = int(op.cost.get("recall_spy", 0))
+            posts = sorted(k for k, v in p.spies_on_board.items() if v > 0)
+            if need and len(posts) > need:
+                # recalling is part of the cost: one "accept" per choice of Spies
+                import itertools
+                for combo in itertools.combinations(posts, need):
+                    actions.append(GameAction(ActionType.RESOLVE_OPTIONAL, player_id,
+                                              accept_optional=True, choice="recall:" + "|".join(combo)))
+            else:
+                actions.append(GameAction(ActionType.RESOLVE_OPTIONAL, player_id,
+                                          accept_optional=True))
             if not getattr(op, "mandatory", False):   # an Intrigue's cost must be paid
                 actions.append(GameAction(ActionType.RESOLVE_OPTIONAL, player_id,
                                           accept_optional=False))   # decline
@@ -1644,11 +1773,17 @@ class GameState:
             for i in range(n):
                 actions.append(GameAction(ActionType.RESOLVE_CONTRACT,
                                           player_id, contract_index=i))
+            for k, _c in enumerate(getattr(self, "shaddam_contracts", {}).get(player_id, [])):
+                actions.append(GameAction(ActionType.RESOLVE_CONTRACT,       # Shaddam's
+                                          player_id, contract_index=100 + k))
 
         pc = self.pending_choice_for(player_id)
         if pc is not None:
+            from src.game.choices import affordable
+            # costs are re-checked now: another pending step may have spent the resources
             for key, _label, _eff in pc.options:
-                actions.append(GameAction(ActionType.RESOLVE_CHOICE, player_id, choice=key))
+                if affordable(self, p, _eff):
+                    actions.append(GameAction(ActionType.RESOLVE_CHOICE, player_id, choice=key))
 
         if self.bl:
             for opt in self.bl.pending_options(player_id):
@@ -1747,6 +1882,9 @@ class GameState:
             self.draw_cards_for_player(i, 5)
         if self.bl:
             self.bl.on_round_start()
+        for p in self.players:
+            if p.leader is not None:
+                p.leader.trigger("on_round_start", p, self)
 
         self.phase                = Phase.PLAYER_TURNS
         self.current_turn_idx     = 0
@@ -1757,6 +1895,8 @@ class GameState:
         self._prev_vp             = {i: self.players[i].victory_points for i in range(self.num_players)}
 
     def get_current_player_id(self) -> int:
+        if self.phase == Phase.SETUP:
+            return next((q for q in range(self.num_players) if self._has_mandatory_pending_for(q)), 0)
         if self.phase == Phase.COMBAT:
             # A player with an unresolved mandatory choice (from a Combat
             # intrigue's spy/contract reward) acts before combat play resumes.
@@ -1784,6 +1924,15 @@ class GameState:
 
     def advance_to_next_player_turn(self) -> None:
         self._reset_harvest_turn()
+        # the turn is over: Shaddam's Signet (no deploying) and the deploy budget
+        # end with it, so a Plot Intrigue played at the start of the next
+        # (Reveal) turn deploys on that turn's own terms
+        ended = self.players[self.turn_order[self.current_turn_idx]]
+        ended.no_deploy_this_turn = False
+        ended.troops_recruited_this_turn = 0
+        ended.deploy_budget_this_turn = 0
+        ended.deployed_this_turn = 0
+        ended.deploy_recruited_this_turn = False
         if len(self.players_revealed) == self.num_players:
             self._begin_combat_phase()
             return
@@ -1814,6 +1963,7 @@ class GameState:
 
     def draw_cards_for_player(self, player_id: int, count: int) -> None:
         player = self.players[player_id]
+        drawn = []
         for _ in range(count):
             if not player.deck:
                 if not player.discard:
@@ -1823,7 +1973,21 @@ class GameState:
                 player.deck    = new_deck
                 player.discard = []
             if player.deck:
-                player.hand.append(player.deck.pop())
+                drawn.append(player.deck.pop())
+                player.hand.append(drawn[-1])
+        if drawn and getattr(self, "_reveal_open", None) == player_id:
+            # a card drawn during your Reveal turn is revealed too (its
+            # persuasion, swords and Reveal effects count) - user, 2026-10-16
+            player.reveal_cards(drawn)
+            player._revealed_this_turn = getattr(player, "_revealed_this_turn", 0) + len(drawn)
+            self.swords_this_reveal[player_id] = (self.swords_this_reveal.get(player_id, 0)
+                                                  + sum(c.swords for c in drawn))
+            for card in drawn:
+                EffectResolver.resolve_reveal_effects(card, player, self)
+            if self.bl and self.bl.has(player_id, "Artillery"):   # per revealed card
+                self.swords_this_reveal[player_id] += sum(
+                    1 for c in drawn if c.swords > 0 or any("swords" in e for e in c.reveal_effects))
+            self.update_combat_strength(player_id)
 
     # -----------------------------------------------------------------------
     # Agent turn
@@ -1843,10 +2007,18 @@ class GameState:
         if player.agents_available < 1:
             return False, "No agents available"
 
+        if space_name in LEADER_SPACES and not self._leader_space_active(space_name):
+            return False, f"{space_name} is not in this game"
         required_icon = BOARD_SPACE_ICONS[space_name]
         card_icons    = {s.value for s in card.access_symbols}
         if self.bl:
             card_icons |= self.bl.extra_icons(player_id, card)
+        extra = getattr(player, "extra_icons_this_turn", None)
+        if extra and card.access_symbols:
+            card_icons |= set(extra)                 # Twisted Intrigue: Resourceful
+        if (player.leader is not None and player.leader.card_spy_icon
+                and card.access_symbols):
+            card_icons.add("spy")                    # Gaius Helen Mohiam
 
         has_matching_icon = required_icon in card_icons
         if (not has_matching_icon and required_icon == "emperor"
@@ -1870,6 +2042,8 @@ class GameState:
         _ignore_gates = (
             getattr(player, "ignore_influence_gates_this_turn", False)
             or any("ignore_influence_gates" in e for e in card.agent_effects))
+        if player.leader is not None and space_name in player.leader.ignore_gates:
+            _ignore_gates = True                     # Liet Kynes: Sietch Tabr
         if space_name in INFLUENCE_GATED_SPACES and not _ignore_gates:
             faction, required_inf = INFLUENCE_GATED_SPACES[space_name]
             if player.influence[faction] < required_inf:
@@ -1886,8 +2060,8 @@ class GameState:
         if space_name == "Swordmaster":
             if player.has_swordmaster:
                 return False, "Player already has a Swordmaster"
-            if player.solari < self._swordmaster_cost():
-                return False, f"Cannot afford Swordmaster ({self._swordmaster_cost()} solari)"
+            if player.solari < self._swordmaster_cost(player_id):
+                return False, f"Cannot afford Swordmaster ({self._swordmaster_cost(player_id)} solari)"
 
         return True, ""
 
@@ -1897,9 +2071,9 @@ class GameState:
         """Legal `space_option` values for a special space (['default'] otherwise)."""
         p = self.players[player_id]
         if space_name == "Spice Refinery":
-            return ["free"] + (["pay_spice"] if p.spice >= 1 else [])
+            return ["free"] + (["pay_spice"] if p.spice >= 1 - self._nav_discount(player_id, "spice", 1) else [])
         if space_name == "Gather Support":
-            return ["free"] + (["paid"] if p.solari >= 2 else [])
+            return ["free"] + (["paid"] if p.solari >= 2 - self._nav_discount(player_id, "solari", 2) else [])
         if space_name == "Sietch Tabr":
             opts = ["hooks"]
             if self.shield_wall_intact:
@@ -1910,6 +2084,8 @@ class GameState:
             base_spice, worms = MAKER_SPACE_OPTIONS[space_name]
             loc = self.current_conflict.location if self.current_conflict else None
             worm_blocked = self.shield_wall_intact and loc in SHIELD_WALL_PROTECTED
+            if p.leader is not None and p.leader.no_sandworms:
+                worm_blocked = False                  # Liet: rewards even behind the Shield Wall
             if p.has_maker_hooks and self.current_conflict and not worm_blocked:
                 opts.append("sandworm")
             return opts
@@ -1943,15 +2119,22 @@ class GameState:
         self._agent_turn_owner = player_id
         player.deferred_rewards = {}           # draws / Intrigues claimed when the player chooses
         self._current_agent_space = space_name       # can't uplift THIS agent
+        self._current_space_option = space_option
+        player.extra_icons_this_turn = None
         player.troops_recruited_this_turn = 0
         player.recalled_spy_this_turn = False
         player.gained_spice_this_turn = False
         player.spice_gained_this_turn = 0
+        player.turn_serial = getattr(player, "turn_serial", 0) + 1
         player.deploy_budget_this_turn = 0
         player.deployed_this_turn = 0
+        player.units_deployed_this_turn = 0
         player.deploy_icon_this_turn = False
+        player.deploy_recruited_this_turn = False
         player.bl_space_this_turn = None
         player.bl_tech_bought_this_turn = False
+        player.no_deploy_this_turn = False
+        player.undeployable_this_turn = 0
         player.deploy_extra_this_turn = 0
         player.maker_bonus_this_turn = 0
         player.agent_to_maker_this_turn = space_name in MAKER_SPACES
@@ -1966,8 +2149,8 @@ class GameState:
             player.play_card_as_agent(card, icons_checked=True)
             if player.leader is not None:
                 player.leader.trigger("on_card_played", player, self, card)
-                if card.name == "Signet Ring" and player.leader.signet is not None:
-                    player.leader.signet(player, self)
+                if card.name == "Signet Ring" and player.leader.name == "Shaddam Corrino IV":
+                    player.no_deploy_this_turn = True
 
             # 2. Pay mandatory cost + place agent
             if space_name in BOARD_SPACE_MANDATORY_COSTS:
@@ -2000,6 +2183,14 @@ class GameState:
                 self._apply_board_space_effects(player_id, space_name, space_option)
                 self._defer_source = card.name
                 EffectResolver.resolve_agent_effects(card, player, self)
+                # Signet Ring: the Leader's ability is the card's Agent box,
+                # resolved once the Agent is on its space
+                if (card.name == "Signet Ring" and player.leader is not None
+                        and player.leader.signet is not None):
+                    self._defer_source = "Signet Ring"
+                    if getattr(self, "leader_log", None) is not None:
+                        self.leader_log.append((player_id, player.leader.name, "signet"))
+                    player.leader.signet(player, self)
             finally:
                 self._defer_rewards_pid = None
                 self._defer_source = None
@@ -2014,9 +2205,12 @@ class GameState:
                 self.check_board_space_contracts(player_id, space_name)
                 self.check_turn_harvest_contracts(player_id)
 
-            # 8b. Leader: on_agent_placed
+            # 8b. Leader: on_agent_placed (+ every other Leader that watches spaces)
             if player.leader is not None:
                 player.leader.trigger("on_agent_placed", player, self, space_name)
+            for other in self.players:
+                if other.id != player_id and other.leader is not None:
+                    other.leader.trigger("on_other_agent_placed", other, self, player_id, space_name)
 
             # 8c. Bloodlines: tech purchase (green space) / commander recruit
             if self.bl:
@@ -2038,6 +2232,10 @@ class GameState:
             player.grant_emperor_access_this_turn = False
             if self.bl:
                 self.bl.end_agent_turn(player_id)
+
+    def _leader_space_active(self, space_name: str) -> bool:
+        """Tuek's Sietch exists only when someone plays Esmar Tuek."""
+        return space_name in getattr(self, "leader_spaces", set())
 
     def _space_cost(self, player_id: int, space_name: str) -> Dict:
         """Mandatory cost to visit a space (Navigation Chamber: 1 less)."""
@@ -2082,7 +2280,7 @@ class GameState:
             option = legal[0]
 
         if space_name == "Swordmaster":
-            p.solari -= self._swordmaster_cost()
+            p.solari -= self._swordmaster_cost(player_id)
             p.unlock_third_agent()
 
         elif space_name == "High Council":
@@ -2095,14 +2293,14 @@ class GameState:
 
         elif space_name == "Gather Support":
             if option == "paid":
-                p.solari -= 2
+                p.solari -= 2 - self._nav_discount(player_id, "solari", 2)
                 EffectResolver.resolve_single_effect({"troops": 2, "water": 1}, p, self)
             else:
                 EffectResolver.resolve_single_effect({"troops": 2}, p, self)
 
         elif space_name == "Spice Refinery":
             if option == "pay_spice":
-                p.spice -= 1
+                p.spice -= 1 - self._nav_discount(player_id, "spice", 1)
                 p.gain_solari(4)
             else:
                 p.gain_solari(2)
@@ -2126,9 +2324,20 @@ class GameState:
     # Special board space resolutions
     # -----------------------------------------------------------------------
 
-    def _swordmaster_cost(self) -> int:
+    def _swordmaster_cost(self, player_id: Optional[int] = None) -> int:
         any_has_sm = any(pl.has_swordmaster for pl in self.players)
-        return SWORDMASTER_COST_AFTER if any_has_sm else SWORDMASTER_COST_FIRST
+        base = SWORDMASTER_COST_AFTER if any_has_sm else SWORDMASTER_COST_FIRST
+        if player_id is not None and self.players[player_id].leader is not None:
+            base = max(0, base - self.players[player_id].leader.swordmaster_discount)
+        return base - self._nav_discount(player_id, "solari", base)
+
+    def _nav_discount(self, player_id: Optional[int], res: str, amount: int) -> int:
+        """Navigation Chamber: a board space costs 1 spice or 1 solari less -
+        also the optional / special costs (Spice Refinery, Gather Support,
+        Swordmaster)."""
+        if player_id is None or not self.bl or amount <= 0:
+            return 0
+        return 1 if self.bl.has(player_id, "Navigation Chamber") else 0
 
     def pay_for_swordmaster(self, player_id: int) -> bool:
         player = self.players[player_id]
@@ -2163,6 +2372,8 @@ class GameState:
     def add_pending_deployment(self, player_id: int, max_deploy: int) -> None:
         """Queue an optional 'deploy up to N troops to the Conflict' choice
         (Sardaukar Coordination: recruited troops only, no +2 icon bonus)."""
+        if getattr(self.players[player_id], "no_deploy_this_turn", False):
+            return                                       # Shaddam's Signet Ring
         if max_deploy > 0 and self.current_conflict is not None:
             p = self.players[player_id]
             p.deploy_budget_this_turn = max(
@@ -2174,11 +2385,14 @@ class GameState:
         """Move `n` troops from garrison straight into the current Conflict
         (`cmd` of them commanders; None = commanders first)."""
         p = self.players[player_id]
+        if getattr(p, "no_deploy_this_turn", False):
+            return                                       # Shaddam's Signet Ring
         n = max(0, min(n, p.troops_garrison))
         if self.bl:
             self.bl.deploy_commanders(player_id, n, cmd)
         p.troops_garrison -= n
         p.deployed_this_turn = getattr(p, "deployed_this_turn", 0) + n
+        self.note_units_deployed(player_id, n)
         self.troops_in_conflict[player_id] = self.troops_in_conflict.get(player_id, 0) + n
 
     # -----------------------------------------------------------------------
@@ -2202,13 +2416,20 @@ class GameState:
         total_troops      = troops_from_garrison + troops_from_this_turn
         conflict_location = (self.current_conflict.location if self.current_conflict else None)
 
+        if getattr(player, "no_deploy_this_turn", False):
+            return False                                 # Shaddam's Signet Ring
         if sandworms > 0:
             if not player.has_maker_hooks:
                 return False
-            if self.shield_wall_intact and conflict_location in SHIELD_WALL_PROTECTED:
+            liet = player.leader is not None and player.leader.no_sandworms
+            if self.shield_wall_intact and conflict_location in SHIELD_WALL_PROTECTED and not liet:
                 return False
+            if liet:                                     # rewards instead of worms
+                player.leader.trigger("on_sandworm_replaced", player, self, sandworms)
+                sandworms = 0
 
         player.troops_garrison -= troops_from_garrison
+        self.note_units_deployed(player_id, total_troops + sandworms)
         self.troops_in_conflict[player_id] = (
             self.troops_in_conflict.get(player_id, 0) + total_troops
         )
@@ -2227,15 +2448,22 @@ class GameState:
         """
         if not self.current_conflict:
             return
+        active = self.get_current_player_id()
+        lp = self.players[active]
+        if getattr(lp, "no_deploy_this_turn", False):
+            return                                                 # Shaddam's Signet Ring
+        if lp.leader is not None and lp.leader.no_sandworms:      # Liet Kynes
+            lp.leader.trigger("on_sandworm_replaced", lp, self, count)
+            return
         if (
             self.shield_wall_intact
             and self.current_conflict.location in SHIELD_WALL_PROTECTED
         ):
             return
-        active = self.get_current_player_id()
         self.sandworms_in_conflict[active] = (
             self.sandworms_in_conflict.get(active, 0) + count
         )
+        self.note_units_deployed(active, count)
 
     def destroy_shield_wall(self) -> None:
         self.shield_wall_intact = False
@@ -2258,13 +2486,19 @@ class GameState:
         cards_to_reveal = list(player.hand)
         player.reveal_cards(cards_to_reveal)
         player._revealed_this_turn = len(cards_to_reveal)
+        player.spice_gained_this_turn = 0          # a Reveal turn is a new turn
+        player.turn_serial = getattr(player, "turn_serial", 0) + 1
         player.cards_acquired_this_turn = 0
         player.gained_spice_this_turn = False
         player.deploy_budget_this_turn = 0
         player.deployed_this_turn = 0
+        player.units_deployed_this_turn = 0
         player.deploy_icon_this_turn = False
+        player.deploy_recruited_this_turn = False
         player.bl_space_this_turn = None
         player.bl_tech_bought_this_turn = False
+        player.no_deploy_this_turn = False
+        player.undeployable_this_turn = 0
         player.deploy_extra_this_turn = 0
 
         swords = sum(c.swords for c in cards_to_reveal)
@@ -2284,6 +2518,9 @@ class GameState:
             self.swords_this_reveal.get(player_id, 0), self
         )
         self.combat_strength[player_id] = strength
+        if player.leader is not None:
+            player.leader.trigger("on_reveal_done", player, self)
+            self.update_combat_strength(player_id)
 
     def update_combat_strength(self, player_id: int) -> None:
         player    = self.players[player_id]
@@ -2311,8 +2548,51 @@ class GameState:
             p.commanders_garrison += c
         self.troops_in_conflict[player_id] -= n
         p.troops_garrison += n
+        if p.leader is not None:                        # commanders count (user)
+            p.leader.trigger("on_units_left_conflict", p, self, n)
         self.update_combat_strength(player_id)
         return n
+
+    def deploy_with_choice(self, player_id: int, n: int) -> None:
+        """Deploy n units from the garrison; with plain troops and commanders
+        both there the player picks the mix (a commander is a troop)."""
+        p = self.players[player_id]
+        if getattr(p, "no_deploy_this_turn", False) or self.current_conflict is None:
+            return
+        n = max(0, min(int(n), p.troops_garrison))
+        cg = getattr(p, "commanders_garrison", 0) if self.bl else 0
+        lo, hi = max(0, n - (p.troops_garrison - cg)), min(n, cg)
+        if n > 0 and hi > lo:
+            opts = []
+            for c in range(lo, hi + 1):
+                t = n - c
+                what = " + ".join(x for x in (f"{t} troop{'s' if t != 1 else ''}" if t else "",
+                                              f"{c} commander{'s' if c != 1 else ''}" if c else "") if x)
+                opts.append((f"dmix{c}", f"Deploy {what}", {"_deploy_mix": [n, c]}))
+            self.add_pending_choice(player_id, "deploy_mix", f"Deploy {n}: which units?", opts)
+            return
+        self.deploy_units(player_id, n, lo)
+
+    def deploy_units(self, player_id: int, n: int, cmd: int = 0) -> None:
+        """Move n units (cmd of them commanders) from garrison to the Conflict."""
+        p = self.players[player_id]
+        if getattr(p, "no_deploy_this_turn", False) or self.current_conflict is None:
+            return
+        n = max(0, min(int(n), p.troops_garrison))
+        if n <= 0:
+            return
+        if self.bl is not None:
+            self.bl.deploy_commanders(player_id, n, cmd=cmd)
+        p.troops_garrison -= n
+        self.troops_in_conflict[player_id] = self.troops_in_conflict.get(player_id, 0) + n
+        self.note_units_deployed(player_id, n)
+        self.update_combat_strength(player_id)
+
+    def note(self, text: str) -> None:
+        """A line for the UI game log (things that happen to other players)."""
+        if not hasattr(self, "ui_notes") or self.ui_notes is None:
+            self.ui_notes = []
+        self.ui_notes.append(text)
 
     def retreat_with_choice(self, player_id: int, n: int, reward: Optional[Dict] = None) -> None:
         """Retreat n units; if both plain troops and commanders are in the
@@ -2409,10 +2689,11 @@ class GameState:
     # -----------------------------------------------------------------------
 
     def get_combat_participants(self) -> List[int]:
+        duncan = getattr(self, "duncan_in_conflict", {})
         return [
             pid for pid in range(self.num_players)
             if (self.troops_in_conflict.get(pid, 0) +
-                self.sandworms_in_conflict.get(pid, 0)) > 0
+                self.sandworms_in_conflict.get(pid, 0) + (1 if duncan.get(pid) else 0)) > 0
         ]
 
     def _current_combat_actor(self) -> Optional[int]:
@@ -2448,6 +2729,8 @@ class GameState:
 
         conflict     = self.current_conflict
         participants = self.get_combat_participants()
+        for part in participants:              # never resolve on a stale strength
+            self.update_combat_strength(part)
 
         if not participants:
             result = CombatResult(
@@ -2644,6 +2927,7 @@ class GameState:
         return False
 
     def _cleanup_after_combat(self) -> None:
+        units = {pid: self.troops_in_conflict.get(pid, 0) for pid in range(self.num_players)}
         if self.bl:
             self.bl.after_combat()        # commanders -> commander supply
         for pid in range(self.num_players):
@@ -2651,10 +2935,15 @@ class GameState:
             if troop_count > 0:
                 self.players[pid].troops_supply += troop_count
             self.troops_in_conflict[pid]    = 0
+            if units[pid] > 0 and self.players[pid].leader is not None:
+                # troops (commanders included) returned after combat count as lost
+                self.players[pid].leader.trigger("on_units_left_conflict",
+                                                 self.players[pid], self, units[pid])
             self.sandworms_in_conflict[pid] = 0
             self.combat_strength[pid]       = 0
             self.swords_this_reveal[pid]    = 0
 
+        self.duncan_in_conflict = {}
         self.current_conflict = None
         self.phase            = Phase.MAKERS
 
@@ -2664,6 +2953,8 @@ class GameState:
 
     def resolve_makers_phase(self) -> None:
         for space in MAKER_SPACES:
+            if space in LEADER_SPACES and not self._leader_space_active(space):
+                continue
             if self.agent_on_space.get(space) is None:
                 self.maker_bonus_spice[space] = self.maker_bonus_spice.get(space, 0) + 1
         self.phase = Phase.RECALL
@@ -2706,6 +2997,10 @@ class GameState:
         old_inf = player.influence[faction]
         player.gain_influence(faction, amount, self)
         new_inf = player.influence[faction]
+
+        # "reach 2 influence" (rulebook p.17: passing 2 counts; only going up)
+        if old_inf < 2 <= new_inf and player.leader is not None:
+            player.leader.trigger("on_influence_2", player, self, faction)
 
         # The 4th space of each track carries a bonus (user, 2026-10-14):
         # Fremen 1 water, Bene Gesserit 1 Intrigue, Spacing Guild 3 solari,
@@ -2905,6 +3200,11 @@ class GameState:
                     player.leader.trigger("on_intrigue_gained", player, self)
 
     def discard_intrigue_card(self, card) -> None:
+        if getattr(card, "twisted", False) and getattr(self, "twisted_owner", None) is not None:
+            owner = self.players[self.twisted_owner]
+            if owner.leader is not None and "twisted_discard" in owner.leader.state:
+                owner.leader.state["twisted_discard"].append(card)
+                return
         self.intrigue_discard.append(card)
 
     # -----------------------------------------------------------------------
@@ -2917,10 +3217,11 @@ class GameState:
 
     def take_contract_from_board(self, player_id: int) -> Optional[Contract]:
         # If no contracts remain (or CHOAM is off) -> 2 Solari instead.
-        if not self.use_choam or not self.contracts_on_board:
+        aside = getattr(self, "shaddam_contracts", {}).get(player_id, [])
+        if not self.use_choam or (not self.contracts_on_board and not aside):
             self.players[player_id].gain_solari(2)
             return None
-        if len(self.contracts_on_board) == 1:
+        if len(self.contracts_on_board) == 1 and not aside:
             contract = self.contracts_on_board.pop(0)
             self.players[player_id].take_contract(contract)
             self._refill_contracts_on_board()
@@ -3061,7 +3362,7 @@ class GameState:
         if intrigue_card not in player.intrigue_cards:
             return False
         player.play_intrigue(intrigue_card)
-        self.intrigue_discard.append(intrigue_card)
+        self.discard_intrigue_card(intrigue_card)
         for pending in list(self.pending_intrigue_trashes):
             if pending.player_id == player_id:
                 EffectResolver.resolve_single_effect(pending.benefit, player, self)

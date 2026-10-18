@@ -60,6 +60,13 @@ def main():
     for x in (850, 1105, 1365):
         grey_out(im, (x, 323, x + 32, 356))
     im = im.crop(CROP)
+    # bonus spice captured on the maker spaces (the UI draws the live count)
+    for x in (742, 1019):                                   # Deep Desert, Hagga Basin
+        copy_disc(im, (x - 48, 485), (x, 485), 21)
+    # Imperial Basin "+ 1": sky from just above, sand from just below
+    top, bot = im.crop((1018, 281, 1086, 300)), im.crop((1018, 343, 1086, 358))
+    im.paste(top.resize((68, 22)), (1018, 300))
+    im.paste(bot.resize((68, 22)), (1018, 322))
     # the captured Conflict panel -> dark plate (the live Conflict is drawn there)
     d = ImageDraw.Draw(im, "RGBA")
     x0, y0 = 1112 - CROP[0], 606 - CROP[1]

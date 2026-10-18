@@ -132,15 +132,19 @@ def tech_value(gs, pid: int, d) -> float:
 
 def tech_buy_value(gs, pid: int, d, discount: int = 0) -> float:
     from src.ai.agents import _RES_VALUE
+    from src.ai import agents
     price = gs.bl.tech_price(pid, d, discount)
-    return 0.8 * tech_value(gs, pid, d) - _RES_VALUE["spice"] * price
+    love = float(agents._TUNE.get("tech_love", 1.0))
+    return 0.8 * love * tech_value(gs, pid, d) - _RES_VALUE["spice"] * price
 
 
 def best_tech_buy(gs, pid: int, discount: int = 0) -> float:
     bl = gs.bl
     best = 0.0
     for i in bl.buyable_stacks(pid, discount):
-        best = max(best, tech_buy_value(gs, pid, bl.tech_stacks[i][0], discount))
+        d, extra = bl.tech_at(pid, i)
+        if d is not None:
+            best = max(best, tech_buy_value(gs, pid, d, discount + extra))
     return best
 
 
@@ -176,8 +180,12 @@ def _p_green(gs, pid: int) -> float:
 
 
 def _p_loyal(gs, pid: int) -> float:
+    # Loyal only works at 3+ Emperor influence (user: taking it with no
+    # Emperor influence is a wasted pick)
+    # (user, 2026-10-16: still overvalued - it was being taken without 3
+    # Emperor influence). Below 3 it does nothing until you get there.
     e = gs.players[pid].influence.get("emperor", 0)
-    return 1.0 if e >= 3 else 0.6 if e == 2 else 0.3 if e == 1 else 0.15
+    return 1.0 if e >= 3 else 0.2 if e == 2 else 0.03 if e == 1 else 0.0
 
 
 def skill_per_combat(gs, pid: int, skill: str) -> float:
@@ -245,7 +253,7 @@ def skill_value(gs, pid: int, skill: str) -> float:
         "Desperate": 3 * SWORD * 0.7,                 # one-shot, only if fighting
         "Canny": 2 * sw * f * 0.7,                    # needs an agent on green
         "Fierce": 1.2 * sw * f,
-        "Loyal": 2 * sw * f * (0.9 if p.influence.get("emperor", 0) >= 3 else 0.35),
+        "Loyal": 2 * sw * f * (0.9 if p.influence.get("emperor", 0) >= 3 else 0.0),   # off below 3
     }.get(skill, 0.0)
 
 
@@ -310,14 +318,19 @@ def score_bl_choice(gs, pid: int, choice: str) -> float:
     from src.ai.agents import _card_effect_value, _conflict_worth
     bl = gs.bl
     c = next((c for c in bl.pending if c.player_id == pid), None)
-    if c is None:
-        return 0.0
     p = gs.players[pid]
+    if c is None:                       # a late buy / recruit later in the turn
+        if choice.startswith("stack:"):
+            d, extra = bl.tech_at(pid, int(choice.split(":")[1]))
+            return tech_buy_value(gs, pid, d, extra) if d is not None else 0.0
+        if choice.startswith("board:") or choice == "supply":
+            return commander_value(gs, pid, choice)
+        return 0.0
     if choice == "decline":
         return 0.2
     if c.kind in ("tech_buy", "tech_offer"):
-        d = bl.tech_stacks[int(choice.split(":")[1])][0]
-        return tech_buy_value(gs, pid, d, c.discount)
+        d, extra = bl.tech_at(pid, int(choice.split(":")[1]))
+        return tech_buy_value(gs, pid, d, c.discount + extra) if d is not None else 0.0
     if c.kind == "commander":
         return commander_value(gs, pid, choice)
     if c.kind == "plasteel":              # trash Plasteel Blades for a row skill
@@ -336,6 +349,18 @@ def score_bl_choice(gs, pid: int, choice: str) -> float:
     if c.kind == "effect":
         payload = c.payloads.get(choice, {})
         return 0.2 + _card_effect_value(gs, pid, payload) if payload else 0.2
+    if c.kind == "complete_contract":
+        from src.ai.agents import _card_effect_value
+        ct = next((x for x in p.contracts_active if x.name == choice.split(":", 1)[1]), None)
+        return 0.5 + (_card_effect_value(gs, pid, ct.rewards) if ct is not None else 0.0)
+    if c.kind == "vault":
+        return 1.0 if choice == "intrigue" else 0.9
+    if c.kind == "ada_spy":                # keep the Spy on the better post: trash any
+        return 0.0
+    if c.kind == "forbidden":
+        if choice == "swords":
+            return 3 * SWORD * min(2.0, _conflict_worth(gs, pid)) - 1.0
+        return -0.5 * p.spice
     return 0.0
 
 

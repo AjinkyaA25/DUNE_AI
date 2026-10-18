@@ -28,3 +28,4 @@ train_run.log
 !/Tech tiles/**
 !/sard_skills/**
 !/video_scrape/cards/**
+!/hub_images/**

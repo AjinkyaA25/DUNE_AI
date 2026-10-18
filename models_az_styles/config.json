@@ -21,5 +21,6 @@
  "margin": 0.0,
  "credit": 2.0,
  "persona": 1.5,
+ "coach": 1.5,
  "speed": 0.1
 }
