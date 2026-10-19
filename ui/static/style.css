@@ -553,6 +553,8 @@ dialog select, dialog input:not([type=checkbox]) { background: var(--panel-2); b
 .mt-con.done img { opacity: .55; filter: saturate(.5); }
 .mt-con i { position: absolute; right: 1px; top: -2px; font-style: normal; font-weight: 800; font-size: 11px; color: var(--good); text-shadow: 0 0 3px #000; }
 .chip.mini { font-size: 9px; padding: 0 3px; }
+.mat-icons { display: flex; flex-wrap: wrap; align-items: center; }
+.mat-icons .bicon { font-size: 10px; padding: 0 6px; }
 
 @media (min-width: 1100px) {
   .left { grid-template-rows: clamp(54px, 8vh, 72px) minmax(0, 1fr) clamp(130px, 20vh, 185px); }
@@ -560,10 +562,13 @@ dialog select, dialog input:not([type=checkbox]) { background: var(--panel-2); b
   .bottom .row .card img { max-height: calc(clamp(130px, 20vh, 185px) - 60px); }
   .bottom .cards > .card, .bottom .cards > .topdeck { flex-basis: 100px; }
   .hand-side .intr-card img { width: 46px; }
-  .players { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+  /* the mats take the larger share of the right column, split evenly (taller mats) */
+  .players { flex: 0 0 58%; min-height: 0; display: flex; flex-direction: column; gap: 5px; overflow: hidden; }
+  .players .mat { flex: 1 1 0; min-height: 0; overflow: hidden; }
   .turn { flex: 1 1 0; max-height: none; min-height: 90px; }
   .mat { padding: 4px 5px; gap: 6px; }
-  .mat-leader { width: 50px; height: 50px; }
+  .mat-leader { width: 62px; height: auto; max-height: 100%; align-self: stretch; }
+  .mat-body { justify-content: flex-start; gap: 3px; }
 }
 
 /* Duncan's Agent in the Conflict; "if you revealed now" */
@@ -590,3 +595,6 @@ dialog select, dialog input:not([type=checkbox]) { background: var(--panel-2); b
 .bspace.tile-space.legal { box-shadow: 0 0 0 3px var(--accent), 0 0 14px 2px var(--accent); }
 .bspace.tile-space .agent { z-index: 2; }
 .bspace.tile-space.dim .tile-img { opacity: .45; }
+
+/* a once-per-round tech that has been flipped (used) this round */
+.mt-tech.used, .pd-tech.used, .chip.used { filter: grayscale(1) brightness(0.55); opacity: 0.7; }

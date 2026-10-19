@@ -55,8 +55,9 @@ def test_board_is_single_source():
 def test_troop_conservation():
     gs, _, _ = _random_playthrough(4, seed=123)
     for p in gs.players:
+        memories = (p.leader.state.get("memories", 0) if getattr(p, "leader", None) else 0)
         total = (p.troops_supply + p.troops_garrison
-                 + gs.troops_in_conflict.get(p.id, 0))
+                 + gs.troops_in_conflict.get(p.id, 0) + memories)   # Jessica's memories sit on her card
         assert total == 12, f"player {p.id} has {total} troops"
 
 

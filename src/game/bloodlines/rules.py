@@ -368,7 +368,14 @@ class Bloodlines:
             self.skill_row.remove(skill)
             if self.skill_deck:
                 self.skill_row.append(self.skill_deck.pop(0))
-        self._p(pid).skills.add(skill)
+        p = self._p(pid)
+        p.skills.add(skill)
+        if skill == "Desperate":
+            # a new Desperate tile (e.g. via Plasteel Blades after re-recruiting
+            # on the Reveal turn, user 2026-10-19) can be trashed this turn too
+            p.bl_desperate_offered = False
+            if self.gs.player_in_reveal_buy == pid:
+                self._offer_desperate(pid)
 
     def recruit(self, pid: int, space: str, choice: str) -> None:
         p = self._p(pid)
@@ -546,6 +553,7 @@ class Bloodlines:
             gs.gain_persuasion(pid, p.bl_reveal_bonus)
             p.bl_reveal_bonus = 0
         p.bl_reveal_skills_fired = False
+        p.bl_desperate_offered = False
         self._reveal_skill_rewards(pid)
 
     def _reveal_skill_rewards(self, pid: int) -> None:
@@ -556,6 +564,7 @@ class Bloodlines:
         if getattr(p, "bl_reveal_skills_fired", True):
             return
         if self.commanders_in_conflict[pid] > 0:
+            self._offer_desperate(pid)
             p.bl_reveal_skills_fired = True
             if "Hardy" in p.skills:
                 p.gain_troops(1)
@@ -564,9 +573,17 @@ class Bloodlines:
                 p.gain_spice(1)
             if "Charismatic" in p.skills:
                 gs.gain_persuasion(pid, 1)
-            if "Desperate" in p.skills:
-                self.pending.append(PendingBLChoice(pid, "desperate",
-                                                    ["use", "decline"]))
+
+    def _offer_desperate(self, pid: int) -> None:
+        """Desperate: on your Reveal turn with a commander in the Conflict you
+        may trash it for 3 swords - once per tile held (a second copy taken
+        later in the same turn is offered again; never two at once)."""
+        p = self._p(pid)
+        if ("Desperate" in p.skills and self.commanders_in_conflict[pid] > 0
+                and not getattr(p, "bl_desperate_offered", False)
+                and not any(c.player_id == pid and c.kind == "desperate" for c in self.pending)):
+            p.bl_desperate_offered = True
+            self.pending.append(PendingBLChoice(pid, "desperate", ["use", "decline"]))
 
     def open_command_window(self, pid: int) -> None:
         """Reveal done, buying starts: count persuasion from here on."""

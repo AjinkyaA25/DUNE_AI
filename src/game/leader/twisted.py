@@ -169,7 +169,7 @@ def _fx_unit_types_solari(gs, p) -> None:
 def _fx_controlled_peek(gs, p) -> None:
     if not p.deck and p.discard:
         nd = list(p.discard)
-        gs.rng.shuffle(nd)
+        gs.shuffle_pile(nd, 1, p.id)
         p.deck, p.discard = nd + p.deck, []
     if not p.deck:
         return

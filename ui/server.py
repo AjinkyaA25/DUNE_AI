@@ -124,7 +124,8 @@ def _az_gen() -> str:
 # of the evolve_fixed champion, so a game never changes AI mid-way) played
 # by the lookahead agent the evolution benchmarks with.  Refresh the copy
 # after an evolution run: cp config/evolve_fixed/champion.json config/best_ai.json
-BEST_AI = {"spec": "look:D2:K3:M1:ev=models_eval_leaders/evaluator.npz:tuned=config/best_ai.json",
+# :E6:EK3:EM4 = endgame solver from round 6 (play-outs to the end; 38.4% vs 31.9% plain, 2026-10-19)
+BEST_AI = {"spec": "look:D2:K3:M1:ev=models_eval_leaders/evaluator.npz:tuned=config/best_ai.json:E6:EK3:EM4",
            "name": "Best AI", "note": "the evolved heuristic"}
 
 OPPONENTS = [
@@ -1275,7 +1276,11 @@ class Session:
                                                         and gs.bl.has(p.id, "Glowglobes")) else None,
                     "hooks": bool(getattr(p, "has_maker_hooks", False)),
                     "intrigueCount": len(p.intrigue_cards),
-                    "techs": [tech_info(getattr(t, "d", t)) for t in getattr(p, "techs", [])],
+                    # once-per-round (flip) techs show greyed out after use until the next round
+                    "techs": [{**tech_info(getattr(t, "d", t)),
+                               "flip": getattr(getattr(t, "d", t), "activation", None) is not None,
+                               "used": bool(getattr(t, "used_this_round", False))}
+                              for t in getattr(p, "techs", [])],
                     "skills": sorted(getattr(p, "skills", set())),
                     "skillImgs": [[k, skill_img(k)] for k in sorted(getattr(p, "skills", set()))],
                     "cmdGarrison": getattr(p, "commanders_garrison", 0),

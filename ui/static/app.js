@@ -331,10 +331,15 @@ function renderPlayers() {
     const thumb = (img, name, cls, extra = "") => img
       ? `<img class="${cls}" src="${img}" data-img="${img}" alt="${esc(name)}" title="${esc(name)}${extra}">`
       : `<span class="chip mini" title="${esc(name)}${extra}">${esc(name)}</span>`;
-    const techs = (p.techs || []).map((t) => thumb(t.img, t.name, "mt-tech", t.text ? `: ${t.text}` : "")).join("");
+    const techs = (p.techs || []).map((t) => thumb(t.img, t.name, t.used ? "mt-tech used" : "mt-tech",
+      (t.text ? `: ${t.text}` : "") + (t.used ? " (flipped: used this round)" : ""))).join("");
     const cons = (p.contractList || []).map((c) => `<span class="mt-con ${c.done ? "done" : ""}">${thumb(c.img, c.name, "", c.done ? " (completed)" : " (active)")}${c.done ? "<i>✓</i>" : ""}</span>`).join("");
     const skills = (p.skillImgs || []).map(([k, img]) => thumb(img, k, "mt-skill")).join("");
     const owned = techs || cons || skills ? `<div class="mat-owned">${techs}${cons}${skills}</div>` : "";
+    // battle icons held, right on the mat (a matching pair = 1 VP; Wild pairs with any at the end)
+    const bicons = (p.battleIcons || []).length
+      ? `<div class="mat-icons" title="Battle icons held: a matching pair scores 1 VP; a Wild pairs with any icon at the end">${iconChips(p.battleIcons)}</div>`
+      : "";
     const badges = [p.swordmaster ? `<span class="bdg" title="Swordmaster: 3rd agent">⚔</span>` : "",
       p.councilor ? `<span class="bdg" title="High Council seat: +2 persuasion every Reveal">🏛</span>` : "",
       p.revealedThisRound ? `<span class="bdg rv" title="Revealed this round">${p.revealedThisRound.persuasion}◆ ${p.revealedThisRound.strength}⚔</span>`
@@ -357,7 +362,7 @@ function renderPlayers() {
           <span title="Intrigue cards">📜<b>${p.intrigueCount}</b></span>
           ${S.bl ? `<span title="Sardaukar commanders: garrison / supply / in the Conflict">🎖<b>${p.cmdGarrison}</b>/${p.cmdSupply}${p.cmdInConflict ? `/${p.cmdInConflict}⚔` : ""}</span>` : ""}
         </div>
-        ${owned}
+        ${bicons}${owned}
       </div>
     </div>`;
   }).join("");
@@ -619,7 +624,7 @@ function renderPlayerDetail(p) {
   h.push(sec(`Intrigues (${p.intrigueCount})`, p.intrigues ? cards(p.intrigues) : hidden));
   h.push(sec("Battle icons", p.battleIcons.length ? iconChips(p.battleIcons) : `<span class="muted">none</span>`));
   h.push(sec(`Techs (${(p.techs || []).length})`, (p.techs || []).length
-    ? p.techs.map((t) => t.img ? `<img class="pd-tech" src="${t.img}" data-img="${t.img}" title="${esc(t.name)}">` : `<span class="chip">${esc(t.name)}</span>`).join("")
+    ? p.techs.map((t) => t.img ? `<img class="pd-tech${t.used ? " used" : ""}" src="${t.img}" data-img="${t.img}" title="${esc(t.name)}${t.used ? " (flipped: used this round)" : ""}">` : `<span class="chip${t.used ? " used" : ""}">${esc(t.name)}</span>`).join("")
     : `<span class="muted">none</span>`));
   const cl = p.contractList || [];
   h.push(sec(`Contracts (${cl.filter((c) => !c.done).length} active · ${cl.filter((c) => c.done).length} done)`, cl.length

@@ -57,14 +57,40 @@ def _fit(win, rnd, speed):
     return win * (1 + speed * max(0, 10 - rnd))
 
 
-def eval_vs_fixed(pool, cand, opp, n, base, speed, agent):
-    """Candidate in 1 seat (rotating), the fixed opponent in the other 3."""
-    specs = [f"{agent}:tuned={cand}"] + [f"{agent}:tuned={opp}"] * 3
-    xs, wins, rounds = [], 0, []
-    for _, rnd, out in pool.imap_unordered(play, [(base + g, specs, True) for g in range(n)], chunksize=8):
+LEAGUE_OPP, LEAGUE_FRAC = [], 0.0
+
+
+def game_specs(cand, opp, g, agent):
+    """Opponents for game seed g: the fixed opponent, each seat swapped for an
+    older AI from the League with chance LEAGUE_FRAC (decided by the seed, so
+    every candidate meets the same field on the same seed)."""
+    specs = [f"{agent}:tuned={cand}"]
+    r = random.Random(9_000_000 + g)
+    for _ in range(3):
+        o = r.choice(LEAGUE_OPP) if LEAGUE_OPP and r.random() < LEAGUE_FRAC else opp
+        specs.append(f"{agent}:tuned={o}")
+    return specs
+
+
+def _one(args):
+    g, cand, opp, agent = args
+    _, rnd, out = play((g, game_specs(cand, opp, g, agent), True))
+    return g, rnd, out
+
+
+def eval_vs_fixed(pool, cand, opp, n, base, speed, agent, per_seed=False):
+    """Candidate in 1 seat (rotating), the fixed opponent (or League AIs) in the
+    other 3. per_seed: also return {seed: fitness} for paired comparisons."""
+    xs, wins, rounds, by = [], 0, [], {}
+    for g, rnd, out in pool.imap_unordered(_one, [(base + g, cand, opp, agent) for g in range(n)], chunksize=8):
         w = out[0]["win"]
-        xs.append(_fit(w, rnd, speed)); wins += w; rounds.append(rnd)
-    return xs, wins, rounds
+        xs.append(_fit(w, rnd, speed)); wins += w; rounds.append(rnd); by[g] = xs[-1]
+    return (xs, wins, rounds, by) if per_seed else (xs, wins, rounds)
+
+
+def _init_league(opp, frac):
+    global LEAGUE_OPP, LEAGUE_FRAC
+    LEAGUE_OPP, LEAGUE_FRAC = opp, frac
 
 
 def eval_leader(pool, leader, cand, opp, n, base, speed, agent):
@@ -98,6 +124,12 @@ def main():
     ap.add_argument("--bench-games", type=int, default=600)
     ap.add_argument("--workers", type=int, default=28)
     ap.add_argument("--seed", type=int, default=31)
+    ap.add_argument("--paired", type=int, default=0, help="paired seeds: champion and mutants play the "
+                    "same games; a seed bank lasts this many generations (0 = off)")
+    ap.add_argument("--league", default="", help="comma list of older AI configs (globs ok) for the field")
+    ap.add_argument("--league-frac", type=float, default=0.0, help="chance each opponent seat is a League AI")
+    ap.add_argument("--cross", type=float, default=0.0, help="chance a mutant copies knobs from a League AI")
+    ap.add_argument("--dead", type=float, default=0.0, help="chance a mutant also switches on a dead knob")
     ap.add_argument("--knobs", default="", help="comma list: mutate only these knobs (and their "
                     "early./mid./late. versions in --start); Leader generations are skipped")
     A = ap.parse_args()
@@ -105,6 +137,14 @@ def main():
         E.MUTABLE = tuple(k.strip() for k in A.knobs.split(",") if k.strip())
         A.leader_every = 10 ** 9
     E.LEADERS = True
+    if A.league:
+        import glob as _glob
+        league = sorted({f for pat in A.league.split(",") if pat.strip() for f in _glob.glob(pat.strip())})
+        global LEAGUE_OPP, LEAGUE_FRAC
+        LEAGUE_OPP, LEAGUE_FRAC = league, A.league_frac
+        E.LEAGUE = league
+        print(f"league: {len(league)} older AIs, {A.league_frac:.0%} of opponent seats", flush=True)
+    E.CROSS_P, E.DEAD_P = A.cross, A.dead
     os.makedirs(A.out, exist_ok=True)
     log_path, champ_path = os.path.join(A.out, "log.jsonl"), os.path.join(A.out, "champion.json")
     state_path, bench_path = os.path.join(A.out, "state.json"), os.path.join(A.out, "bench.jsonl")
@@ -144,7 +184,9 @@ def main():
         print(f"bench gen {gen} (lookahead): champion {rec['share']:.1%} vs previous AI | "
               f"rounds {rec['rounds']} | ended by R8 {rec['ended_by_r8']:.1%}", flush=True)
 
-    with Pool(A.workers, maxtasksperchild=200) as pool:
+    bank = {}                                   # paired: champion fitness per seed of the current bank
+    with Pool(A.workers, maxtasksperchild=200, initializer=_init_league,
+              initargs=(LEAGUE_OPP, LEAGUE_FRAC)) as pool:
         if est.n == 0:
             xs, w, rd = eval_vs_fixed(pool, champ_path, opp, A.champ_games, 0, A.speed, A.agent)
             est.add(xs, w)
@@ -171,14 +213,28 @@ def main():
                 p = os.path.join(A.out, f"gen{gen}_m{k}.json")
                 json.dump(w_, open(p, "w"), indent=1)
                 base = gen * 1_000_000 + k * 100_000
+                paired = None
                 if leader:
                     xs, w, rd = eval_leader(pool, leader, p, opp, A.leader_games, base, A.speed, A.agent)
+                elif A.paired:
+                    # same seeds as the champion's bank: compare game by game
+                    bid = (gen - 1) // A.paired
+                    bbase = 70_000_000 + bid * 100_000
+                    if bank.get("id") != bid:
+                        _, _, _, cb = eval_vs_fixed(pool, champ_path, opp, A.games, bbase, A.speed, A.agent, True)
+                        bank.clear(); bank.update({"id": bid, "x": cb})
+                    xs, w, rd, mb = eval_vs_fixed(pool, p, opp, A.games, bbase, A.speed, A.agent, True)
+                    paired = np.array([mb[g] - bank["x"][g] for g in mb])
                 else:
                     xs, w, rd = eval_vs_fixed(pool, p, opp, A.games, base, A.speed, A.agent)
                 e = Est(); e.add(xs, w)
                 agree = human_agreement(p, human_pos) if (human_pos and not leader) else agree_c
                 score = e.mean + A.human * (agree - agree_c)
-                zv = (score - ref.mean) / math.sqrt(e.se2() + ref.se2())
+                if paired is not None:
+                    cmean = float(np.mean(list(bank["x"].values())))
+                    zv = (score - cmean) / max(1e-9, float(paired.std()) / math.sqrt(len(paired)))
+                else:
+                    zv = (score - ref.mean) / math.sqrt(e.se2() + ref.se2())
                 res.append({"k": k, "traits": traits, "share": round(w / len(xs), 4), "fit": round(e.mean, 4),
                             "score": round(score, 4), "z": round(zv, 2), "rounds": round(float(np.mean(rd)), 3),
                             "agree": round(agree, 4), "est": e, "w": w_, "path": p})
@@ -191,7 +247,8 @@ def main():
             if changed:
                 champion = best["w"]
                 json.dump(champion, open(champ_path, "w"), indent=1)
-                rec["changes"] = {t: champion.get(t) for t in best["traits"]}
+                bank.clear()
+                rec["changes"] = {t: champion.get(t.split(" ")[0].split("<-")[0]) for t in best["traits"]}
                 # re-measure on fresh seeds: the best of 3 is luckier than its true level
                 fresh = Est()
                 if leader:

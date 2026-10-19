@@ -164,6 +164,9 @@ BLOODLINES_TECHS = frozenset({
 })
 
 
+BLOODLINES_TECH_NAMES = BLOODLINES_TECHS
+
+
 def tech_pool(ix_techs: bool = False) -> List[TechDef]:
     """Tiles in the market: Bloodlines only, or (ix_techs) every defined tile."""
     return [t for t in TECHS if ix_techs or t.name in BLOODLINES_TECHS]

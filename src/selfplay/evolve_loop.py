@@ -39,9 +39,9 @@ import src.selfplay.evolve as E
 BEST = os.path.join("config", "best_ai.json")
 HIST = os.path.join("config", "best_ai_history")
 OUT = os.path.join("config", "evolve_loop")
-KNOBS = ("deploy_hold,combat_ev,troop_hold,out_of_rewards,combat,ci_hold,fight_learned,intrigue_count,"
+KNOBS = ("deploy_hold,combat_ev,troop_hold,out_of_rewards,ci_hold,fight_learned,intrigue_count,"
          "smf_plan,tsmf,tsmf_goal,pers_w,buy_plan,buy_mult,hc_rush,sm_solari,deck_k,"
-         "deck_plan,hc_judge,intrigue_love,res_intrigue")
+         "deck_plan,hc_judge,intrigue_love,res_intrigue,ci_plan,inf_plan,eg_plan,prep_draw,spice_judge,tech_love,res_spice,tech_judge,tech_learned,tech_deny")
 
 
 def log(rec: dict) -> None:
@@ -51,7 +51,7 @@ def log(rec: dict) -> None:
     print(json.dumps(rec), flush=True)
 
 
-LOOK = "look:D2:K3:M1:ev=models_eval_leaders/evaluator.npz"
+LOOK = "look:D2:K3:M1:ev=models_eval_leaders/evaluator.npz"   # plain: the E6 solver x4 seats is ~15x slower
 
 
 def confirm(path: str, games: int, seed: int, workers: int, agent: str = "heuristic"):
@@ -92,10 +92,18 @@ def recalibrate(A) -> None:
     if not A.recalib:
         return
     best = json.load(open(BEST))
+    # skip when this exact Best AI was refitted already (e.g. on a restart)
+    import hashlib
+    key = hashlib.sha1(json.dumps(best, sort_keys=True).encode()).hexdigest()
+    done = os.path.join(OUT, "recalib_done.json")
+    seen = json.load(open(done)) if os.path.exists(done) else []
+    if key in seen:
+        return
+    json.dump(seen + [key], open(done, "w"))
     have = [int(f[len("calibration_v"):-5]) for f in os.listdir("models_fight")
             if f.startswith("calibration_v") and f.endswith(".json")]
     ver = max([1, int(best.get("fight_calib", 1))] + have) + 1
-    spec = f"heuristic:tuned={BEST}"
+    spec = "heuristic:tuned=" + BEST.replace(os.sep, "/")
     with open(os.path.join(OUT, f"recalib_v{ver}.log"), "w") as fh:
         subprocess.run([sys.executable, "-u", "-m", "src.selfplay.deploy_report", spec, "--games", str(A.recalib),
                         "--workers", str(A.workers)], stdout=fh, stderr=subprocess.STDOUT, check=False)
@@ -126,6 +134,13 @@ def main():
     ap.add_argument("--seed", type=int, default=50_000_000)
     ap.add_argument("--start-from", default=None, help="first cycle evolves from this config instead of Best AI")
     ap.add_argument("--recalib", type=int, default=0, help="deploy-report games per Conflict-odds refit (0 = off)")
+    # passed to evolve_fixed (user, 2026-10-19): paired seeds, a League of older
+    # AIs in the field + crossover from them, dead knobs switched on now and then
+    ap.add_argument("--paired", type=int, default=0)
+    ap.add_argument("--league", default="")
+    ap.add_argument("--league-frac", type=float, default=0.0)
+    ap.add_argument("--cross", type=float, default=0.0)
+    ap.add_argument("--dead", type=float, default=0.0)
     A = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     if A.candidate:
@@ -141,7 +156,9 @@ def main():
         log({"event": "cycle_start", "cycle": k, "out": out})
         cmd = [sys.executable, "-u", "-m", "src.selfplay.evolve_fixed", "--out", out, "--start", start,
                "--opp", BEST, "--gens", str(A.gens), "--games", str(A.games), "--knobs", A.knobs,
-               "--workers", str(A.workers), "--seed", str(31 + 7 * k)]
+               "--workers", str(A.workers), "--seed", str(31 + 7 * k),
+               "--paired", str(A.paired), "--league", A.league + "," + os.path.join(HIST, "*.json"),
+               "--league-frac", str(A.league_frac), "--cross", str(A.cross), "--dead", str(A.dead)]
         with open(out + ".log", "w") as fh:
             subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, check=False)
         champ = os.path.join(out, "champion.json")

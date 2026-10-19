@@ -44,11 +44,58 @@ def effective(weights: dict) -> dict:
     return {**TUNE_DEFAULTS, **weights}
 
 
-def mutate(weights: dict, rng: random.Random, sigma: float = 0.12, max_traits: int = 3):
-    """Change only 1-3 traits (friend's rule); keys with value 0 stay off."""
-    from src.ai.agents import SEED_ON
+# on/off switches and selectors: never "activated" by a random mutation
+SWITCHES = frozenset(("fight_model", "deck_model", "trash_model", "cmd_choice", "opp_pool",
+                      "fight_calib", "trash_dagger", "look_w"))
+# exploration (user, 2026-10-19: "if there are any dead nodes, make sure to try
+# to activate them occasionally"): DEAD_P = chance a mutant also switches on
+# one knob that is off and that evolution never touches; CROSS_P = chance a
+# mutant instead copies 1-3 knob values from an older AI in LEAGUE ("if there
+# is something to be learned that may have been missed, pick up on that")
+DEAD_P, CROSS_P, LEAGUE = 0.0, 0.0, []
+
+
+def dead_knobs(weights: dict) -> list:
+    """Numeric knobs that are off (0) for these weights and outside MUTABLE."""
+    from src.ai.agents import TUNE_DEFAULTS
     eff = effective(weights)
-    keys = [k for k in weights if not k.startswith("L.") and k.split(".")[-1] in MUTABLE
+    return sorted(k for k, v in TUNE_DEFAULTS.items()
+                  if k not in SWITCHES and k not in MUTABLE and isinstance(v, (int, float))
+                  and not (eff.get(k) or 0))
+
+
+def crossover(weights: dict, rng: random.Random, max_traits: int = 3):
+    """Copy 1-3 knob values (incl. early./mid./late. and L. keys) from a League AI."""
+    if not LEAGUE:
+        return None
+    src = rng.choice(LEAGUE)
+    a, b = effective(weights), effective(json.load(open(src)))
+    diff = sorted(k for k in set(a) | set(b) if k not in SWITCHES and a.get(k) != b.get(k)
+                  and isinstance(b.get(k, 0), (int, float)) and isinstance(a.get(k, 0), (int, float)))
+    if not diff:
+        return None
+    child = dict(weights)
+    traits = rng.sample(diff, rng.randint(1, min(max_traits, len(diff))))
+    for k in traits:
+        child[k] = b.get(k, 0)
+    return child, [f"{t}<-{os.path.basename(src)}" for t in traits]
+
+
+def mutate(weights: dict, rng: random.Random, sigma: float = 0.12, max_traits: int = 3):
+    """Change only 1-3 traits (friend's rule); keys with value 0 stay off -
+    except a dead knob switched on with chance DEAD_P, or a crossover from an
+    older AI with chance CROSS_P."""
+    from src.ai.agents import SEED_ON, TUNE_DEFAULTS
+    if CROSS_P and rng.random() < CROSS_P:
+        out = crossover(weights, rng, max_traits)
+        if out:
+            return out
+    eff = effective(weights)
+    # a dead knob that was switched on stays mutable from then on
+    revived = {k for k, d in TUNE_DEFAULTS.items() if not d and k not in MUTABLE and k not in SWITCHES
+               and isinstance(weights.get(k), (int, float)) and weights.get(k, 0) > 0}
+    keys = [k for k in weights if not k.startswith("L.")
+            and (k.split(".")[-1] in MUTABLE or k in revived)
             and isinstance(weights[k], (int, float))] \
         + [k for k in MUTABLE if k not in weights]
     keys = [k for k in keys if (weights.get(k, eff.get(k, 0)) or 0) > 0 or k.split(".")[-1] in SEED_ON]
@@ -57,6 +104,12 @@ def mutate(weights: dict, rng: random.Random, sigma: float = 0.12, max_traits: i
     for k in traits:
         v = child.get(k, eff.get(k, 0)) or SEED_ON.get(k.split(".")[-1], 0.0)
         child[k] = round(max(0.01, min(200.0, v * math.exp(rng.gauss(0, sigma)))), 6)
+    if DEAD_P and rng.random() < DEAD_P:
+        dead = dead_knobs(child)
+        if dead:
+            k = rng.choice(dead)
+            child[k] = round(SEED_ON.get(k, 0.5) * math.exp(rng.gauss(0, sigma)), 6)
+            traits = traits + [f"{k} (dead, switched on)"]
     return child, traits
 
 

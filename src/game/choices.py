@@ -330,7 +330,7 @@ def apply_internal(gs: "GameState", p: "Player", eff: Dict) -> None:
             gs.recall_spies_choice(pid, 1)
     if eff.get("_peek_after_shuffle"):
         nd = list(p.discard)
-        gs.rng.shuffle(nd)
+        gs.shuffle_pile(nd, 1, p.id)
         p.deck, p.discard = nd + p.deck, []
         built = build(gs, p, "peek_top", 1)
         if built and len(built[2]) > 1:

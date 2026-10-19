@@ -329,6 +329,11 @@ class GameState:
         self.num_players = num_players
         self.rng: np.random.Generator = np.random.default_rng(seed)
         self._seed      = seed
+        # reshuffles draw from their own stream per (pile, player, n-th
+        # reshuffle), so two AIs compared on the same seed get the same
+        # shuffles even after their decisions differ (paired seeds, 2026-10-19)
+        self._shuffle_salt = 0
+        self._shuffle_count: dict = {}
         self.use_choam  = use_choam
 
         # ===== PLAYERS =====
@@ -1996,6 +2001,18 @@ class GameState:
     # Card draw (uses seeded RNG)
     # -----------------------------------------------------------------------
 
+    def shuffle_pile(self, items: list, pile: int, pid: int) -> None:
+        """Shuffle a reshuffled pile (1 = a player's deck, 2 = Intrigue deck)
+        from its own seeded stream: the n-th reshuffle of that pile is the same
+        whatever happened before it in the game."""
+        count = getattr(self, "_shuffle_count", None)
+        if count is None:
+            count = self._shuffle_count = {}
+        n = count.get((pile, pid), 0)
+        count[(pile, pid)] = n + 1
+        key = [int(self._seed or 0) & 0x7FFFFFFF, int(getattr(self, "_shuffle_salt", 0)), pile, pid, n]
+        np.random.default_rng(key).shuffle(items)
+
     def draw_cards_for_player(self, player_id: int, count: int) -> None:
         player = self.players[player_id]
         drawn = []
@@ -2004,7 +2021,7 @@ class GameState:
                 if not player.discard:
                     break
                 new_deck = list(player.discard)
-                self.rng.shuffle(new_deck)
+                self.shuffle_pile(new_deck, 1, player_id)
                 player.deck    = new_deck
                 player.discard = []
             if player.deck:
@@ -3231,7 +3248,7 @@ class GameState:
                 if not self.intrigue_discard:
                     break
                 shuffled = list(self.intrigue_discard)
-                self.rng.shuffle(shuffled)
+                self.shuffle_pile(shuffled, 2, 0)
                 self.intrigue_deck    = shuffled
                 self.intrigue_discard = []
             if self.intrigue_deck:

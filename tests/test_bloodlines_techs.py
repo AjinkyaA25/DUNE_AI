@@ -344,3 +344,27 @@ def test_suspensor_suits_only_for_intrigues_after_it_is_owned():
         tech = lambda: g.step(next(a for a in g.get_valid_actions(pid) if a.choice == "stack:0"))
         (tech(), claim()) if order == "buy first" else (claim(), tech())
         assert g.troops_in_conflict.get(pid, 0) == (1 if order == "buy first" else 0)
+
+
+# ---------------------------------------------------------------- UI: flipped techs
+def test_ui_flipped_tech_greyed_until_next_round():
+    """A once-per-round (flip) tech shows as used after its activation and is
+    back to normal once the next round starts (user, 2026-10-19)."""
+    import sys
+    sys.argv = ["x"]
+    import ui.server as srv
+    s = srv.Session(seat=0, specs=["random"] * 3, seed=2, bloodlines=True)
+    pid = 0
+    for name in ("Spy Drones", "Advanced Data Analysis", "Rapid Dropships"):
+        give(s.gs, pid, name)
+
+    def techs():
+        me = next(x for x in s.view(reveal=False)["players"] if x["id"] == pid)
+        return {t["name"]: t for t in me["techs"]}
+
+    assert all(t["flip"] and not t["used"] for t in techs().values())
+    tile = next(t for t in s.gs.players[pid].techs if t.name == "Spy Drones")
+    tile.used_this_round = True                       # activated this round
+    assert techs()["Spy Drones"]["used"] and not techs()["Rapid Dropships"]["used"]
+    s.gs.bl.on_round_start()
+    assert not any(t["used"] for t in techs().values())

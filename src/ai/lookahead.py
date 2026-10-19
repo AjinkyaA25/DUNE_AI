@@ -18,7 +18,14 @@ heuristic points one percentage point of win chance is worth. A game that
 ends inside the lookahead is scored by its real result.
 
 spec: look[:D<depth>][:K<k>][:M<m>][:LW<look_w>][:ev=<evaluator.npz>][:tuned=<json>]
+          [:E<round>][:EK<k>][:EM<m>]
       e.g. look:D3:K4:M2:tuned=config/evolve_look/champion.json
+
+Endgame solver (E<round>, user 2026-10-19: "the endgame solver should
+realistically start on round 6, the preparation round for round 7"): from
+that round on, each candidate is played out to the END of the game on EM
+determinized worlds (every seat by the heuristic) and scored by the real
+result, instead of `depth` turns + the evaluator; EK candidates.
 """
 from __future__ import annotations
 
@@ -57,7 +64,8 @@ class LookaheadAgent:
 
     def __init__(self, depth: int = 3, k: int = 4, m: int = 2, look_w: Optional[float] = None,
                  evaluator: Optional[str] = None, tuning: Optional[dict] = None,
-                 seed: Optional[int] = None, opening_book=None, step_cap: int = 200):
+                 seed: Optional[int] = None, opening_book=None, step_cap: int = 200,
+                 end_round: int = 0, end_k: int = 4, end_m: int = 4):
         from src.ai.agents import HeuristicAgent
         # the heuristic shortlists the candidates and plays every seat in the
         # lookahead; `tuning` (evolved weights) changes both
@@ -67,6 +75,7 @@ class LookaheadAgent:
         self.ev = load_evaluator(evaluator)
         self.rng = np.random.default_rng(seed)
         self.step_cap = step_cap
+        self.end_round, self.end_k, self.end_m = end_round, end_k, end_m
         self.stats = {"searched": 0, "switched": 0, "seconds": 0.0}
         self.last = None
 
@@ -80,25 +89,32 @@ class LookaheadAgent:
                 or not any(a.action_type in SEARCHED for a in acts)):
             return self.h.select_action(gs, pid, valid)
         t0 = time.time()
+        endgame = bool(self.end_round) and gs.round >= self.end_round
+        k, m = (self.end_k, self.end_m) if endgame else (self.k, self.m)
         scores = [self.h.score(gs, pid, a) for a in acts]
-        order = sorted(range(len(acts)), key=lambda i: -scores[i])[: self.k]
+        order = sorted(range(len(acts)), key=lambda i: -scores[i])[: k]
         cands = [acts[i] for i in order]
         from src.ai.determinize import determinize
         # common random numbers: world j is the same for every candidate
-        seeds = self.rng.integers(0, 2**31 - 1, size=self.m)
-        win = np.full((len(cands), self.m), np.nan)
+        seeds = self.rng.integers(0, 2**31 - 1, size=m)
+        win = np.full((len(cands), m), np.nan)
         leaves, where = [], []
         for i, c in enumerate(cands):
             key = repr(c)
-            for j in range(self.m):
+            for j in range(m):
                 g = determinize(gs, pid, np.random.default_rng(int(seeds[j])))
                 ga = next((x for x in g.get_valid_actions(pid) if repr(x) == key), None)
                 if ga is None:
                     continue
                 g.step(ga)
-                self._advance(g)
+                self._advance(g, to_end=endgame)
                 if g.game_over:
                     win[i, j] = self._result(g, pid)
+                    if endgame:
+                        # a 0/1 result per world is noisy: break ties by the VP margin
+                        vp = [q.victory_points for q in g.players]
+                        lead = vp[pid] - max(v for q, v in enumerate(vp) if q != pid)
+                        win[i, j] += 0.03 * max(-5, min(5, lead))
                 else:
                     leaves.append(self.ev.encode(g, pid))
                     where.append((i, j))
@@ -119,10 +135,12 @@ class LookaheadAgent:
                      "total": [float(x) for x in total], "chosen": best}
         return cands[best]
 
-    def _advance(self, g: GameState) -> None:
-        """Play on until `depth` more Agent / Reveal turns have been taken."""
+    def _advance(self, g: GameState, to_end: bool = False) -> None:
+        """Play on until `depth` more Agent / Reveal turns have been taken
+        (to_end: until the game is over)."""
         turns = steps = 0
-        while not g.game_over and turns < self.depth and steps < self.step_cap:
+        depth, cap = (10 ** 9, 20 * self.step_cap) if to_end else (self.depth, self.step_cap)
+        while not g.game_over and turns < depth and steps < cap:
             q = _actor(g)
             va = g.get_valid_actions(q)
             a = self.h.select_action(g, q, va)

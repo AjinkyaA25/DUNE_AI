@@ -103,6 +103,34 @@ TUNE_DEFAULTS = {
     # as 1 VP now minus the deck dilution over the draws left; hc_judge = the
     # High Council seat as +2 persuasion x what it buys x Reveals left; 0 = old rule
     "tsmf_judge": 0.0, "hc_judge": 0.0,
+    # play to the Intrigue hand (user, 2026-10-19): ci_plan = Combat Intrigue
+    # swords in hand count toward the strength a combat-space Agent move can
+    # reach (many Combat Intrigues -> join more fights); inf_plan = influence
+    # the held Intrigues will add counts toward the next friendship / alliance
+    # (faction-bump Intrigues -> score alliances); eg_plan = gains toward a
+    # held endgame Intrigue's condition (Secure Spice Trade: 2 TSMF, CHOAM
+    # Profits: 4 contracts, Sacred Pools: 3 water, Strategic Stockpiling:
+    # 5 spice, an icon card: win that icon) earn its VP x the chance they add
+    "ci_plan": 0.0, "inf_plan": 0.0, "eg_plan": 0.0,
+    # prep_draw (user, 2026-10-19: round 6 sets up round 7): from round 6, a
+    # move that draws cards is also valued by how it changes the next round's
+    # hand - drawing the deck down so the bought cards get shuffled in
+    "prep_draw": 0.0,
+    # spice_judge (user, 2026-10-19: "the AI hates picking up spice ... spice
+    # buys techs"): spice is also worth the tech it gets you to - the best
+    # market tech's surplus once affordable, part of it while saving up,
+    # x the chance of reaching a tech space before the end; 0 = flat value
+    "spice_judge": 0.0,
+    # tech_judge: Panopticon / CHOAM Transports / Gene-Locked Vault / Delivery
+    # Bay / Ornithopter Fleet valued by the player's situation (blend weight;
+    # 0 = the old flat numbers) - src/ai/bloodlines_heuristic.SITUATIONAL
+    "tech_judge": 0.0,
+    # tech_deny: + this x half of what the tile is worth to the rival most
+    # likely to buy it soon (tiles are unique: rush the ones in demand)
+    "tech_deny": 0.0,
+    # tech_learned: blend toward the tile's measured gain in this situation
+    # (models_tech/tech_values.json from src.selfplay.tech_study --fit)
+    "tech_learned": 0.0,
     # persuasion economy (user, 2026-10-17: enough persuasion to buy TSMF
     # every round late): hc_rush = extra value per round left for the High
     # Council seat (+2 persuasion each Reveal); starter_trash = extra value
@@ -253,7 +281,10 @@ _TUNE = dict(TUNE_DEFAULTS)
 SEED_ON = {"maker_bonus": 0.5, "alliance": 0.5, "contract_stack": 1.0, "out_of_rewards": 1.0,
            "hc_rush": 0.5, "starter_trash": 1.0, "smf_plan": 2.0, "tsmf_goal": 2.0,
            "pers_w": 0.3, "buy_plan": 1.0, "fight_learned": 0.5, "intrigue_count": 0.5,
-           "deploy_wait": 0.5, "combat_ev": 1.0, "tsmf_judge": 1.0, "hc_judge": 1.0, "deck_model": 1}
+           "deploy_wait": 0.5, "combat_ev": 1.0, "tsmf_judge": 1.0, "hc_judge": 1.0, "deck_model": 1,
+           "ci_plan": 1.0, "inf_plan": 0.5, "eg_plan": 1.0, "prep_draw": 1.0, "spice_judge": 1.0,
+           "tech_judge": 1.0, "tech_deny": 0.5,
+           "tech_learned": 1.0}
 
 
 def _apply_tuning(t: dict) -> None:
@@ -353,7 +384,7 @@ def _game_urgency(gs: GameState, pid: int) -> float:
     return 1.0 + 2.5 * max(round_component, vp_component, race)
 
 
-def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> float:
+def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float, _shift: int = 0) -> float:
     """
     Value of adding `amt` influence to one faction track — or, if fac == "any"
     (Dangerous Rhetoric etc.), the best of the four choices, since the player
@@ -380,8 +411,17 @@ def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float) -> floa
     """
     if fac == "any":
         return max(_influence_gain_value(gs, pid, f, amt) for f in _FACTIONS)
+    k_plan = _TUNE.get("inf_plan", 0.0)
+    if k_plan and not _shift:
+        pend = _pending_influence(gs, pid, fac)
+        if pend:
+            # the held Intrigues' influence lands too: blend in the value of
+            # this gain on top of it (it may now finish a friendship / alliance)
+            k_plan = min(1.0, k_plan)
+            return ((1.0 - k_plan) * _influence_gain_value(gs, pid, fac, amt, _shift=-1)
+                    + k_plan * _influence_gain_value(gs, pid, fac, amt, _shift=pend))
     p = gs.players[pid]
-    cur = p.influence.get(fac, 0)
+    cur = min(6, p.influence.get(fac, 0) + max(0, _shift))
     amt = int(round(amt))
     new = min(6, cur + amt)
     urgency = _game_urgency(gs, pid)
@@ -459,6 +499,7 @@ def _effect_value(gs: GameState, pid: int, eff: dict) -> float:
             v += _influence_gain_value(gs, pid, "any", amt)
         elif k == "contract" and amt > 0 and _TUNE.get("contracts", 0):
             v += _take_contract_value(gs, pid) * amt
+            v += _endgame_goal_bonus(gs, pid, "contracts", 0.6 * amt)
         elif k in _WALL_BREAK_KEYS:
             v += _wall_break_value(gs, pid, with_worm=any(x in eff for x in _SANDWORM_KEYS)) * amt
         elif k in _SANDWORM_KEYS:
@@ -468,12 +509,53 @@ def _effect_value(gs: GameState, pid: int, eff: dict) -> float:
         else:
             if k == "spy" and amt > 0:
                 v += _dp_spy_bonus(gs, pid) * amt
+            if k in ("water", "spice") and amt > 0:
+                v += _endgame_goal_bonus(gs, pid, k, amt)
+            if k == "spice":
+                v += _spice_judge_delta(gs, pid, amt)
             val = _RES_VALUE.get(k, 0.3)
             sat = _TUNE.get("sat_" + k, 0.0)
             if sat and amt > 0:
                 val /= 1.0 + sat * _held(gs.players[pid], k) / 5.0
             v += val * amt
     return v
+
+
+_SPICE_CACHE: Dict[tuple, list] = {}
+
+
+def _spice_potential(gs: GameState, pid: int, x: float) -> float:
+    """spice_judge: what holding x spice is worth toward the market techs."""
+    bl = getattr(gs, "bl", None)
+    if bl is None:
+        return 0.0
+    p = gs.players[pid]
+    tops = tuple(st[0].name if st else "" for st in bl.tech_stacks)
+    key = (id(gs), id(_TUNE), pid, gs.round, tops, len(getattr(p, "techs", []) or []))
+    offers = _SPICE_CACHE.get(key)
+    if offers is None:
+        from src.ai.bloodlines_heuristic import tech_buy_value
+        offers = []
+        for st in bl.tech_stacks:
+            if st:
+                surplus = tech_buy_value(gs, pid, st[0])
+                if surplus > 0:
+                    offers.append((bl.tech_price(pid, st[0]), surplus))
+        if len(_SPICE_CACHE) > 4096:
+            _SPICE_CACHE.clear()
+        _SPICE_CACHE[key] = offers
+    if not offers:
+        return 0.0
+    reach = min(0.9, 0.35 * _rounds_left(gs))          # a tech space visit still to come
+    return reach * max(sv * (1.0 if x >= price else 0.5 * x / max(1, price)) for price, sv in offers)
+
+
+def _spice_judge_delta(gs: GameState, pid: int, amt: float) -> float:
+    k = _TUNE.get("spice_judge", 0.0)
+    if not k or not amt:
+        return 0.0
+    have = gs.players[pid].spice
+    return k * (_spice_potential(gs, pid, max(0, have + amt)) - _spice_potential(gs, pid, have))
 
 
 def _held(p, k: str) -> int:
@@ -1138,11 +1220,13 @@ def _combat_space_ev(gs: GameState, pid: int, a) -> float:
     rec = sum(e["troops"] for e in gs.get_space_effects_preview(a.space_name, a.space_option)
               if isinstance(e, dict) and isinstance(e.get("troops"), (int, float)) and e["troops"] > 0)
     avail = int(min(p.troops_garrison + rec, 2 + rec))
-    mine0, u0 = _my_strength(gs, pid)
+    # ci_plan: the Combat Intrigues in hand go in too once a unit is there
+    ci = _TUNE.get("ci_plan", 0.0) * _own_combat_intrigue_swords(gs, pid) if _TUNE.get("ci_plan", 0.0) else 0.0
+    mine0, u0 = _my_strength(gs, pid, add_swords=ci)
     ev0 = fight_ev(gs, pid, mine0, u0)
     best = 0.0
     for n in range(1, avail + 1):
-        mine, u = _my_strength(gs, pid, add_troops=n)
+        mine, u = _my_strength(gs, pid, add_troops=n, add_swords=ci)
         keep = max(0, n - rec) * _troop_hold_value(gs)          # recruited troops weren't in the garrison
         best = max(best, fight_ev(gs, pid, mine, u) - ev0 - keep
                    - n * _TUNE.get("deploy_hold", 0.4) * min(1.0, _rounds_left(gs) / 2.0))
@@ -1595,6 +1679,111 @@ def _endgame_hold_value(gs: GameState, pid: int, ic) -> float:
     return v
 
 
+_PEND_INF_KEYS = {"influence_choice": None, "influence_any": None,
+                  "influence_emperor_or_spacing": ("emperor", "spacing_guild"),
+                  "influence_bene_or_fremen": ("bene_gesserit", "fremen")}
+
+
+def _pending_influence(gs: GameState, pid: int, fac: str) -> int:
+    """Influence on track `fac` the player's held Plot Intrigues can add
+    (Buy Access, Imperium Politics, Sietch Ritual, ...)."""
+    n = 0.0
+    for ic in gs.players[pid].intrigue_cards:
+        for e in ic.effects:
+            fe = _flatten(e) if isinstance(e, dict) else {}
+            for k, v in fe.items():
+                if not isinstance(v, (int, float)) or v <= 0:
+                    continue
+                if k in _PEND_INF_KEYS:
+                    facs = _PEND_INF_KEYS[k]
+                    if facs is None or fac in facs:
+                        n += v
+                elif _FACTION_OF.get(k) == fac:
+                    n += v
+    return int(min(2, n))
+
+
+def _endgame_goals(gs: GameState, pid: int) -> list:
+    """(what, need, vp) for every endgame condition on a held Intrigue."""
+    out = []
+    for ic in gs.players[pid].intrigue_cards:
+        for e in ic.effects:
+            if not isinstance(e, dict):
+                continue
+            for k, sub in e.items():
+                if k == "if_tsmf_2":
+                    out.append(("tsmf", 2, 1.4))              # 1 VP + 2 spice
+                elif k.startswith("if_contracts_") and ic.name == "CHOAM Profits":
+                    out.append(("contracts", int(k[len("if_contracts_"):]), 1.0))
+                elif k == "if_bl_endgame_water_3":
+                    out.append(("water", 3, 1.0))
+                elif k == "if_bl_endgame_techs_3":
+                    out.append(("techs", 3, 1.0))
+                elif k == "spice_or_match_icon" and isinstance(sub, dict):
+                    out.append(("icon:" + sub.get("icon", ""), 1, 1.0))
+                elif k == "pay_then" and isinstance(sub, dict) and sub.get("vp")                         and (sub.get("cost") or {}).get("spice"):
+                    out.append(("spice", int(sub["cost"]["spice"]), float(sub["vp"])))
+    return out
+
+
+def _goal_have(gs: GameState, pid: int, what: str) -> int:
+    p = gs.players[pid]
+    if what == "tsmf":
+        return sum(1 for pile in (p.deck, p.hand, p.discard, p.in_play)
+                   for c in pile if c.name == "The Spice Must Flow")
+    if what == "contracts":
+        return len(getattr(p, "contracts_completed", []) or [])
+    if what == "techs":
+        return len(getattr(p, "techs", []) or [])
+    return int(getattr(p, what, 0) or 0)
+
+
+def _goal_chance(have: float, need: int, left: int) -> float:
+    if have >= need:
+        return 0.95
+    return max(0.05, min(0.8, 0.45 * left / (2.0 * (need - have))))
+
+
+def _endgame_goal_bonus(gs: GameState, pid: int, what: str, amt: float) -> float:
+    """eg_plan: gaining `amt` of `what` raises the chance a held endgame
+    Intrigue pays -> that change x its VP."""
+    k = _TUNE.get("eg_plan", 0.0)
+    if not k or amt <= 0:
+        return 0.0
+    goals = [g for g in _endgame_goals(gs, pid) if g[0] == what]
+    if not goals:
+        return 0.0
+    left = _rounds_left(gs)
+    have = _goal_have(gs, pid, what)
+    vp1 = _effect_value(gs, pid, {"vp": 1})
+    return k * sum(vp * vp1 * (_goal_chance(have + amt, need, left) - _goal_chance(have, need, left))
+                   for _, need, vp in goals)
+
+
+def _next_hand_quality(gs: GameState, pid: int, extra_draws: float = 0.0) -> float:
+    """prep_draw: expected quality of next round's 5-card hand. Cards left in
+    the deck come first; once it runs out, everything else (discard, cards in
+    play and in hand, which go to the discard at Recall) is shuffled in."""
+    p = gs.players[pid]
+    deck = list(p.deck)
+    rest = list(p.discard) + list(p.in_play) + list(p.hand)
+    if not deck and not rest:
+        return 0.0
+    q = {}
+
+    def qual(c):
+        if c.name not in q:
+            q[c.name] = _card_play_quality(gs, pid, c)
+        return q[c.name]
+
+    left = max(0.0, len(deck) - extra_draws)
+    m_deck = sum(qual(c) for c in deck) / len(deck) if deck else 0.0
+    m_all = sum(qual(c) for c in deck + rest) / len(deck + rest)
+    from_deck = min(5.0, left)
+    # drawn cards land in hand -> discard, so the reshuffle sees the whole deck
+    return from_deck * m_deck + (5.0 - from_deck) * m_all
+
+
 def _intrigue_value(gs: GameState, pid: int, ic) -> float:
     """How good is it to play this Intrigue right now?"""
     p = gs.players[pid]
@@ -1741,6 +1930,9 @@ def _conflict_worth(gs: GameState, pid: int, worm: Optional[bool] = None) -> flo
         v += 1.8                                  # pairs with anything at Endgame
     elif icon and icon in held:
         v += 4.0                                  # completes a guaranteed 1 VP now
+    elif icon and _TUNE.get("eg_plan", 0.0) and any(
+            g[0] == "icon:" + icon for g in _endgame_goals(gs, pid)):
+        v += 1.6 + 2.4 * min(1.0, _TUNE["eg_plan"])   # the held icon Intrigue pairs it at Endgame
     elif icon:
         # first icon of this type — a half-pair. ~0.5 VP in expectation once you
         # win another of the same; worth more to a player who already wins
@@ -2321,6 +2513,8 @@ class HeuristicAgent(Agent):
                 s += _influence_gain_value(gs, pid, fac, 1) + _TUNE["faction_space"]
             cost = SPACE_MANDATORY_COSTS.get(a.space_name, {})
             s -= sum(_RES_VALUE.get(k, 0.4) * v for k, v in cost.items())
+            if cost.get("spice"):
+                s += _spice_judge_delta(gs, pid, -cost["spice"])
             # High Council (+2 persuasion every future Reveal turn) and
             # Swordmaster (a 3rd Agent every future round) are durable,
             # compounding structural investments, not one-off payoffs. The
@@ -2406,6 +2600,11 @@ class HeuristicAgent(Agent):
                     gs, pid, _reveal_persuasion_after(gs, pid, a))
             if _TUNE.get("smf_plan", 0.0):
                 s += _TUNE["smf_plan"] * _smf_plan_value(gs, pid, a)
+            if _TUNE.get("prep_draw", 0.0) and gs.round >= 6:
+                played = next((c for c in p.hand if c.name == a.card_name), None)
+                nd = _move_draws(gs, a, played)
+                if nd:
+                    s += _TUNE["prep_draw"] * (_next_hand_quality(gs, pid, nd) - _next_hand_quality(gs, pid))
             g = _TUNE.get("tsmf_goal", 0.0)
             if g and gs.round >= 3 and _tsmf_short(gs, pid)                     and _reveal_persuasion_after(gs, pid, a) >= 9:
                 s += 0.5 * g          # this move keeps a TSMF buy on the Reveal turn
@@ -2430,6 +2629,8 @@ class HeuristicAgent(Agent):
             card = stack[-1] if stack else None
             if card:
                 s += _acquire_card_value(gs, pid, card, self.lean_deck)
+                if a.reserve_type == "spice_must_flow":
+                    s += _endgame_goal_bonus(gs, pid, "tsmf", 1)
 
         elif at == ActionType.PLAY_INTRIGUE:
             ic = next((c for c in p.intrigue_cards
@@ -3101,12 +3302,34 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 with open(p[6:], encoding="utf-8") as _f:
                     kw["tuning"] = _json.load(_f)
         return RoundSearchAgent(seed=seed, opening_book=opening_book, **kw)
+    if kind == "ppo":
+        # ppo[:net=<npz>][:tuned=<json>][:greedy][:T<temp>] (src/ai/ppo.py)
+        from src.ai.ppo import PPOAgent
+        kw = {}
+        for p in parts[1:]:
+            if p.startswith("net="):
+                kw["net"] = p[4:]
+            elif p == "greedy":
+                kw["greedy"] = True
+            elif p.startswith("T") and p[1:].replace(".", "", 1).isdigit():
+                kw["temperature"] = float(p[1:])
+            elif p.startswith("tuned="):
+                import json as _json
+                with open(p[6:], encoding="utf-8") as _f:
+                    kw["tuning"] = _json.load(_f)
+        return PPOAgent(seed=seed, opening_book=opening_book, **kw)
     if kind == "look":
         # look[:D<depth>][:K<k>][:M<m>][:LW<look_w>][:ev=<npz>][:tuned=<json>] (src/ai/lookahead.py)
         from src.ai.lookahead import LookaheadAgent
         kw = {}
         for p in parts[1:]:
-            if p.startswith("LW"):
+            if p.startswith("EK"):
+                kw["end_k"] = int(p[2:])
+            elif p.startswith("EM"):
+                kw["end_m"] = int(p[2:])
+            elif p.startswith("E") and p[1:].isdigit():
+                kw["end_round"] = int(p[1:])
+            elif p.startswith("LW"):
                 kw["look_w"] = float(p[2:])
             elif p.startswith("D"):
                 kw["depth"] = int(p[1:])

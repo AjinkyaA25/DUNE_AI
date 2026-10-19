@@ -529,7 +529,7 @@ class EffectResolver:
         # -- look at top of deck: draw it, or trash if it's a weak starter --
         if "peek_top" in effect:
             if not player.deck and player.discard:
-                nd = list(player.discard); gs.rng.shuffle(nd)
+                nd = list(player.discard); gs.shuffle_pile(nd, 1, player.id)
                 player.deck, player.discard = nd, []
             if player.deck:
                 top = player.deck[-1]
@@ -789,7 +789,7 @@ class EffectResolver:
         #    last is discarded (choices._llf_step) ----------------------------
         if "look_top3_draw_discard_trash" in effect:
             if len(player.deck) < 3 and player.discard:
-                nd = list(player.discard); gs.rng.shuffle(nd)
+                nd = list(player.discard); gs.shuffle_pile(nd, 1, player.id)
                 player.deck = nd + player.deck
                 player.discard = []
             player.llf_cards = [player.deck.pop() for _ in range(min(3, len(player.deck)))]
