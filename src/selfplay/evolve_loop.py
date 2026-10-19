@@ -14,7 +14,12 @@ Each cycle:
     python -m src.selfplay.evolve_loop [--cycles 0] [--gens 30] [--candidate <json>]
 
 --candidate: confirm (and maybe promote) this config first, e.g. the champion
-of a run that just finished. --cycles 0 = run until stopped. Progress goes to
+of a run that just finished. --recalib N (user, 2026-10-19: "with the increase
+in games the AI should get better slowly with adjustment to judgement"): after
+every promotion (and once at the start) play N deploy-report games with Best
+AI, refit the Conflict odds on what really happened (fight_calib.py ->
+models_fight/calibration_vK.json) and put Best AI + fight_calib K through the
+same promotion check, so the combat judgement keeps tracking how Best AI plays. --cycles 0 = run until stopped. Progress goes to
 config/evolve_loop/log.jsonl; the website / UI pick up a new Best AI on restart.
 """
 from __future__ import annotations
@@ -35,7 +40,8 @@ BEST = os.path.join("config", "best_ai.json")
 HIST = os.path.join("config", "best_ai_history")
 OUT = os.path.join("config", "evolve_loop")
 KNOBS = ("deploy_hold,combat_ev,troop_hold,out_of_rewards,combat,ci_hold,fight_learned,intrigue_count,"
-         "smf_plan,tsmf,tsmf_goal,pers_w,buy_plan,buy_mult,hc_rush,sm_solari,deck_k")
+         "smf_plan,tsmf,tsmf_goal,pers_w,buy_plan,buy_mult,hc_rush,sm_solari,deck_k,"
+         "deck_plan,hc_judge,intrigue_love,res_intrigue")
 
 
 def log(rec: dict) -> None:
@@ -81,12 +87,37 @@ def maybe_promote(path: str, tag: str, A) -> bool:
     return win
 
 
+def recalibrate(A) -> None:
+    """Refit the Conflict odds on Best AI's own deploys; try the refit as a candidate."""
+    if not A.recalib:
+        return
+    best = json.load(open(BEST))
+    have = [int(f[len("calibration_v"):-5]) for f in os.listdir("models_fight")
+            if f.startswith("calibration_v") and f.endswith(".json")]
+    ver = max([1, int(best.get("fight_calib", 1))] + have) + 1
+    spec = f"heuristic:tuned={BEST}"
+    with open(os.path.join(OUT, f"recalib_v{ver}.log"), "w") as fh:
+        subprocess.run([sys.executable, "-u", "-m", "src.selfplay.deploy_report", spec, "--games", str(A.recalib),
+                        "--workers", str(A.workers)], stdout=fh, stderr=subprocess.STDOUT, check=False)
+        report = os.path.join("reports", "deploy_" + spec.replace(":", "_").replace("/", "_").replace("=", "_")[:60] + ".json")
+        dest = os.path.join("models_fight", f"calibration_v{ver}.json")
+        subprocess.run([sys.executable, "-u", "-m", "src.selfplay.fight_calib", "--out", dest,
+                        f"{report}:{best.get('fight_learned', 0.0)}"], stdout=fh, stderr=subprocess.STDOUT, check=False)
+    if not os.path.exists(dest):
+        log({"event": "recalib_failed", "version": ver})
+        return
+    cand = os.path.join(OUT, f"recalib_v{ver}.json")
+    json.dump({**best, "fight_calib": ver}, open(cand, "w"), indent=1)
+    log({"event": "recalib", "version": ver, "games": A.recalib, "fit": json.load(open(dest))})
+    maybe_promote(cand, f"recalib{ver}", A)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cycles", type=int, default=0, help="0 = until stopped")
-    ap.add_argument("--gens", type=int, default=30)
-    ap.add_argument("--games", type=int, default=4000, help="games per mutant")
-    ap.add_argument("--confirm", type=int, default=8000)
+    ap.add_argument("--gens", type=int, default=20)
+    ap.add_argument("--games", type=int, default=6000, help="games per mutant")
+    ap.add_argument("--confirm", type=int, default=10000)
     ap.add_argument("--z", type=float, default=1.0, help="promote at this many SE above 25%%")
     ap.add_argument("--look-games", type=int, default=1500, help="lookahead check before promoting (0 = skip)")
     ap.add_argument("--knobs", default=KNOBS)
@@ -94,10 +125,12 @@ def main():
     ap.add_argument("--candidate", default=None)
     ap.add_argument("--seed", type=int, default=50_000_000)
     ap.add_argument("--start-from", default=None, help="first cycle evolves from this config instead of Best AI")
+    ap.add_argument("--recalib", type=int, default=0, help="deploy-report games per Conflict-odds refit (0 = off)")
     A = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     if A.candidate:
         maybe_promote(A.candidate, "candidate", A)
+    recalibrate(A)
     k = 0
     while A.cycles == 0 or k < A.cycles:
         k += 1
@@ -115,7 +148,8 @@ def main():
         if not os.path.exists(champ) or json.load(open(champ)) == json.load(open(BEST)):
             log({"event": "cycle_end", "cycle": k, "result": "no change kept"})
             continue
-        maybe_promote(champ, f"cycle{k}", A)
+        if maybe_promote(champ, f"cycle{k}", A):
+            recalibrate(A)
 
 
 if __name__ == "__main__":

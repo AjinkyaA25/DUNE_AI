@@ -1094,7 +1094,7 @@ def _opp_fight_rule(gs: GameState, q: int, viewer: Optional[int] = None):
     return vis + pot, 1.5 + 0.9 * (pot ** 0.5), can
 
 
-_CALIB: Dict[str, object] = {"m": None, "loaded": False}
+_CALIB: Dict[int, object] = {}
 
 
 def _p_ahead(mu: float, sd: float, can, my_strength: float, revealed: bool = False) -> float:
@@ -1105,17 +1105,20 @@ def _p_ahead(mu: float, sd: float, can, my_strength: float, revealed: bool = Fal
     separate odds against a rival who has already revealed (user, 2026-10-18:
     only Combat Intrigues are left to come, so deploy what the fight needs)."""
     z = (mu - my_strength) / sd
-    if _TUNE.get("fight_calib", 0):
-        if not _CALIB["loaded"]:
-            _CALIB["loaded"] = True
+    ver = int(_TUNE.get("fight_calib", 0))
+    if ver:
+        # fight_calib N > 1: the refit on Best AI's own play, calibration_vN.json
+        # (src.selfplay.evolve_loop --recalib)
+        if ver not in _CALIB:
             try:
                 import json, os
-                path = os.path.join(os.path.dirname(__file__), "..", "..", "models_fight", "calibration.json")
+                name = "calibration.json" if ver == 1 else f"calibration_v{ver}.json"
+                path = os.path.join(os.path.dirname(__file__), "..", "..", "models_fight", name)
                 with open(path) as fh:
-                    _CALIB["m"] = {float(k): v for k, v in json.load(fh).items()}
+                    _CALIB[ver] = {float(k): v for k, v in json.load(fh).items()}
             except (OSError, ValueError):
-                _CALIB["m"] = None
-        m = _CALIB["m"]
+                _CALIB[ver] = None
+        m = _CALIB[ver]
         if m:
             c = m[min(m, key=lambda k: abs(k - min(1.0, _TUNE.get("fight_learned", 0.0))))]
             c = c.get("rev" if revealed else "unrev", c)

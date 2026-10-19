@@ -18,7 +18,7 @@ have not revealed (a revealed rival can only add Combat Intrigues, so those
 odds can be much sharper). Used by agents.fight_ev when the fight_calib knob
 is on. Ties count half.
 
-    python -m src.selfplay.fight_calib REPORT.json:WEIGHT [REPORT.json:WEIGHT ...]
+    python -m src.selfplay.fight_calib [--out PATH] REPORT.json:WEIGHT [REPORT.json:WEIGHT ...]
 """
 from __future__ import annotations
 
@@ -64,9 +64,15 @@ def fit(Z, PIN, Y):
     return best
 
 
-def main():
-    out = json.load(open(OUT)) if os.path.exists(OUT) else {}
-    for arg in sys.argv[1:]:
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    dest = OUT
+    if "--out" in argv:
+        i = argv.index("--out")
+        dest = argv[i + 1]
+        del argv[i:i + 2]
+    out = json.load(open(dest)) if os.path.exists(dest) else {}
+    for arg in argv:
         path, w = arg.rsplit(":", 1)
         Z, PIN, Y, G, R = rows(path)
         test = G % 5 == 0                                   # held-out games
@@ -95,8 +101,8 @@ def main():
                 if m.sum():
                     print(f"   calibrated {lo:.1f}-{hi:.1f}: n={m.sum():5d} predicted {P1[m].mean():.3f} actual {Y[m].mean():.3f}")
         out[str(float(w))] = entry
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    json.dump(out, open(OUT, "w"), indent=1)
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    json.dump(out, open(dest, "w"), indent=1)
 
 
 if __name__ == "__main__":
