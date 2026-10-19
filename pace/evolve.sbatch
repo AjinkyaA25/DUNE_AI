@@ -10,7 +10,8 @@
 
 cd "$SLURM_SUBMIT_DIR"
 module load anaconda3
-source activate dune 2>/dev/null || conda activate dune
+eval "$(conda shell.bash hook)"
+conda activate dune
 export PYTHONHASHSEED=0
 python -u -m src.selfplay.evolve_loop --recalib 1500 --paired 3 \
     --league "config/evolve_plan/champion.json,config/evolve_fixed/champion.json,config/gap/best_ref2.json" \

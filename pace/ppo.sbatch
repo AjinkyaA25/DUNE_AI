@@ -13,7 +13,8 @@
 
 cd "$SLURM_SUBMIT_DIR"
 module load anaconda3
-source activate dune 2>/dev/null || conda activate dune
+eval "$(conda shell.bash hook)"
+conda activate dune
 export PYTHONHASHSEED=0
 python -u -m src.selfplay.ppo_train --out models_ppo --games 700 --workers 34 \
     --T 1.0 --eval-every 10 --eval-games 2000
