@@ -98,7 +98,12 @@ def main():
     ap.add_argument("--bench-games", type=int, default=600)
     ap.add_argument("--workers", type=int, default=28)
     ap.add_argument("--seed", type=int, default=31)
+    ap.add_argument("--knobs", default="", help="comma list: mutate only these knobs (and their "
+                    "early./mid./late. versions in --start); Leader generations are skipped")
     A = ap.parse_args()
+    if A.knobs:
+        E.MUTABLE = tuple(k.strip() for k in A.knobs.split(",") if k.strip())
+        A.leader_every = 10 ** 9
     E.LEADERS = True
     os.makedirs(A.out, exist_ok=True)
     log_path, champ_path = os.path.join(A.out, "log.jsonl"), os.path.join(A.out, "champion.json")

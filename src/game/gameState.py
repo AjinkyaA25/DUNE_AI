@@ -766,8 +766,11 @@ class GameState:
         # Combat strength is derived (units + revealed swords), so refresh it
         # after anything done during the Combat phase: a choice inside a
         # combat Intrigue (e.g. Questionable Methods' lose-influence -> +4
-        # swords) adds swords after the card itself was played.
-        if self.phase == Phase.COMBAT and self.current_conflict is not None:
+        # swords) adds swords after the card itself was played. Also during
+        # Player Turns: Sardaukar sword skills count the moment they apply
+        # (user, 2026-10-18: commander in the Conflict, then buy Canny at
+        # Assembly Hall -> +2 strength at once).
+        if self.phase in (Phase.PLAYER_TURNS, Phase.COMBAT) and self.current_conflict is not None:
             for part in self.get_combat_participants():
                 self.update_combat_strength(part)
 
@@ -929,6 +932,30 @@ class GameState:
         usable = p.troops_garrison - getattr(p, "undeployable_this_turn", 0)
         return max(0, min(usable, budget - getattr(p, "deployed_this_turn", 0)))
 
+    def deploy_mix_ok(self, pid: int, budget: int, dt: int, dc: int) -> bool:
+        """May the player deploy dt more plain troops and dc more commanders
+        this turn? The X icon's 2 (and other free deploys) take any unit; a
+        unit recruited this turn only adds a deploy of its own kind (user,
+        2026-10-18: Arrakeen, deploy 3 troops, re-recruit a commander -> only
+        the commander may follow)."""
+        p = self.players[pid]
+        rec = getattr(p, "troops_recruited_this_turn", 0)
+        free = budget - rec
+        if rec <= 0 or free < 0:
+            return True
+        rc = min(rec, getattr(p, "cmd_recruited_this_turn", 0))
+        rt = rec - rc
+        c0 = getattr(p, "deployed_cmd_this_turn", 0)
+        t0 = getattr(p, "deployed_this_turn", 0) - c0
+        return max(0, t0 + dt - rt) + max(0, c0 + dc - rc) <= free
+
+    def _deploy_budget(self, pid: int) -> int:
+        p = self.players[pid]
+        icon = getattr(p, "deploy_icon_this_turn", False)
+        rec = getattr(p, "troops_recruited_this_turn", 0)
+        return max(getattr(p, "deploy_budget_this_turn", 0),
+                   2 + rec + getattr(p, "deploy_extra_this_turn", 0) if icon else rec)
+
     def _open_deploy_actions(self, pid: int) -> List["GameAction"]:
         hi = self.deploy_left(pid)
         out: List[GameAction] = []
@@ -937,11 +964,13 @@ class GameState:
         p = self.players[pid]
         cmd = getattr(p, "commanders_garrison", 0) if self.bl else 0
         plain = p.troops_garrison - cmd
+        budget = self._deploy_budget(pid)
         for n in range(1, hi + 1):
             if cmd:
                 for c in range(max(0, n - plain), min(n, cmd) + 1):
-                    out.append(GameAction(ActionType.RESOLVE_DEPLOY, pid, deploy_count=n, deploy_cmd=c))
-            else:
+                    if self.deploy_mix_ok(pid, budget, n - c, c):
+                        out.append(GameAction(ActionType.RESOLVE_DEPLOY, pid, deploy_count=n, deploy_cmd=c))
+            elif self.deploy_mix_ok(pid, budget, n, 0):
                 out.append(GameAction(ActionType.RESOLVE_DEPLOY, pid, deploy_count=n))
         return out
 
@@ -1078,6 +1107,8 @@ class GameState:
         p0.deploy_budget_this_turn = 0
         p0.deploy_extra_this_turn = 0
         p0.deployed_this_turn = 0
+        p0.deployed_cmd_this_turn = 0
+        p0.cmd_recruited_this_turn = 0
         p0.units_deployed_this_turn = 0
         self._revealing_pid = pid
         self._reveal_open = pid                   # until the Reveal turn ends
@@ -1715,12 +1746,14 @@ class GameState:
                 hi = 0
             cmd = getattr(p, "commanders_garrison", 0) if self.bl else 0
             plain = p.troops_garrison - cmd
+            budget = getattr(p, "deploy_budget_this_turn", 0)
             for n in range(0, hi + 1):
                 if cmd and n:          # which units go: troops and/or commanders
                     for c in range(max(0, n - plain), min(n, cmd) + 1):
-                        actions.append(GameAction(ActionType.RESOLVE_DEPLOY, player_id,
-                                                  deploy_count=n, deploy_cmd=c))
-                else:
+                        if self.deploy_mix_ok(player_id, budget, n - c, c):
+                            actions.append(GameAction(ActionType.RESOLVE_DEPLOY, player_id,
+                                                      deploy_count=n, deploy_cmd=c))
+                elif n == 0 or self.deploy_mix_ok(player_id, budget, n, 0):
                     actions.append(GameAction(ActionType.RESOLVE_DEPLOY,
                                               player_id, deploy_count=n))
 
@@ -1932,6 +1965,8 @@ class GameState:
         ended.troops_recruited_this_turn = 0
         ended.deploy_budget_this_turn = 0
         ended.deployed_this_turn = 0
+        ended.deployed_cmd_this_turn = 0
+        ended.cmd_recruited_this_turn = 0
         ended.deploy_recruited_this_turn = False
         if len(self.players_revealed) == self.num_players:
             self._begin_combat_phase()
@@ -2128,6 +2163,8 @@ class GameState:
         player.turn_serial = getattr(player, "turn_serial", 0) + 1
         player.deploy_budget_this_turn = 0
         player.deployed_this_turn = 0
+        player.deployed_cmd_this_turn = 0
+        player.cmd_recruited_this_turn = 0
         player.units_deployed_this_turn = 0
         player.deploy_icon_this_turn = False
         player.deploy_recruited_this_turn = False
@@ -2389,7 +2426,9 @@ class GameState:
             return                                       # Shaddam's Signet Ring
         n = max(0, min(n, p.troops_garrison))
         if self.bl:
+            c_before = self.bl.commanders_in_conflict.get(player_id, 0)
             self.bl.deploy_commanders(player_id, n, cmd)
+            p.deployed_cmd_this_turn = getattr(p, "deployed_cmd_this_turn", 0)                 + self.bl.commanders_in_conflict.get(player_id, 0) - c_before
         p.troops_garrison -= n
         p.deployed_this_turn = getattr(p, "deployed_this_turn", 0) + n
         self.note_units_deployed(player_id, n)
@@ -2492,6 +2531,8 @@ class GameState:
         player.gained_spice_this_turn = False
         player.deploy_budget_this_turn = 0
         player.deployed_this_turn = 0
+        player.deployed_cmd_this_turn = 0
+        player.cmd_recruited_this_turn = 0
         player.units_deployed_this_turn = 0
         player.deploy_icon_this_turn = False
         player.deploy_recruited_this_turn = False

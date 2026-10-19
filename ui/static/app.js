@@ -64,8 +64,8 @@ function render() {
   renderConflict();
   renderContracts();
   renderPlayers();
+  renderVP();
   renderPile();
-  renderPurchases();
   renderHand(me);
   renderRow(me);
   renderEval();
@@ -147,7 +147,7 @@ function renderConflict() {
         <span class="fz-str" style="border-color:${p.color}">⚔ ${str}</span></div>
       <div class="fz-body">
         <div class="garrison" style="border-color:${p.color}">${unit("cube", gTr)}${gCmd ? unit("dmd", gCmd) : ""}</div>
-        <div class="deployed">${cubes(cTr, "cube")}${cTr > 12 ? `<span class="more">×${cTr}</span>` : ""}${cubes(cCmd, "dmd")}${"🪱".repeat(p.worms)}${cTr + cCmd + p.worms ? `<span class="dn">${cTr}${cCmd ? `+${cCmd}◆` : ""}</span>` : ""}</div>
+        <div class="deployed">${p.duncanAgent ? `<span class="cagent" style="background:${p.color}" title="Duncan Idaho's Agent (Into the Fray): ${p.duncanAgent} strength, can't retreat"></span>` : ""}${cubes(cTr, "cube")}${cTr > 12 ? `<span class="more">×${cTr}</span>` : ""}${cubes(cCmd, "dmd")}${"🪱".repeat(p.worms)}${cTr + cCmd + p.worms ? `<span class="dn">${cTr}${cCmd ? `+${cCmd}◆` : ""}</span>` : ""}</div>
       </div></div>`;
   }).join("");
   $("conflict").innerHTML = `
@@ -233,7 +233,11 @@ const SPACE_BOX = {
   "Arrakeen": [643, 270, 871, 366], "Imperial Basin": [900, 270, 1130, 366],
   "Research Station": [328, 414, 558, 510], "Sietch Tabr": [328, 557, 558, 653],
   "Deep Desert": [606, 414, 836, 510], "Hagga Basin": [884, 414, 1112, 510],
+  // Esmar Tuek's leader space - not printed on the board: its tile, below Sietch Tabr
+  "Tuek's Sietch": [328, 664, 558, 792],
 };
+// spaces drawn as tiles (not on the board picture): what the tile shows
+const TILE_SPACES = { "Tuek's Sietch": { img: "/static/tueks_sietch.webp" } };
 const POST_XY = {
   "Emperor Post": [235, 100], "Spacing Guild Post": [235, 299], "Bene Gesserit Post": [235, 498],
   "Fremen Post": [235, 700], "Landsraad Post": [618, 92], "Green Post": [705, 107],
@@ -242,7 +246,8 @@ const POST_XY = {
   "Hagga Basin Post": [975, 529], "Imperial Basin Post": [1126, 410],
 };
 // where the board shows bonus spice on the maker spaces
-const MAKER_XY = { "Deep Desert": [742, 485], "Hagga Basin": [1019, 485], "Imperial Basin": [1062, 322] };
+const MAKER_XY = { "Deep Desert": [742, 485], "Hagga Basin": [1019, 485], "Imperial Basin": [1062, 322],
+  "Tuek's Sietch": [501, 754] };          // on the tile's maker (sandworm) hexagon
 const BANNER_XY = { "Spice Refinery": [454, 291], "Arrakeen": [709, 291], "Imperial Basin": [969, 291] };
 const COUNCIL_SEATS = [[340, 48], [384, 48], [430, 48], [476, 48]];
 const SWORDMASTER_COIN = [538, 183];
@@ -277,9 +282,11 @@ function renderBoard() {
   const spaces = S.spaces.filter((s) => SPACE_BOX[s.name]).map((s) => {
     const [x0, y0, x1, y1] = SPACE_BOX[s.name];
     const occ = s.occupant != null ? player(s.occupant) : null;
-    const cls = ["bspace", legal.has(s.name) ? "legal" : "", selectedCard && !legal.has(s.name) ? "dim" : ""].join(" ");
-    return `<div class="${cls}" data-space="${esc(s.name)}" title="${esc(s.name)}${occ ? ` · ${esc(pname(occ))}` : ""}"
+    const tile = TILE_SPACES[s.name];
+    const cls = ["bspace", tile ? "tile-space" : "", legal.has(s.name) ? "legal" : "", selectedCard && !legal.has(s.name) ? "dim" : ""].join(" ");
+    return `<div class="${cls}" data-space="${esc(s.name)}" title="${esc(s.name)}${s.special ? `: ${esc(s.special)}` : ""}${occ ? ` · ${esc(pname(occ))}` : ""}"
       style="${at(x0, y0)};width:${pctX(x1 - x0)};height:${pctY(y1 - y0)}">
+      ${tile ? `<img class="tile-img" src="${tile.img}" alt="${esc(s.name)}" draggable="false">` : ""}
       ${occ ? `<span class="agent" style="background:${occ.color}"></span>` : ""}
       ${cmdrs.has(s.name) ? `<span class="cmdr-dot" title="Sardaukar commander available"></span>` : ""}
     </div>`;
@@ -312,60 +319,65 @@ function renderBoard() {
     <div class="conflict" id="conflict" style="${at(706, 562)};width:${pctX(552)};height:${pctY(226)}"></div></div>`;
 }
 
+// Player mats, right of the board: leader, VP, resources, card counts (click a
+// mat for everything the player holds)
 function renderPlayers() {
-  $("players").innerHTML = `<div class="players-grid">` + S.players.map((p) => {
-    const infl = FACTIONS.map(([f, tag]) =>
-      `<div class="${p.alliances[f] ? "ally" : ""}" title="${f.replace("_", " ")}${p.alliances[f] ? " — alliance" : ""}">${tag} ${p.influence[f]}</div>`).join("");
-    const hand = !p.you && p.hand ? `<div class="hidden-hand">${p.hand.map((c) => c.img
-      ? `<img src="${c.img}" data-img="${c.img}" title="${esc(c.name)}">` : `<span class="chip">${esc(c.name)}</span>`).join("")}</div>` : "";
-    const intr = !p.you && p.intrigues ? (p.intrigues.length
-      ? `<div class="intr-imgs">${p.intrigues.map((x) => x.img ? `<img src="${x.img}" data-img="${x.img}" title="${esc(x.name)}" alt="${esc(x.name)}">` : `<span class="chip">${esc(x.name)}</span>`).join("")}</div>`
-      : `<div class="sub">Intrigue: none</div>`) : "";
+  const spiesOn = (p) => Object.values(S.spyPosts || {}).flat().filter((id) => id === p.id).length;
+  $("players").innerHTML = S.players.map((p) => {
     const L = p.leader;
-    const leader = L ? `<div class="leader">${L.img ? `<img src="${L.img}" data-img="${L.img}" alt="${esc(L.name)}" title="${esc(L.name)}">` : ""}
-      <div><div class="lname">${esc(L.name)}</div>${(L.status || []).map((t) => `<div class="lstat">${esc(t)}</div>`).join("")}
-      ${L.nav ? `<div class="nav-slots">${L.nav.map((c) => c.img
-        ? `<img src="${c.img}" data-img="${c.img}" class="${c.played ? "played" : ""}" title="Slot ${c.slot}${c.played ? " (played)" : ""}" alt="Navigation slot ${c.slot}">`
-        : `<span class="nav-back" title="Slot ${c.slot}: face down">${c.slot}</span>`).join("")}</div>` : ""}</div></div>` : "";
-    const rv = p.revealedThisRound ? `<div class="revealed-line" title="What this player revealed this round">Revealed: ${p.revealedThisRound.persuasion} persuasion · ${p.revealedThisRound.strength} strength</div>` : "";
+    const lstat = L ? [L.name, ...(L.status || [])].join(" · ") : "";
+    const portrait = L && L.img ? `<img class="mat-leader" src="${L.img}" data-img="${L.img}" alt="${esc(L.name)}" title="${esc(lstat)}">`
+      : `<div class="mat-leader none">${esc(L ? L.name : "")}</div>`;
+    const thumb = (img, name, cls, extra = "") => img
+      ? `<img class="${cls}" src="${img}" data-img="${img}" alt="${esc(name)}" title="${esc(name)}${extra}">`
+      : `<span class="chip mini" title="${esc(name)}${extra}">${esc(name)}</span>`;
+    const techs = (p.techs || []).map((t) => thumb(t.img, t.name, "mt-tech", t.text ? `: ${t.text}` : "")).join("");
+    const cons = (p.contractList || []).map((c) => `<span class="mt-con ${c.done ? "done" : ""}">${thumb(c.img, c.name, "", c.done ? " (completed)" : " (active)")}${c.done ? "<i>✓</i>" : ""}</span>`).join("");
+    const skills = (p.skillImgs || []).map(([k, img]) => thumb(img, k, "mt-skill")).join("");
+    const owned = techs || cons || skills ? `<div class="mat-owned">${techs}${cons}${skills}</div>` : "";
+    const badges = [p.swordmaster ? `<span class="bdg" title="Swordmaster: 3rd agent">⚔</span>` : "",
+      p.councilor ? `<span class="bdg" title="High Council seat: +2 persuasion every Reveal">🏛</span>` : "",
+      p.revealedThisRound ? `<span class="bdg rv" title="Revealed this round">${p.revealedThisRound.persuasion}◆ ${p.revealedThisRound.strength}⚔</span>`
+        : p.revealNow ? `<span class="bdg now" title="If ${p.you ? "you revealed" : "they revealed"} right now: persuasion ◆ (cards at their current value, techs, Charismatic, High Council, Assembly Hall, Navigation) and strength ⚔">Reveal now ${p.revealNow.persuasion}◆ ${p.revealNow.strength}⚔</span>` : ""].join("");
     const unseenN = (p.unseen || []).reduce((t, x) => t + x[1], 0);
-    const piles = `<div class="piles">
-      <button class="pile-btn" data-pile="discard" data-pid="${p.id}">Discard <b>${p.discard.length}</b></button>
-      <button class="pile-btn" data-pile="unseen" data-pid="${p.id}">${p.you ? "Deck" : "Hand or deck"} <b>${unseenN}</b></button></div>`;
-    const bp = p.buyPower ? `<div class="sub" title="from public info: their owned cards minus discard and played cards">Reveal persuasion ~${p.buyPower.mean} · reach 5: ${Math.round(100 * p.buyPower.p["5"])}% · 7: ${Math.round(100 * p.buyPower.p["7"])}% · 9: ${Math.round(100 * p.buyPower.p["9"])}%</div>` : "";
-    const played = p.inPlay.length ? `<div class="sub">Played: ${p.inPlay.map((c) => esc(c.name)).join(", ")}</div>` : "";
-    return `<div class="pl ${S.active === p.id && !S.gameOver ? "active" : ""}" data-pid="${p.id}" title="Click for everything this player holds" style="border-left-color:${p.color}">
-      <div class="hd"><span class="who">${esc(pname(p))}</span><span class="vp">${p.vp} VP</span></div>
-      <div class="res"><span>💰 <b>${p.solari}</b></span><span>🟠 <b>${p.spice}</b></span><span>💧 <b>${p.water}</b></span>
-        <span title="Agents this player can still send this round (out of their total)" style="font-weight:600">🧍 Agents left <b style="font-size:1.15em">${p.agentsAvail}</b> of ${p.agentsTotal}</span><span title="garrison: troops (commanders included)">🛡 <b>${p.garrison}</b></span><span title="Spies: in supply / on the board">🕵 <b>${p.spies}</b> / ${Object.values(S.spyPosts || {}).flat().filter((id) => id === p.id).length} on board</span></div>
-      ${leader}${rv}
-      <div class="infl">${infl}</div>
-      ${p.topCard ? `<div class="sub topcard">Glowglobes · top of deck: <b data-img="${p.topCard.img || ""}">${esc(p.topCard.name)}</b></div>` : ""}
-      <div class="sub">Hand ${p.handSize} · deck ${p.deck} · intrigue ${p.intrigueCount}${p.swordmaster ? " · Swordmaster" : ""}${p.councilor ? " · High Council" : ""}${p.revealed ? " · revealed" : ""}</div>
-      ${p.techs && p.techs.length ? `<div class="owned"><span class="owned-lbl">Techs</span><div class="techs-mini">${p.techs.map((t) => t.img ? `<img src="${t.img}" data-img="${t.img}" title="${esc(t.name)}: ${esc(t.text)}">` : `<span class="chip">${esc(t.name)}</span>`).join("")}</div></div>` : ""}
-      ${(p.contractList || []).length ? `<div class="owned"><span class="owned-lbl">Contracts</span><div class="contracts-mini">${p.contractList.map((c) => `<span class="cm ${c.done ? "done" : ""}" title="${esc(c.name)} · ${c.done ? "completed" : "active"}">${c.img ? `<img src="${c.img}" data-img="${c.img}" alt="${esc(c.name)}">` : `<span class="chip">${esc(c.name)}</span>`}${c.done ? `<i>✓</i>` : ""}</span>`).join("")}</div></div>` : ""}
-      ${S.bl ? `<div class="sub">Commanders: ${p.cmdGarrison} garrison · ${p.cmdSupply} supply${p.cmdInConflict ? ` · ${p.cmdInConflict} in Conflict` : ""}${p.skills.length ? ` · skills: ${p.skills.map(esc).join(", ")}` : ""}</div>` : ""}
-      ${S.bl && p.you && p.cmdSupply > 0 ? `<div class="sub cmd-hint">⚔ ${p.cmdSupply} commander${p.cmdSupply > 1 ? "s" : ""} in supply: re-recruit for ${S.bl.commanderCost} solari after any Agent turn</div>` : ""}
-      <div class="sub">Battle icons: ${p.battleIcons.length ? iconChips(p.battleIcons) : "none"}</div>
-      ${played}${bp}${piles}${intr}${hand}
+    return `<div class="pl mat ${S.active === p.id && !S.gameOver ? "active" : ""}" data-pid="${p.id}" title="Click for everything this player holds" style="--pc:${p.color}">
+      ${portrait}
+      <div class="mat-body">
+        <div class="mat-hd"><span class="who">${esc(pname(p))}</span>${badges}<span class="vp" title="victory points">${p.vp}<small>VP</small></span></div>
+        <div class="mat-res">
+          <span title="solari">💰<b>${p.solari}</b></span><span title="spice">🟠<b>${p.spice}</b></span><span title="water">💧<b>${p.water}</b></span>
+          <span title="troops in garrison (commanders included)">🛡<b>${p.garrison}</b></span>
+          <span title="agents left this round / total">🧍<b>${p.agentsAvail}</b>/${p.agentsTotal}</span>
+          <span title="spies in supply / on the board">🕵<b>${p.spies}</b>/${spiesOn(p)}</span>
+        </div>
+        <div class="mat-cards">
+          <span title="cards in hand">✋<b>${p.handSize}</b></span>
+          <button class="pile-btn" data-pile="unseen" data-pid="${p.id}" title="${p.you ? "your deck" : "in hand or deck"}">🂠<b>${p.you ? p.deck : unseenN}</b></button>
+          <button class="pile-btn" data-pile="discard" data-pid="${p.id}" title="discard pile">🗑<b>${p.discard.length}</b></button>
+          <span title="Intrigue cards">📜<b>${p.intrigueCount}</b></span>
+          ${S.bl ? `<span title="Sardaukar commanders: garrison / supply / in the Conflict">🎖<b>${p.cmdGarrison}</b>/${p.cmdSupply}${p.cmdInConflict ? `/${p.cmdInConflict}⚔` : ""}</span>` : ""}
+        </div>
+        ${owned}
+      </div>
     </div>`;
-  }).join("") + `</div>`;
+  }).join("");
+}
+
+// VP track, between the board and the player mats: one marker per player
+function renderVP() {
+  const top = Math.max(15, ...S.players.map((p) => p.vp));
+  let rows = "";
+  for (let v = top; v >= 0; v--) {
+    const here = S.players.filter((p) => p.vp === v).map((p) =>
+      `<i style="background:${p.color}" title="${esc(pname(p))}: ${p.vp} VP"></i>`).join("");
+    rows += `<div class="vprow ${v === 10 ? "end" : ""}" title="${v} VP${v === 10 ? " · reaching 10 ends the game after the round" : ""}"><span class="vpn">${v}</span><span class="vpm">${here}</span></div>`;
+  }
+  $("vptrack").innerHTML = `<div class="vpt-title">VP</div>${rows}`;
 }
 
 const ICON_CLS = { "Crysknife": "ic-knife", "Desert Mouse": "ic-mouse", "Ornithopter": "ic-thopter", "Wild": "ic-wild" };
 function iconChips(list) {
   return list.map((i) => `<span class="bicon ${ICON_CLS[i] || ""}">${esc(i)}</span>`).join("");
-}
-
-function renderPurchases() {
-  $("purchases").innerHTML = `<div class="panel-title">Cards bought <span class="muted">(by round; hover for the card)</span></div>
-    <div class="buy-grid">` + S.players.map((p) => `
-      <div class="buycol" style="border-top:3px solid ${p.color}">
-        <div class="who">${esc(pname(p))} <span class="muted">· ${p.purchases.length}</span></div>
-        ${p.purchases.length ? p.purchases.map((b) => `
-          <div class="buy" data-img="${b.img || ""}"><span class="r">R${b.round}</span> ${esc(b.card)}${b.cost != null ? ` <span class="muted">(${b.cost})</span>` : ""}${b.free ? ` <span class="muted">free</span>` : ""}</div>`).join("")
-          : `<div class="muted">nothing yet</div>`}
-      </div>`).join("") + `</div>`;
 }
 
 function renderHand(me) {
@@ -378,6 +390,7 @@ function renderHand(me) {
   if (me.glowglobes)                            // Glowglobes: the top of your deck, always visible
     $("hand").innerHTML += `<div class="topdeck"><div class="topdeck-lbl">Top of deck<br><span class="muted">Glowglobes</span></div>` +
       (me.topCard ? cardEl(me.topCard, "") : `<span class="muted">deck empty: the next draw reshuffles your discard</span>`) + `</div>`;
+  $("persuasionNow").innerHTML = me && me.revealNow ? `If you revealed now: <b>${me.revealNow.persuasion}</b> persuasion · <b>${me.revealNow.strength}</b> strength` : "";
   $("handHint").textContent = myTurn && agentCards.size
     ? (selectedCard ? `· ${selectedCard}: pick a highlighted space` : "· click a card, then a highlighted space") : "";
   const intrActs = new Map(S.actions.filter((a) => a.type === "play_intrigue").map((a) => [a.intrigue, a.i]));
@@ -471,29 +484,67 @@ function renderTurn() {
   $("turn").innerHTML = h;
 }
 
+// Move strip above the board: one bordered box per move (player colour), with
+// pictures of the card played + space, Intrigues played and anything gained.
+// Deploys are left out: the Conflict on the board shows them.
+const MOVE_BADGE = { intrigue: "📜", buy: "🛒", tech: "⚙", skill: "⚔", contract: "📃" };
 function renderLog() {
-  const entries = [...S.log].reverse();
-  $("log").innerHTML = entries.map((e) => {
-    const p = player(e.pid);
-    const ai = !!e.explain;
-    let why = "";
-    if (ai) {
-      const vals = e.explain.rows.map((r) => r.value);
-      const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
-      const isSearch = e.explain.kind === "search";
-      why = `<div class="why"><table>` + e.explain.rows.map((r) => `
-        <tr class="${r.chosen ? "chosen" : ""}"><td>${r.chosen ? "✔" : ""}</td><td>${esc(r.label)}</td>
-          <td style="width:70px"><div class="bar"><div style="width:${Math.max(4, (100 * (r.value - lo)) / span)}%"></div></div></td>
-          <td style="text-align:right">${isSearch ? Math.round(100 * r.value) + "%" : r.value}</td></tr>`).join("") +
-        `</table><div class="note">${esc(e.explain.note)}${e.secs ? ` · ${e.secs}s` : ""}</div></div>`;
-    }
-    return `<div class="le ${ai ? "ai" : ""} ${openLog.has(e.n) ? "open" : ""}" data-n="${e.n}">
-      <span class="r">R${e.round}</span><span class="pd" style="background:${p ? p.color : "#666"}"></span>
-      <span class="${ai ? "has-why" : ""}">${p && p.you ? "<b>You</b>" : esc(p ? p.colorName : "?")}: ${esc(e.label)}</span>
-      ${$("evalOn").checked && e.ev !== undefined ? evDelta(e.ev) : ""}
-      ${e.error ? `<span style="color:var(--bad)"> (${esc(e.error)})</span>` : ""}
-      ${e.ai_pick && !e.agree ? `<div class="aipick">AI would have played: ${esc(e.ai_pick)}</div>` : ""}${why}</div>`;
-  }).join("");
+  // one rectangle per turn: a player's consecutive moves (card + space,
+  // Intrigues, buys, ...) until someone else moves
+  const turns = [];
+  for (const e of S.log) {
+    const t = turns[turns.length - 1];
+    if (t && t.pid === e.pid && t.round === e.round) t.entries.push(e);
+    else turns.push({ pid: e.pid, round: e.round, entries: [e] });
+  }
+  const icon = (ic) => {
+    if (ic.kind === "reveal") return `<div class="mv-ic mv-reveal" title="Reveal: persuasion ◆ and swords revealed ⚔ (cards and techs)">Reveal<br><b>${esc(ic.text)}</b></div>`;
+    const badge = MOVE_BADGE[ic.kind] ? `<span class="mv-badge" title="${ic.kind}">${MOVE_BADGE[ic.kind]}</span>` : "";
+    const pic = ic.img ? `<img src="${ic.img}" alt="${esc(ic.name)}">` : `<span class="mv-name">${esc(ic.name)}</span>`;
+    const space = ic.space ? `<span class="mv-space">${esc(ic.space)}</span>` : "";
+    return `<div class="mv-ic mv-${ic.kind}" data-img="${ic.img || ""}" title="${esc(ic.name)}${ic.space ? " → " + esc(ic.space) : ""}">${pic}${badge}${space}</div>`;
+  };
+  let lastRound = null;
+  const boxes = [];
+  turns.reverse().forEach((t) => {
+    const icons = t.entries.flatMap((e) => e.icons || []);
+    if (!icons.length) return;
+    if (lastRound !== null && t.round !== lastRound) boxes.push(`<div class="mv-round">R${lastRound}</div>`);
+    lastRound = t.round;
+    const p = player(t.pid);
+    const who = p && p.you ? "You" : p ? p.colorName : "?";
+    boxes.push(`<div class="mv ${t.entries.some((e) => e.explain) ? "ai" : ""}" data-n="${t.entries.map((e) => e.n).join(",")}" style="--pc:${p ? p.color : "#666"}"
+      title="${esc(who + ": " + t.entries.map((e) => e.label).join(" · "))}">${icons.map(icon).join("")}</div>`);
+  });
+  if (lastRound !== null) boxes.push(`<div class="mv-round">R${lastRound}</div>`);
+  const el = $("moves"), keep = el.scrollLeft;
+  el.innerHTML = boxes.join("") || `<span class="muted">Moves will show here</span>`;
+  el.scrollLeft = keep;                       // stay where the player scrolled to
+}
+
+// click a move: what it was, and for an AI move what else it considered
+function renderMoveDetail(list) {
+  $("pileBody").classList.add("detail");
+  $("pileBody").innerHTML = list.map(moveDetail).join("");
+  const p = player(list[0].pid);
+  $("pileTitle").innerHTML = `R${list[0].round} · ${p && p.you ? "You" : esc(p ? p.colorName : "?")}`;
+}
+function moveDetail(e) {
+  let why = "";
+  if (e.explain) {
+    const vals = e.explain.rows.map((r) => r.value);
+    const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+    const isSearch = e.explain.kind === "search";
+    why = `<div class="why"><table>` + e.explain.rows.map((r) => `
+      <tr class="${r.chosen ? "chosen" : ""}"><td>${r.chosen ? "✔" : ""}</td><td>${esc(r.label)}</td>
+        <td style="width:70px"><div class="bar"><div style="width:${Math.max(4, (100 * (r.value - lo)) / span)}%"></div></div></td>
+        <td style="text-align:right">${isSearch ? Math.round(100 * r.value) + "%" : r.value}</td></tr>`).join("") +
+      `</table><div class="note">${esc(e.explain.note)}${e.secs ? ` · ${e.secs}s` : ""}</div></div>`;
+  }
+  return `<section class="pd-sec"><div>${esc(e.label)}${e.error ? ` <span style="color:var(--bad)">(${esc(e.error)})</span>` : ""}</div>
+    ${e.ai_pick && !e.agree ? `<div class="aipick">AI would have played: ${esc(e.ai_pick)}</div>` : ""}
+    ${$("evalOn").checked && e.ev !== undefined ? evDelta(e.ev) : ""}
+    <div class="pd-row">${(e.icons || []).filter((ic) => ic.img).map((ic) => `<img class="pd-tech" src="${ic.img}" data-img="${ic.img}" title="${esc(ic.name)}">`).join("")}</div>${why}</section>`;
 }
 
 // ---------------------------------------------------------------- events
@@ -578,10 +629,31 @@ function renderPlayerDetail(p) {
     (p.skillImgs || []).length ? p.skillImgs.map(([k, img]) => img ? `<img class="pd-skill" src="${img}" data-img="${img}" title="${esc(k)}">` : `<span class="chip">${esc(k)}</span>`).join("")
       : `<span class="muted">no skills</span>`));
   h.push(sec(`In play this round (${p.inPlay.length})`, cards(p.inPlay)));
+  const L = p.leader;
+  if (L) h.push(sec(`Leader: ${esc(L.name)}`, `${L.img ? `<img class="pd-leader" src="${L.img}" data-img="${L.img}" alt="${esc(L.name)}">` : ""}
+    <div>${(L.status || []).map((t) => `<div class="lstat">${esc(t)}</div>`).join("")}
+    ${L.nav ? `<div class="nav-slots">${L.nav.map((c) => c.img
+      ? `<img src="${c.img}" data-img="${c.img}" class="${c.played ? "played" : ""}" title="Slot ${c.slot}${c.played ? " (played)" : ""}" alt="Navigation slot ${c.slot}">`
+      : `<span class="nav-back" title="Slot ${c.slot}: face down">${c.slot}</span>`).join("")}</div>` : ""}
+    ${p.topCard ? `<div class="sub">Glowglobes · top of deck: <b>${esc(p.topCard.name)}</b></div>` : ""}
+    ${p.buyPower ? `<div class="sub">Reveal persuasion ~${p.buyPower.mean} · reach 5: ${pct(p.buyPower.p["5"])} · 7: ${pct(p.buyPower.p["7"])} · 9: ${pct(p.buyPower.p["9"])}</div>` : ""}</div>`));
+  h.push(sec(`Cards bought (${p.purchases.length})`, p.purchases.length ? p.purchases.map((b) =>
+    `<div class="buy" data-img="${b.img || ""}"><span class="r">R${b.round}</span> ${esc(b.card)}${b.cost != null ? ` <span class="muted">(${b.cost})</span>` : ""}${b.free ? ` <span class="muted">free</span>` : ""}</div>`).join("")
+    : `<span class="muted">nothing yet</span>`));
   $("pileTitle").innerHTML = `${esc(pname(p))} · <b>${p.vp} VP</b> · 💰${p.solari} 🟠${p.spice} 💧${p.water}${p.swordmaster ? " · Swordmaster" : ""}${p.councilor ? " · High Council" : ""}`;
   $("pileBody").classList.add("detail");
   $("pileBody").innerHTML = h.join("");
 }
+document.addEventListener("click", (ev) => {
+  const mv = ev.target.closest(".moves .mv");
+  if (!mv || !S) return;
+  const ns = mv.dataset.n.split(",").map(Number);
+  const list = S.log.filter((x) => ns.includes(x.n));
+  if (!list.length) return;
+  pileView = null;
+  renderMoveDetail(list);
+  $("pileDlg").showModal();
+});
 document.addEventListener("click", (ev) => {
   const b = ev.target.closest(".pile-btn");
   const card = !b && ev.target.closest(".players .pl");
@@ -593,6 +665,10 @@ document.addEventListener("click", (ev) => {
 });
 $("pileDlg").addEventListener("close", () => { pileView = null; });
 $("pileDlg").addEventListener("click", (ev) => { if (ev.target === $("pileDlg") || ev.target.closest(".pile-close")) $("pileDlg").close(); });
+
+$("moves").addEventListener("wheel", (ev) => {     // wheel scrolls the move strip sideways
+  if (Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) { $("moves").scrollLeft += ev.deltaY; ev.preventDefault(); }
+}, { passive: false });
 
 const zoom = $("zoom");
 document.addEventListener("mousemove", (ev) => {

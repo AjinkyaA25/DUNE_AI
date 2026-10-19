@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -79,6 +79,35 @@ TUNE_DEFAULTS = {
     # the rewards (4th of 4) are lost for nothing - each one expected to be
     # lost that way costs this many troop-values (fight_ev). 0 = off
     "out_of_rewards": 0.0,
+    # fight_learned: weight of the rival forecast fitted on recorded games
+    # (src/ai/fight_forecast.py) for rivals who have NOT revealed yet, blended
+    # with the hand-made rule (0 = rule only, 1 = learned only); revealed
+    # rivals keep the rule (as accurate there). fight_own: 1 = my own swords
+    # still to come from the fitted model instead of 0.7 x hand swords
+    "fight_learned": 0.0, "fight_own": 0.0,
+    # intrigue_count: opponents' Intrigues valued at the average Conflict
+    # swords of the cards still unseen (played ones are public until the
+    # reshuffle), x this weight; 0 = the flat 0.6 swords per card
+    "intrigue_count": 0.0,
+    # fight_calib: 1 = "will this rival finish ahead of me?" odds calibrated
+    # on real outcomes (models_fight/calibration.json); 0 = plain normal curve
+    "fight_calib": 0.0,
+    # deploy_wait: cost per troop deployed while I still have Agents to place
+    # and rivals have not revealed, x the share of rivals still hidden
+    "deploy_wait": 0.0,
+    # combat_ev: value a combat-space Agent move by the best deploy it opens
+    # (fight_ev with the calibrated odds) x this, instead of the flat
+    # combat x Conflict worth x garrison rule; 0 = the flat rule
+    "combat_ev": 0.0,
+    # judgements instead of flat rules (user, 2026-10-18): tsmf_judge = TSMF
+    # as 1 VP now minus the deck dilution over the draws left; hc_judge = the
+    # High Council seat as +2 persuasion x what it buys x Reveals left; 0 = old rule
+    "tsmf_judge": 0.0, "hc_judge": 0.0,
+    # persuasion economy (user, 2026-10-17: enough persuasion to buy TSMF
+    # every round late): hc_rush = extra value per round left for the High
+    # Council seat (+2 persuasion each Reveal); starter_trash = extra value
+    # for trashing a weak starter card (Dagger, Convincing Argument, ...)
+    "hc_rush": 0.0, "starter_trash": 0.0,
     "fight_model": 1,        # 0 = the old deploy / combat-intrigue scoring (for A/B)
     # deck_model 1: value a buy by how it changes the average card you draw
     # for the rest of the game (dilution), not in isolation; deck_k scales it
@@ -108,6 +137,10 @@ TUNE_DEFAULTS = {
     # short of 2, bonus a TSMF buy, value persuasion on bought cards, and
     # value agent moves that keep 9+ persuasion for the Reveal turn
     "tsmf_goal": 0.0,
+    # smf_plan: value per agent move of how close it keeps the Reveal turn to
+    # the 9 persuasion for TSMF, counting cards it draws (_smf_plan_value);
+    # use early./mid./late. versions to learn WHEN to aim for TSMF
+    "smf_plan": 0.0,
     # pers_w: extra value per persuasion point on a card (buying it, keeping
     # it out of the trash) - persuasion is what reaches 9 for TSMF
     "pers_w": 0.0,
@@ -217,7 +250,10 @@ def split_phases(tuning: Optional[dict]) -> Dict[str, dict]:
 _TUNE = dict(TUNE_DEFAULTS)
 
 # value a knob that is off (0) starts from when a mutation / Leader weight turns it on
-SEED_ON = {"maker_bonus": 0.5, "alliance": 0.5, "contract_stack": 1.0, "out_of_rewards": 1.0}
+SEED_ON = {"maker_bonus": 0.5, "alliance": 0.5, "contract_stack": 1.0, "out_of_rewards": 1.0,
+           "hc_rush": 0.5, "starter_trash": 1.0, "smf_plan": 2.0, "tsmf_goal": 2.0,
+           "pers_w": 0.3, "buy_plan": 1.0, "fight_learned": 0.5, "intrigue_count": 0.5,
+           "deploy_wait": 0.5, "combat_ev": 1.0, "tsmf_judge": 1.0, "hc_judge": 1.0, "deck_model": 1}
 
 
 def _apply_tuning(t: dict) -> None:
@@ -774,6 +810,30 @@ def _deck_buy_value(gs: GameState, pid: int, card) -> float:
     return v
 
 
+def _tsmf_judgement(gs: GameState, pid: int, card) -> float:
+    """The Spice Must Flow judged (user, 2026-10-18): 1 VP now, priced by how
+    close the game is to its end, MINUS a weak card in the deck = the times
+    it will still be drawn x how much worse it plays than the deck's average
+    card. Early that costs a lot of draws; late almost none."""
+    p = gs.players[pid]
+    owned = [c for z in (p.deck, p.discard, p.hand, p.in_play) for c in z]
+    mean = sum(_card_play_quality(gs, pid, c) for c in owned) / max(1, len(owned))
+    draws_left = max(0.0, 9.5 - gs.round) * 5.0          # ~5 cards a round
+    my_draws = draws_left / (len(owned) + 1)
+    dilution = my_draws * max(0.0, mean - _card_play_quality(gs, pid, card))
+    return _reward_worth(gs, pid, {"vp": 1}) - dilution
+
+
+def _hc_judgement(gs: GameState, pid: int) -> float:
+    """The High Council seat judged: +2 persuasion on every Reveal left, each
+    worth 2 x what a point of persuasion buys - the Row cards' average value
+    per persuasion of cost (an average: the Row changes before most of those
+    Reveals, so one card that +2 happens to unlock today is not the price)."""
+    per = [max(0.0, _acquire_card_value(gs, pid, c)) / c.cost for c in gs.imperium_row if (c.cost or 0) > 0]
+    reveals_left = max(0, 10 - gs.round) + (0 if pid in gs.players_revealed else 1)
+    return reveals_left * 2.0 * (sum(per) / len(per) if per else 0.0)
+
+
 def _acquire_card_value(gs: GameState, pid: int, card, lean: bool = False) -> float:
     if _TUNE.get("deck_model", 0):
         return _deck_buy_value(gs, pid, card)
@@ -830,8 +890,10 @@ def _acquire_card_value(gs: GameState, pid: int, card, lean: bool = False) -> fl
     # TSMF is a late-game VP dump, not a card that compounds into future turns
     # like a Row card does — rarely worth it before round 4; from then on it
     # competes normally (i.e. only wins out when the Row has nothing better).
-    if card.name == "The Spice Must Flow" and gs.round < 4 and not _TUNE.get("tsmf_early", 0):
+    if card.name == "The Spice Must Flow" and gs.round < 4 and not _TUNE.get("tsmf_early", 0)             and not _TUNE.get("tsmf_judge", 0):
         s *= 0.15
+    if card.name == "The Spice Must Flow" and _TUNE.get("tsmf_judge", 0):
+        s = _TUNE["tsmf_judge"] * _tsmf_judgement(gs, pid, card)
 
     # Prepare the Way is a cheap tempo/ramp card, not a payload: the 2nd copy is
     # worth far less than the first (same conditional solari, same Landsraad/BG
@@ -854,6 +916,52 @@ def _acquire_card_value(gs: GameState, pid: int, card, lean: bool = False) -> fl
         s -= _dilution_penalty(gs, p)
     s += _dp_buy_bonus(gs, pid, card)
     return s
+
+
+def _ci_card_swords(ic) -> float:
+    """Swords one Intrigue card adds in a Conflict (0 if it isn't a Combat Intrigue)."""
+    from src.game.intrigue.intrigue import IntrigueTiming
+    ts = ic.timing if isinstance(ic.timing, (set, tuple, list, frozenset)) else (ic.timing,)
+    if IntrigueTiming.COMBAT not in ts:
+        return 0.0
+    sw = 0.0
+    for e in ic.effects:
+        fe = _flatten(e)
+        v = fe.get("swords", 0)
+        sw += v if isinstance(v, (int, float)) else 2.0
+        for sub in fe.values():
+            if isinstance(sub, dict) and isinstance(sub.get("swords"), (int, float)):
+                sw += sub["swords"]
+    return sw if sw else 2.0                            # deploy / pull-troop combat cards ~= 2
+
+
+_UNSEEN_CACHE: Dict[tuple, Tuple[float, float]] = {}
+
+
+def _unseen_intrigue_swords(gs: GameState, viewer: Optional[int]) -> Tuple[float, float]:
+    """(mean, variance) of the Conflict swords on one Intrigue card `viewer`
+    cannot see (user, 2026-10-18: a played Intrigue is gone until the deck is
+    reshuffled - track what is left). Unseen = the Intrigue deck + the other
+    players' hands: the discard pile is public and my own hand is known."""
+    hands = tuple(len(q.intrigue_cards) for q in gs.players)
+    key = (id(gs), viewer, len(gs.intrigue_deck), len(gs.intrigue_discard), hands)
+    hit = _UNSEEN_CACHE.get(key)
+    if hit is not None:
+        return hit
+    pool = list(gs.intrigue_deck)
+    for q in gs.players:
+        if q.id != viewer:
+            pool += q.intrigue_cards
+    if not pool:
+        out = (0.0, 0.0)
+    else:
+        xs = [_ci_card_swords(c) for c in pool]
+        m = sum(xs) / len(xs)
+        out = (m, sum((x - m) ** 2 for x in xs) / len(xs))
+    if len(_UNSEEN_CACHE) > 4096:
+        _UNSEEN_CACHE.clear()
+    _UNSEEN_CACHE[key] = out
+    return out
 
 
 def _own_combat_intrigue_swords(gs: GameState, pid: int) -> float:
@@ -926,8 +1034,24 @@ def _skill_swords(gs: GameState, pid: int, assume_commander: bool = False) -> fl
         bl.commanders_in_conflict[pid] = 0
 
 
-def _opp_fight(gs: GameState, q: int):
-    """(expected final strength, spread, can_place) of opponent q."""
+def _opp_fight(gs: GameState, q: int, viewer: Optional[int] = None):
+    """(expected final strength, spread, can_place) of opponent q, as player
+    `viewer` sees it. can_place may be a probability (learned forecast:
+    P(in the fight))."""
+    mu, sd, can = _opp_fight_rule(gs, q, viewer)
+    lam = _TUNE.get("fight_learned", 0)
+    if lam and gs.phase.name != "COMBAT" and q not in gs.players_revealed:
+        from src.ai.fight_forecast import rival
+        r = rival(gs, q)
+        if r is not None:
+            p_in, lmu, lsd = r
+            lam = min(1.0, lam)
+            return (mu + lam * (lmu - mu), sd + lam * (lsd - sd),
+                    float(can) + lam * (p_in - float(can)))
+    return mu, sd, can
+
+
+def _opp_fight_rule(gs: GameState, q: int, viewer: Optional[int] = None):
     p = gs.players[q]
     units = gs.troops_in_conflict.get(q, 0) + gs.sandworms_in_conflict.get(q, 0)
     vis = 2 * gs.troops_in_conflict.get(q, 0) + 3 * gs.sandworms_in_conflict.get(q, 0) \
@@ -947,7 +1071,16 @@ def _opp_fight(gs: GameState, q: int):
                     pot += mean * max(0, len(p.hand) - p.agents_available)
             else:
                 pot += 2.0                               # reveal swords, on average
-    pot += 1.2 * min(len(p.intrigue_cards), 3) * 0.5     # combat intrigues maybe
+    ci_var = 0.0
+    if _TUNE.get("intrigue_count", 0):
+        # each of q's Intrigues is an unseen card: its swords on average, from
+        # what is left after the played (public) ones
+        m, v = _unseen_intrigue_swords(gs, viewer)
+        k = len(p.intrigue_cards)
+        pot += _TUNE["intrigue_count"] * k * m
+        ci_var = k * v
+    else:
+        pot += 1.2 * min(len(p.intrigue_cards), 3) * 0.5     # combat intrigues maybe
     vis += _skill_swords(gs, q)
     bl = getattr(gs, "bl", None)
     if bl is not None and _TUNE.get("opp_cmdr", 0) and gs.phase.name != "COMBAT"             and p.agents_available > 0 and p.solari >= bl.commander_cost(q)             and (p.commanders_supply > 0 or any(bl.commander_on_space.values()))             and not bl.commanders_in_conflict.get(q, 0):
@@ -956,7 +1089,61 @@ def _opp_fight(gs: GameState, q: int):
         pot += 0.5 * _skill_swords(gs, q, assume_commander=True)
     can = units > 0 or (gs.phase.name != "COMBAT" and p.agents_available > 0
                         and p.troops_garrison > 0)
+    if ci_var:
+        return vis + pot, (1.5 + 0.9 * (pot ** 0.5)) + 0.5 * ci_var ** 0.5, can
     return vis + pot, 1.5 + 0.9 * (pot ** 0.5), can
+
+
+_CALIB: Dict[str, object] = {"m": None, "loaded": False}
+
+
+def _p_ahead(mu: float, sd: float, can, my_strength: float, revealed: bool = False) -> float:
+    """P(this rival finishes ahead of me). fight_calib on: the odds fitted on
+    real outcomes (src/selfplay/fight_calib.py) - the AI ends ~2.5 stronger
+    than it estimates, and Reveal / Intrigue swings make the extremes less
+    sure - for the forecast blend in use (nearest fight_learned weight), with
+    separate odds against a rival who has already revealed (user, 2026-10-18:
+    only Combat Intrigues are left to come, so deploy what the fight needs)."""
+    z = (mu - my_strength) / sd
+    if _TUNE.get("fight_calib", 0):
+        if not _CALIB["loaded"]:
+            _CALIB["loaded"] = True
+            try:
+                import json, os
+                path = os.path.join(os.path.dirname(__file__), "..", "..", "models_fight", "calibration.json")
+                with open(path) as fh:
+                    _CALIB["m"] = {float(k): v for k, v in json.load(fh).items()}
+            except (OSError, ValueError):
+                _CALIB["m"] = None
+        m = _CALIB["m"]
+        if m:
+            c = m[min(m, key=lambda k: abs(k - min(1.0, _TUNE.get("fight_learned", 0.0))))]
+            c = c.get("rev" if revealed else "unrev", c)
+            u = max(-30.0, min(30.0, c["a"] * z + c["b"]))
+            return float(can) / (1.0 + math.exp(-u))
+    return _phi(z) * float(can)
+
+
+def _combat_space_ev(gs: GameState, pid: int, a) -> float:
+    """What an Agent on combat space `a` is worth for the Conflict: the best
+    deploy it opens (2 + the troops the space recruits), priced like the
+    deploy decision itself - change in expected reward minus the troops kept.
+    Against rivals who have revealed the odds are near-certain (user,
+    2026-10-18: a late Agent - the Swordmaster's 3rd - deploys knowing what
+    the fight needs)."""
+    p = gs.players[pid]
+    rec = sum(e["troops"] for e in gs.get_space_effects_preview(a.space_name, a.space_option)
+              if isinstance(e, dict) and isinstance(e.get("troops"), (int, float)) and e["troops"] > 0)
+    avail = int(min(p.troops_garrison + rec, 2 + rec))
+    mine0, u0 = _my_strength(gs, pid)
+    ev0 = fight_ev(gs, pid, mine0, u0)
+    best = 0.0
+    for n in range(1, avail + 1):
+        mine, u = _my_strength(gs, pid, add_troops=n)
+        keep = max(0, n - rec) * _troop_hold_value(gs)          # recruited troops weren't in the garrison
+        best = max(best, fight_ev(gs, pid, mine, u) - ev0 - keep
+                   - n * _TUNE.get("deploy_hold", 0.4) * min(1.0, _rounds_left(gs) / 2.0))
+    return best
 
 
 def fight_ev(gs: GameState, pid: int, my_strength: float, my_units: int,
@@ -973,8 +1160,8 @@ def fight_ev(gs: GameState, pid: int, my_strength: float, my_units: int,
     for q in range(gs.num_players):
         if q == pid:
             continue
-        mu, sd, can = _opp_fight(gs, q)
-        pa = _phi((mu - my_strength) / sd) if can else 0.0
+        mu, sd, can = _opp_fight(gs, q, pid)
+        pa = _p_ahead(mu, sd, can, my_strength, q in gs.players_revealed)
         nd = [0.0] * (len(dist) + 1)
         for k, pk in enumerate(dist):
             nd[k] += pk * (1 - pa)
@@ -995,7 +1182,13 @@ def _my_strength(gs: GameState, pid: int, add_troops: int = 0, add_swords: float
     t = gs.troops_in_conflict.get(pid, 0) + add_troops
     w = gs.sandworms_in_conflict.get(pid, 0)
     sw = gs.swords_this_reveal.get(pid, 0) + add_swords
-    if gs.phase.name != "COMBAT" and pid not in gs.players_revealed:
+    extra = None
+    if _TUNE.get("fight_own", 0) and gs.phase.name != "COMBAT":
+        from src.ai.fight_forecast import own_extra
+        extra = own_extra(gs, pid)              # Reveal + Combat Intrigue swords to come
+    if extra is not None:
+        sw += extra
+    elif gs.phase.name != "COMBAT" and pid not in gs.players_revealed:
         sw += sum(getattr(c, "swords", 0) or 0 for c in gs.players[pid].hand) * 0.7
     # add_cmd: how many of the added units are commanders (None: commanders first)
     sends_cmd = (add_cmd > 0) if add_cmd is not None else (
@@ -1077,12 +1270,34 @@ _STARTERS = frozenset(("Reconnaissance", "Diplomacy", "Dune, the Desert Planet",
                        "Dagger", "Convincing Argument", "Seek Allies", "Signet Ring"))
 
 
-def _reveal_persuasion_after(gs: GameState, pid: int, a) -> float:
+def _draw_persuasion(gs: GameState, pid: int) -> float:
+    """Expected persuasion of one card drawn now (deck, or the discard that
+    gets shuffled in when the deck is empty)."""
+    p = gs.players[pid]
+    pool = p.deck or p.discard
+    if not pool:
+        return 0.0
+    return sum((c.persuasion or 0) for c in pool) / len(pool)
+
+
+def _move_draws(gs: GameState, a, played) -> float:
+    """Cards agent move `a` draws: the space's effects and the played card's agent box."""
+    n = 0.0
+    effs = list(gs.get_space_effects_preview(a.space_name, a.space_option))
+    effs += list(getattr(played, "agent_effects", []) or [])
+    for e in effs:
+        if isinstance(e, dict) and isinstance(e.get("draw"), (int, float)):
+            n += e["draw"]
+    return n
+
+
+def _reveal_persuasion_after(gs: GameState, pid: int, a, draws: bool = False) -> float:
     """Persuasion this player can expect on their Reveal turn if they make
     agent move `a` now: the cards left in hand (the lowest-persuasion ones
     go out with the remaining agents), persuasion already gained this round,
     the space's reveal persuasion (Assembly Hall, High Council) and the
-    played card's agent-box persuasion."""
+    played card's agent-box persuasion. draws: also the cards the move draws,
+    at the deck's average persuasion."""
     p = gs.players[pid]
     hand = list(p.hand)
     played = next((c for c in hand if c.name == a.card_name), None)
@@ -1100,7 +1315,21 @@ def _reveal_persuasion_after(gs: GameState, pid: int, a) -> float:
     for e in getattr(played, "agent_effects", []) or []:
         if isinstance(e, dict) and isinstance(e.get("persuasion"), (int, float)):
             P += e["persuasion"]
+    if draws:
+        P += _move_draws(gs, a, played) * _draw_persuasion(gs, pid)
     return P
+
+
+def _smf_plan_value(gs: GameState, pid: int, a) -> float:
+    """How far agent move `a` gets this player toward the 9 persuasion a
+    The Spice Must Flow costs on the Reveal turn (user, 2026-10-18: build
+    persuasion - High Council, draw spaces, keeping strong cards for the
+    Reveal - to buy TSMF). 0 below 5 persuasion, 1 at 9+; nothing once the
+    TSMF stack is empty."""
+    if not gs.reserve_spice_must_flow:
+        return 0.0
+    P = _reveal_persuasion_after(gs, pid, a, draws=True)
+    return max(0.0, min(1.0, (P - 5.0) / 4.0))
 
 
 def _best_buy_value(gs: GameState, pid: int, P: float) -> float:
@@ -1192,6 +1421,8 @@ def _trash_values(gs: GameState, pid: int) -> Dict[str, float]:
         if card in p.hand and pid not in gs.players_revealed:
             v -= _card_reveal_worth(gs, pid, card)    # it won't be revealed this round
         out[card.name] = v * k
+        if card.name in _STARTERS and card.name not in ("Signet Ring", "Diplomacy"):
+            out[card.name] += _TUNE.get("starter_trash", 0.0)
     return out
 
 
@@ -2101,8 +2332,11 @@ class HeuristicAgent(Agent):
             # opening/midgame and taper as fewer rounds remain to benefit.
             remaining_rounds = max(1, MAX_ROUNDS - gs.round)
             _sm = self.sm_boost
-            if a.space_name == "High Council" and not p.has_councilor:
+            if a.space_name == "High Council" and not p.has_councilor and _TUNE.get("hc_judge", 0):
+                s += _TUNE["hc_judge"] * _hc_judgement(gs, pid)
+            elif a.space_name == "High Council" and not p.has_councilor:
                 s += min(20.0, 2.5 * remaining_rounds) if _sm else min(15.0, 1.5 * remaining_rounds)
+                s += _TUNE.get("hc_rush", 0.0) * remaining_rounds
                 if _TUNE.get("hc_bl", 0) and getattr(gs, "bl", None) is not None:
                     from src.ai.bloodlines_heuristic import high_council_bl_value
                     s += _TUNE["hc_bl"] * high_council_bl_value(gs, pid)
@@ -2129,8 +2363,11 @@ class HeuristicAgent(Agent):
                         s += _TUNE["sm_solari"] * min(solari_here, gap)
             if (sp.is_combat_space and gs.current_conflict is not None
                     and not getattr(p, "no_deploy_this_turn", False)):
-                s += _TUNE["combat"] * _conflict_worth(gs, pid) * (1.0 + 0.3 * min(p.troops_garrison, 4)
-                                                  + 0.5 * _combat_build_strength(gs, pid))
+                if _TUNE.get("combat_ev", 0):
+                    s += _TUNE["combat_ev"] * _combat_space_ev(gs, pid, a)
+                else:
+                    s += _TUNE["combat"] * _conflict_worth(gs, pid) * (1.0 + 0.3 * min(p.troops_garrison, 4)
+                                                      + 0.5 * _combat_build_strength(gs, pid))
             if _TUNE.get("leader_play", 1.0):
                 s += _TUNE.get("leader_play", 1.0) * _leader_space_value(gs, pid, a)
             if a.space_name == "Tuek's Sietch":
@@ -2164,6 +2401,8 @@ class HeuristicAgent(Agent):
             if _TUNE.get("buy_plan", 0.0) and gs.round <= 8:
                 s += _TUNE["buy_plan"] * 0.3 * _best_buy_value(
                     gs, pid, _reveal_persuasion_after(gs, pid, a))
+            if _TUNE.get("smf_plan", 0.0):
+                s += _TUNE["smf_plan"] * _smf_plan_value(gs, pid, a)
             g = _TUNE.get("tsmf_goal", 0.0)
             if g and gs.round >= 3 and _tsmf_short(gs, pid)                     and _reveal_persuasion_after(gs, pid, a) >= 9:
                 s += 0.5 * g          # this move keeps a TSMF buy on the Reveal turn
@@ -2284,6 +2523,8 @@ class HeuristicAgent(Agent):
             mine0, u0 = _my_strength(gs, pid)
             mine, u = _my_strength(gs, pid, add_troops=n, add_cmd=a.deploy_cmd)
             own_ci = _own_combat_intrigue_swords(gs, pid) * 0.6
+            if _TUNE.get("fight_own", 0) and gs.phase.name != "COMBAT":
+                own_ci = 0.0                    # already in the learned own-sword forecast
             ev = fight_ev(gs, pid, mine + own_ci, u)
             ev0 = fight_ev(gs, pid, mine0 + own_ci, u0)
             s = (ev - ev0) - n * _troop_hold_value(gs) + _cmd_deploy_adj(gs, pid, a)
@@ -2293,6 +2534,16 @@ class HeuristicAgent(Agent):
             # max-deploys too often): each one deployed gives that up
             if n > 0 and _rounds_left(gs) >= 1:
                 s -= n * _TUNE.get("deploy_hold", 0.4) * min(1.0, _rounds_left(gs) / 2.0)
+            # committing blind (user, 2026-10-18): with Agents still to place,
+            # troops can follow on a later turn - after rivals reveal, when
+            # only their Combat Intrigues are left to come. Deploying against
+            # rivals who have all revealed costs nothing extra (the Swordmaster's
+            # 3rd Agent is what buys that wait).
+            w = _TUNE.get("deploy_wait", 0.0)
+            if w and n > 0 and gs.phase.name != "COMBAT" and p.agents_available > 0                     and pid not in gs.players_revealed:
+                rivals = [q for q in range(gs.num_players) if q != pid]
+                hidden = sum(1 for q in rivals if q not in gs.players_revealed) / max(1, len(rivals))
+                s -= w * n * _RES_VALUE["troops"] * hidden
 
         elif at == ActionType.RESOLVE_TRASH and _TUNE.get("trash_model", 0):
             s = _trash_value(gs, pid, a.trash_card_name)

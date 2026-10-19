@@ -1,0 +1,32 @@
+{
+ "0.0": {
+  "a": 0.85,
+  "b": -0.05,
+  "n": 39678,
+  "source": "reports/deploy_heuristic_tuned_config_best_ai.json.json",
+  "test_logloss_before": 0.6978,
+  "test_logloss_after": 0.6077
+ },
+ "0.5": {
+  "n": 82686,
+  "source": "reports/deploy_heuristic_tuned_config_gap_calib_best.json.json",
+  "a": 1.1,
+  "b": -0.4,
+  "test_logloss_before": 0.5635,
+  "test_logloss_after": 0.5175,
+  "rev": {
+   "a": 1.2,
+   "b": -0.75,
+   "n": 1970,
+   "test_logloss_before": 0.327,
+   "test_logloss_after": 0.2796
+  },
+  "unrev": {
+   "a": 1.1,
+   "b": -0.4,
+   "n": 80716,
+   "test_logloss_before": 0.5691,
+   "test_logloss_after": 0.5229
+  }
+ }
+}

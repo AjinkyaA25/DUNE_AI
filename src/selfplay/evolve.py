@@ -32,7 +32,10 @@ MUTABLE = ("res_contract", "res_spy", "res_intrigue", "res_draw", "res_solari", 
            "tsmf", "alliance", "worm_bonus", "style", "deck_plan",
            "look_w",                               # look_w: lookahead agents only
            "spy_post", "spy_multi", "spy_combat", "deploy_hold", "intrigue_love", "tech_love",
-           "maker_bonus", "contract_stack", "leader_play", "out_of_rewards")
+           "maker_bonus", "contract_stack", "leader_play", "out_of_rewards",
+           "hc_rush", "starter_trash",
+           # TSMF / persuasion plan + learned Conflict forecast (2026-10-18)
+           "smf_plan", "tsmf_goal", "pers_w", "buy_plan", "fight_learned")
 # knobs at 0 can be switched on by a mutation (user, 2026-10-17)
 
 

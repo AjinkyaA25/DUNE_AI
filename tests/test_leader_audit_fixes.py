@@ -614,3 +614,158 @@ def test_long_live_the_fighters_player_picks_draw_and_trash():
     gs.step(next(a for a in gs.get_valid_actions(0) if a.choice == "llf_trash:0"))  # trash the 1st
     assert p.trash[-1] is top3[0] and len(p.trash) == trash + 1
     assert p.discard[-1] is top3[1] and len(p.discard) == discard + 1
+
+
+def _sietch_visit(gs, pid, pick):
+    """pid sends an agent to Tuek's Sietch and picks option `pick` (o0 = 1 spice, o1 = draw)."""
+    a = next(a for a in gs.get_valid_actions(pid) if a.action_type == ActionType.AGENT_TURN
+             and a.space_name == "Tuek's Sietch")
+    gs.step(a)
+    ch = next(c for c in gs.get_valid_actions(pid)
+              if c.action_type == ActionType.RESOLVE_CHOICE and c.choice == pick)
+    gs.step(ch)
+
+
+def test_tueks_sietch_opponent_visit_spice_bonus_and_esmar_intrigue():
+    gs = _game(["Chani", "Esmar Tuek", "Duncan Idaho", "Muad'Dib"])
+    pid = gs.get_current_player_id()
+    assert gs.players[pid].leader.name != "Esmar Tuek"
+    esmar = next(p for p in gs.players if p.leader.name == "Esmar Tuek")
+    gs.maker_bonus_spice["Tuek's Sietch"] = 2
+    spice, intr, sol = gs.players[pid].spice, len(esmar.intrigue_cards), esmar.solari
+    _sietch_visit(gs, pid, "o0")
+    assert gs.players[pid].spice == spice + 3            # 1 spice + the 2 bonus spice
+    assert gs.maker_bonus_spice["Tuek's Sietch"] == 0
+    assert len(esmar.intrigue_cards) == intr + 1 and esmar.solari == sol
+
+
+def test_tueks_sietch_esmar_draws_and_gains_solari():
+    gs = _game(["Esmar Tuek", "Chani", "Duncan Idaho", "Muad'Dib"])
+    pid = gs.get_current_player_id()
+    p = gs.players[pid]
+    assert p.leader.name == "Esmar Tuek"
+    gs.maker_bonus_spice["Tuek's Sietch"] = 1
+    hand, sol, spice = len(p.hand), p.solari, p.spice
+    _sietch_visit(gs, pid, "o1")
+    assert len(p.hand) == hand - 1 + 1                   # played a card, drew one
+    assert p.solari == sol + 1 and p.spice == spice + 1  # bonus spice even when drawing
+
+
+def test_tueks_sietch_only_with_esmar_and_no_spy_post():
+    from src.game.board.board import ALL_OBSERVATION_POSTS
+    import src.game.board.board as B
+    assert not _game(["Chani", "Gurney Halleck", "Duncan Idaho", "Muad'Dib"])._leader_space_active("Tuek's Sietch")
+    posts = [v for v in vars(B).values() if isinstance(v, dict)]
+    assert not any("Tuek's Sietch" in s for d in posts for s in d.values() if isinstance(s, (set, frozenset)))
+    assert "Tuek's Sietch" not in ALL_OBSERVATION_POSTS
+
+
+def test_tueks_sietch_builds_bonus_spice_when_empty():
+    gs = _game(["Esmar Tuek", "Chani", "Duncan Idaho", "Muad'Dib"])
+    gs.maker_bonus_spice["Tuek's Sietch"] = 0
+    gs.resolve_makers_phase()
+    assert gs.maker_bonus_spice["Tuek's Sietch"] == 1
+
+
+def test_esmar_signet_place_or_take_from_any_maker_space():
+    from src.game.leader.leader_definitions import esmar_signet
+    gs = _game(["Esmar Tuek", "Chani", "Duncan Idaho", "Muad'Dib"])
+    p = next(p for p in gs.players if p.leader.name == "Esmar Tuek")
+    gs.maker_bonus_spice.update({"Tuek's Sietch": 1, "Hagga Basin": 2, "Deep Desert": 0, "Imperial Basin": 0})
+    esmar_signet(p, gs)
+    labels = [o[1] for o in gs.pending_choices[-1].options]
+    assert any("Place 1 bonus spice on Tuek's Sietch" in l for l in labels)
+    assert any("from Tuek's Sietch" in l for l in labels) and any("from Hagga Basin" in l for l in labels)
+    assert not any("from Deep Desert" in l for l in labels)
+
+
+def _ring_to_sietch(gs, p):
+    ring = next((c for c in p.deck if c.name == "Signet Ring"), None)
+    if ring is not None:
+        p.deck.remove(ring); p.hand.append(ring)
+    a = next(a for a in gs.get_valid_actions(p.id) if a.action_type == ActionType.AGENT_TURN
+             and a.space_name == "Tuek's Sietch" and a.card_name == "Signet Ring")
+    gs.step(a)
+
+
+def test_esmar_signet_at_own_sietch_place_is_harvested_at_once():
+    gs = _game(["Esmar Tuek", "Chani", "Duncan Idaho", "Muad'Dib"])
+    p = gs.players[gs.get_current_player_id()]
+    for k in gs.maker_bonus_spice:
+        gs.maker_bonus_spice[k] = 0
+    gs.maker_bonus_spice["Hagga Basin"] = 2
+    spice = p.spice
+    _ring_to_sietch(gs, p)
+    seen = set()
+    while gs.pending_choices:
+        pc = gs.pending_choices[-1]
+        seen.add(pc.prompt)
+        acts = [x for x in gs.get_valid_actions(p.id) if x.action_type == ActionType.RESOLVE_CHOICE]
+        assert not any(x.choice == "decline" for x in acts) or pc.prompt != "Smuggle Spice"   # mandatory
+        gs.step(next((x for x in acts if x.choice == "place"), acts[0]))
+    assert "Smuggle Spice" in seen
+    assert p.spice == spice + 2                    # 1 from the Sietch + the placed bonus spice
+    assert gs.maker_bonus_spice["Tuek's Sietch"] == 0 and gs.maker_bonus_spice["Hagga Basin"] == 2
+
+
+def test_esmar_signet_take_reduces_the_other_maker_space():
+    gs = _game(["Esmar Tuek", "Chani", "Duncan Idaho", "Muad'Dib"])
+    p = gs.players[gs.get_current_player_id()]
+    for k in gs.maker_bonus_spice:
+        gs.maker_bonus_spice[k] = 0
+    gs.maker_bonus_spice["Hagga Basin"] = 2
+    spice = p.spice
+    _ring_to_sietch(gs, p)
+    while gs.pending_choices:
+        acts = [x for x in gs.get_valid_actions(p.id) if x.action_type == ActionType.RESOLVE_CHOICE]
+        gs.step(next((x for x in acts if x.choice == "take:Hagga Basin"), acts[0]))
+    assert p.spice == spice + 2 and gs.maker_bonus_spice["Hagga Basin"] == 1
+
+
+def test_sardaukar_sword_skill_counts_the_moment_it_applies():
+    gs = _game(["Chani", "Gurney Halleck", "Duncan Idaho", "Muad'Dib"])
+    pid = gs.get_current_player_id()
+    p = gs.players[pid]
+    gs.troops_in_conflict[pid] = 1
+    gs.bl.commanders_in_conflict[pid] = 1
+    gs.update_combat_strength(pid)
+    before = gs.combat_strength[pid]
+    p.skills.add("Canny")                          # bought at Assembly Hall this turn:
+    gs.agent_on_space["Assembly Hall"] = pid       # an Agent on a green space
+    a = next(a for a in gs.get_valid_actions(pid) if a.action_type == ActionType.AGENT_TURN)
+    gs.step(a)
+    assert gs.combat_strength[pid] == before + 2
+
+
+def _deploy_opts(gs, pid):
+    return sorted((a.deploy_count, a.deploy_cmd or 0) for a in gs._open_deploy_actions(pid))
+
+
+def test_recruited_commander_only_adds_a_commander_deploy():
+    """Arrakeen: X icon (2) + 1 recruited troop; 3 troops deployed; then a
+    commander re-recruited -> only that commander may follow, not a troop."""
+    gs = _game(["Chani", "Gurney Halleck", "Duncan Idaho", "Muad'Dib"])
+    pid = gs.get_current_player_id()
+    p = gs.players[pid]
+    p.deploy_icon_this_turn = True
+    p.troops_garrison, p.commanders_garrison = 6, 0
+    p.troops_recruited_this_turn = 1
+    assert _deploy_opts(gs, pid)[-1] == (3, 0)
+    gs._do_deploy(pid, 3, 0)
+    assert _deploy_opts(gs, pid) == []
+    p.commanders_garrison += 1                       # re-recruit a commander
+    p.troops_garrison += 1
+    p.troops_recruited_this_turn += 1
+    p.cmd_recruited_this_turn = 1
+    assert _deploy_opts(gs, pid) == [(1, 1)]
+
+
+def test_free_deploys_take_any_unit_kind():
+    gs = _game(["Chani", "Gurney Halleck", "Duncan Idaho", "Muad'Dib"])
+    pid = gs.get_current_player_id()
+    p = gs.players[pid]
+    p.deploy_icon_this_turn = True
+    p.troops_garrison, p.commanders_garrison = 5, 1
+    p.troops_recruited_this_turn, p.cmd_recruited_this_turn = 1, 1   # recruited one commander
+    opts = _deploy_opts(gs, pid)
+    assert (2, 0) in opts and (3, 1) in opts and (3, 0) not in opts

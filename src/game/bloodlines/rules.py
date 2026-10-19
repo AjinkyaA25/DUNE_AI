@@ -386,6 +386,7 @@ class Bloodlines:
         p.troops_garrison += 1
         if self.gs.in_own_turn(pid):                 # deployable this turn
             p.troops_recruited_this_turn = getattr(p, "troops_recruited_this_turn", 0) + 1
+            p.cmd_recruited_this_turn = getattr(p, "cmd_recruited_this_turn", 0) + 1   # as a commander only
         # the other kind of recruit (board / supply) may still follow
         more = self.recruit_options(pid, space) if space in COMMANDER_SPACES else []
         if more:

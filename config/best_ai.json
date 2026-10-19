@@ -69,5 +69,19 @@
  "L.Steersman Y'rkoon.res_spy": 1.5787,
  "L.Lady Margot Fenring.spy_post": 1.1499,
  "L.Lady Margot Fenring.tech_love": 0.5019,
- "out_of_rewards": 1.0
+ "out_of_rewards": 1.0,
+ "fight_learned": 0.5,
+ "fight_calib": 1.0,
+ "smf_plan": 3.0,
+ "early.smf_plan": 1.036512,
+ "mid.smf_plan": 3.491413,
+ "late.smf_plan": 4.0,
+ "tsmf_goal": 0.961926,
+ "pers_w": 0.192215,
+ "early.tsmf": 1.909144,
+ "mid.tsmf": 3.336,
+ "late.tsmf": 3.336,
+ "intrigue_count": 0.7,
+ "combat_ev": 2.5,
+ "deck_model": 1
 }

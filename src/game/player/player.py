@@ -81,6 +81,8 @@ class Player:
         # recruited this turn.  Multiple deploy icons do NOT stack the +2.
         self.deploy_budget_this_turn = 0
         self.deployed_this_turn = 0
+        self.deployed_cmd_this_turn = 0     # commanders among them
+        self.cmd_recruited_this_turn = 0    # commanders recruited this turn (deploy as commanders only)
         # Undercover Asset / Insider Information: ignore a board space's Influence
         # requirement.  Emperor's Invitation: the card you play may reach an
         # Emperor space regardless of its icons.  Cleared at end of Agent turn

@@ -42,6 +42,8 @@ def _choose(player, gs, prompt: str, options: List, may: bool = True, kind: str 
     if not [o for o in opts if o[0] != "decline"]:
         return
     if len(opts) == 1:                               # a single forced option: just do it
+        if player.leader is not None:
+            gs.note(f"{player.leader.name}: {prompt} - {opts[0][1]} (the only option)")
         _fx(player, gs, opts[0][2])
         return
     gs.add_pending_choice(player.id, kind, prompt, opts)

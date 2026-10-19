@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import copy
 import glob
 import json
 import mimetypes
@@ -46,8 +47,9 @@ from src.ai.action_features import encode_action  # noqa: E402
 from src.ai.agents import make_agent  # noqa: E402
 from src.ai.features import encode_state  # noqa: E402
 from src.data.card_definitions import setup_game  # noqa: E402
-from src.game.board.board import ALL_OBSERVATION_POSTS, UPRISING_BOARD  # noqa: E402
-from src.game.gameState import ActionType, GameAction, GameState  # noqa: E402
+from src.game.board.board import ALL_OBSERVATION_POSTS, LEADER_SPACES, UPRISING_BOARD  # noqa: E402
+from src.game.effects import EffectResolver  # noqa: E402
+from src.game.gameState import ActionType, GameAction, GameState, Phase  # noqa: E402
 
 STATIC = os.path.join(HERE, "static")
 
@@ -198,6 +200,8 @@ SPECIAL = {   # rulebook wording, shortened (rulebook_spaces_text.txt)
     "Deep Desert": "bonus spice + 4 spice, OR summon 2 sandworms (with Hooks)",
     "Imperial Basin": "+ bonus spice; controller +1 spice",
     "Arrakeen": "controller +1 solari",
+    "Tuek's Sietch": "Esmar Tuek only: + bonus spice, then 1 spice OR draw 1 card; Esmar +1 solari "
+                     "(an opponent: Esmar draws an Intrigue); no Spy post",
 }
 # seats in turn order (first player moves on each round): red, green, yellow, blue
 COLORS = ["#c0392b", "#27ae60", "#d4a017", "#2e6fd8"]
@@ -923,6 +927,8 @@ class Session:
         if bought:
             entry["bought"] = bought
         inf_before = [dict(q.influence) for q in gs.players]
+        owned_before = self._owned(gs, pid)
+        icons = self._move_icons(gs, act, bought)
         pool_before = gs.persuasion_pool.get(pid, 0)
         round_before = gs.round
         _, reward, _, info = gs.step(act)
@@ -945,6 +951,20 @@ class Session:
             gs.ui_notes = []
         if info.get("error"):
             entry["error"] = info["error"]
+        # techs / skills / contracts this move gained, for the move strip
+        for kind, names in self._owned(gs, pid).items():
+            for nm in names - owned_before[kind]:
+                img = {"tech": tech_img, "skill": skill_img, "contract": contract_img}[kind](nm)
+                icons.append({"kind": kind, "name": nm, "img": img})
+        if act.action_type == ActionType.REVEAL_TURN:
+            # swords revealed (cards' sword icons + reveal effects + techs), not
+            # the total strength with troops
+            q = gs.players[pid]
+            swords = gs.swords_this_reveal.get(pid, 0) + sum(
+                t.passive_reveal_bonus.get("swords", 0) for t in getattr(q, "techs", [])
+                if hasattr(t, "has_passive_reveal_bonus") and t.has_passive_reveal_bonus())
+            icons.append({"kind": "reveal", "text": f"{gs.persuasion_pool.get(pid, 0)}◆ {swords}⚔"})
+        entry["icons"] = icons
         # the 4th space of each influence track pays a reward when reached
         from src.game.gameState import INFLUENCE_4_BONUS
         names = {"fremen": "Fremen: +1 water", "bene_gesserit": "Bene Gesserit: +1 Intrigue",
@@ -963,6 +983,56 @@ class Session:
         h = self.eval_hist
         if len(h) >= 2 and h[-1]["n"] == len(self.moves) and h[-2]["n"] == len(self.moves) - 1:
             entry["ev"] = round(h[-1]["win"][self.seat] - h[-2]["win"][self.seat], 3)
+
+    def _reveal_now(self, gs: GameState, pid: int) -> Optional[Dict]:
+        """Persuasion (and strength) this player would have if they revealed
+        right now: the engine's own Reveal turn played on a copy - cards at
+        their current value (Bene Gesserit Operative counts 3 only with 2 Spies
+        out, Command Center 1 until 2 troops retreated), techs, Charismatic
+        with a commander in the Conflict, High Council, Assembly Hall (not if
+        the Agent left it - Duncan's Into the Fray), Steersman's Navigation."""
+        if pid in gs.players_revealed or gs.phase != Phase.PLAYER_TURNS:
+            return None
+        key = (len(self.log), pid)
+        cache = self.__dict__.setdefault("_reveal_cache", {})
+        if key not in cache:
+            if len(cache) > 16:
+                cache.clear()
+            try:
+                g2 = copy.deepcopy(gs)
+                g2.ui_notes = []
+                g2._step_reveal_turn(GameAction(ActionType.REVEAL_TURN, pid))
+                for conds, q in list(g2._pending_reveal_conditionals):   # resolved at the end of the turn
+                    if q == pid:
+                        EffectResolver.resolve_single_effect(conds, g2.players[q], g2)
+                g2.update_combat_strength(pid)
+                cache[key] = {"persuasion": g2.persuasion_pool.get(pid, 0),
+                              "strength": g2.combat_strength.get(pid, 0)}
+            except Exception:
+                cache[key] = None
+        return cache[key]
+
+    @staticmethod
+    def _owned(gs: GameState, pid: int) -> Dict[str, set]:
+        p = gs.players[pid]
+        return {"tech": {getattr(getattr(t, "d", t), "name", str(t)) for t in getattr(p, "techs", [])},
+                "skill": set(getattr(p, "skills", set()) or set()),
+                "contract": {c.name for c in list(p.contracts_active) + list(p.contracts_completed)}}
+
+    @staticmethod
+    def _move_icons(gs: GameState, act: GameAction, bought: Optional[Dict]) -> List[Dict]:
+        """Pictures for the move strip: the card played and where, the Intrigue
+        played, the card bought (deploys show on the board's Conflict)."""
+        t = act.action_type
+        out = []
+        if t == ActionType.AGENT_TURN and act.card_name:
+            out.append({"kind": "agent", "name": act.card_name, "img": card_img(act.card_name),
+                        "space": act.space_name})
+        elif t == ActionType.PLAY_INTRIGUE and act.intrigue_card_name:
+            out.append({"kind": "intrigue", "name": act.intrigue_card_name, "img": card_img(act.intrigue_card_name)})
+        if bought:
+            out.append({"kind": "buy", "name": bought["card"], "img": bought.get("img"), "free": bought.get("free")})
+        return out
 
     @staticmethod
     def _bought(gs: GameState, act: GameAction) -> Optional[Dict]:
@@ -1222,6 +1292,8 @@ class Session:
                     "contractsDone": pd.get("contracts_completed", 0),
                     "revealed": p.id in gs.players_revealed,
                     "revealedThisRound": self.revealed.get(p.id),
+                    "revealNow": self._reveal_now(gs, p.id) if show else None,
+                    "duncanAgent": getattr(gs, "duncan_in_conflict", {}).get(p.id, 0),
                     "leader": leader_view(gs, p, show),
                     "persuasion": gs.persuasion_pool.get(p.id, 0),
                     "research": gs.research_track.get(p.id, 0) if gs.research_track else 0,
@@ -1239,6 +1311,8 @@ class Session:
                                                    getattr(cc.battle_icon, "value", None))}
             spaces = []
             for name, s in UPRISING_BOARD.items():
+                if name in LEADER_SPACES and not gs._leader_space_active(name):
+                    continue                     # Tuek's Sietch: only with Esmar Tuek
                 spaces.append({"name": name, "type": s.space_type.value,
                                "special": SPECIAL.get(name),
                                "cost": s.mandatory_cost, "gate": s.influence_gate,

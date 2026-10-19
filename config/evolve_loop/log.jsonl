@@ -1,0 +1,14 @@
+{"time": "2026-10-18 22:25", "event": "confirm", "agent": "heuristic", "candidate": "config/evolve_plan/champion.json", "share": 0.2504, "z": 0.08, "vp": 8.124, "rounds": 9.07, "ended_by_r8": 0.2674}
+{"time": "2026-10-18 22:25", "event": "decision", "candidate": "config/evolve_plan/champion.json", "promoted": false}
+{"time": "2026-10-18 22:25", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261018_2225"}
+{"time": "2026-10-18 23:11", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261018_2311"}
+{"time": "2026-10-18 23:50", "event": "confirm", "agent": "heuristic", "candidate": "config/gap/all25.json", "share": 0.3466, "z": 19.96, "vp": 8.928, "rounds": 8.976, "ended_by_r8": 0.2981}
+{"time": "2026-10-19 00:03", "event": "confirm", "agent": "lookahead", "candidate": "config/gap/all25.json", "share": 0.344, "z": 8.41, "vp": 8.911, "rounds": 8.871, "ended_by_r8": 0.3473}
+{"time": "2026-10-19 00:03", "event": "decision", "candidate": "config/gap/all25.json", "promoted": true}
+{"time": "2026-10-19 00:03", "event": "promoted", "new_best": "config/gap/all25.json", "previous_saved_as": "config\\best_ai_history\\best_ai_20261019_0003_candidate.json"}
+{"time": "2026-10-19 00:03", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261019_0003"}
+{"time": "2026-10-19 00:27", "event": "confirm", "agent": "heuristic", "candidate": "config/gap/j_deck.json", "share": 0.2776, "z": 5.71, "vp": 8.728, "rounds": 8.831, "ended_by_r8": 0.3513}
+{"time": "2026-10-19 00:41", "event": "confirm", "agent": "lookahead", "candidate": "config/gap/j_deck.json", "share": 0.2873, "z": 3.34, "vp": 8.662, "rounds": 8.703, "ended_by_r8": 0.4133}
+{"time": "2026-10-19 00:41", "event": "decision", "candidate": "config/gap/j_deck.json", "promoted": true}
+{"time": "2026-10-19 00:41", "event": "promoted", "new_best": "config/gap/j_deck.json", "previous_saved_as": "config\\best_ai_history\\best_ai_20261019_0041_candidate.json"}
+{"time": "2026-10-19 00:41", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261019_0041"}
