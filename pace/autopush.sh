@@ -14,6 +14,7 @@ while true; do
     games=$(echo "$last" | python -c "import json,sys; print(json.load(sys.stdin)['games'])")
     best=$(python -c "import json; b=json.load(open('$D/best.json')); print(f\"best iter {b['iter']}, eval {b['share']:.1%} vs Best AI {b['baseline']:.1%}\")")
     git add $D/best.json $D/best.npz $D/checkpoint.pt $D/net.npz $D/log.jsonl
+    for f in $D/elo.json $D/elo_games.jsonl; do [ -f $f ] && git add $f; done   # --elo-games runs
     git commit -q -m "PPO checkpoint ($D): iteration $it ($games games); $best" \
         -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" \
         && echo "[autopush $(date -Is)] committed iter $it" \

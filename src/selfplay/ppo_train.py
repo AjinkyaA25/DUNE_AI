@@ -37,6 +37,7 @@ from multiprocessing import Pool
 import numpy as np
 
 from src.ai.ppo import K_MAX, EMB, ID_FIELDS, id_sizes
+from src.selfplay import elo
 
 BASE = os.path.join("config", "ppo", "base.json")        # heuristic the policy sits on (pinned)
 
@@ -321,6 +322,9 @@ def main():
                     help="> 0: each eval also plays the policy in 1 seat vs 3 copies of the previous eval's "
                          "snapshot (25%% = no progress since then; plateau check once Best AI is beaten)")
     ap.add_argument("--snap-pool", type=int, default=5, help="newest snapshots the opponents are drawn from")
+    ap.add_argument("--elo-games", type=int, default=0,
+                    help="> 0: each eval's snapshot also plays this many 4-player games vs the rated field (Best AI, "
+                         "--pool nets, earlier snapshots) and all rated games are refit into Elo (src.selfplay.elo)")
     ap.add_argument("--base", default=os.path.join("config", "best_ai.json"),
                     help="heuristic weights the policy starts from (copied to config/ppo/base.json once)")
     A = ap.parse_args()
@@ -370,6 +374,10 @@ def main():
             json.dump(base_eval, open(bpath, "w"))
             print(f"baseline: Best AI in the eval seat {base_eval['share']:.1%} | rounds {base_eval['rounds']:.2f}",
                   flush=True)
+        elo_field = {"pool_" + os.path.basename(p)[:-4]: f"ppo:net={p}:tuned={BASE}:greedy" for p in pool_nets}
+        if A.elo_games and not os.path.exists(os.path.join(A.out, "elo.json")):
+            rt = elo.rate_snapshot(pool, A.out, None, None, A.elo_games, elo_field, f"heuristic:tuned={BASE}")
+            print("elo field: " + ", ".join(f"{k} {v[0]:.0f}" for k, v in sorted(rt.items())), flush=True)
         t_eval, g_eval = time.time(), state["games"]
         while A.iters == 0 or state["iter"] < A.iters:
             state["iter"] += 1
@@ -436,6 +444,11 @@ def main():
                     rec["eval_vs_prev"] = {"prev": os.path.basename(prev), "share": round(float(w.mean()), 4),
                                            "se": round(float(w.std() / math.sqrt(len(w))), 4)}
                 state["eval_snap"] = snap
+                if A.elo_games:
+                    name = f"iter{it:05d}"
+                    rt = elo.rate_snapshot(pool, A.out, name, f"ppo:net={snap}:tuned={BASE}:greedy", A.elo_games,
+                                           elo_field, f"heuristic:tuned={BASE}")
+                    rec["elo"] = dict(zip(("rating", "se", "games"), rt[name]))
                 best =os.path.join(A.out, "best.json")
                 b = json.load(open(best)) if os.path.exists(best) else {"diff": -1}
                 if rec["eval"]["diff"] > b["diff"]:
