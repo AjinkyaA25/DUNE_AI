@@ -120,16 +120,21 @@ def _az_gen() -> str:
     return n.rsplit("_", 1)[1].split(".")[0] if n else "?"
 
 
-# The only bot the page offers: the evolved heuristic weights (a frozen copy
-# of the evolve_fixed champion, so a game never changes AI mid-way) played
-# by the lookahead agent the evolution benchmarks with.  Refresh the copy
-# after an evolution run: cp config/evolve_fixed/champion.json config/best_ai.json
+# The only bot the page offers: the PPO policy (2026-10-20) - a network trained by
+# self-play (PPO) that corrects the evolved heuristic's move scores. Frozen copies
+# (models_ui/ppo.npz = models_ppo/best.npz at iteration 1340 / 932k games, and the
+# heuristic it sits on, config/ppo_ui.json) so a game never changes AI mid-way.
+# Refresh after more training: cp models_ppo/best.npz models_ui/ppo.npz
+# 53.2% vs 3x the E6 endgame solver, 67.3% vs 3x the evolved heuristic; instant moves.
+BEST_AI = {"spec": "ppo:net=models_ui/ppo.npz:tuned=config/ppo_ui.json:greedy",
+           "name": "Best AI", "note": "PPO network on top of the evolved heuristic"}
 # :E6:EK3:EM4 = endgame solver from round 6 (play-outs to the end; 38.4% vs 31.9% plain, 2026-10-19)
-BEST_AI = {"spec": "look:D2:K3:M1:ev=models_eval_leaders/evaluator.npz:tuned=config/best_ai.json:E6:EK3:EM4",
-           "name": "Best AI", "note": "the evolved heuristic"}
+E6_AI = {"spec": "look:D2:K3:M1:ev=models_eval_leaders/evaluator.npz:tuned=config/best_ai.json:E6:EK3:EM4",
+         "name": "Endgame solver (E6)", "note": "evolved heuristic + lookahead, solves the game from round 6 (slow)"}
 
 OPPONENTS = [
     BEST_AI,
+    E6_AI,
     {"spec": "look:D3:K4:M4:tuned=config/evolve_look/champion.json",
      "name": "Lookahead heuristic (3 turns ahead + evaluator)",
      "note": "tries its top 4 moves in 4 reshuffled worlds, plays 3 more turns and scores the position "
@@ -877,6 +882,15 @@ class Session:
                     + f". Its value for this position: {az['value']:.2f}.")
             return {"kind": "search", "rows": rows, "note": note}
         last = getattr(agent, "last", None)
+        if last and last.get("ppo"):                               # PPOAgent
+            rows = [{"label": label(gs, c), "value": round(p, 3), "heur": round(h, 2),
+                     "chosen": repr(c) == repr(act)} for c, p, h in zip(last["cands"], last["prob"], last["heur"])]
+            ht = last["heur_top"]
+            note = ("The network's probability for each move (it plays the most likely). heur = the evolved "
+                    "heuristic's score, which the network starts from and corrects"
+                    + ("" if repr(ht) == repr(act) else f"; the heuristic alone would have played {label(gs, ht)}")
+                    + f". Its win-chance estimate here: {min(1.0, max(0.0, last['value'])):.0%}.")
+            return {"kind": "search", "rows": rows, "note": note}
         if last and last.get("cands") and "win" in last:          # LookaheadAgent
             rows = [{"label": label(gs, c), "value": round(float(w), 3),
                      "heur": round(float(t), 2), "chosen": i == last["chosen"]}

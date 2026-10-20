@@ -54,7 +54,8 @@ def judge_game(path: str):
         return []
     g = clean_game(g, R._card_factory())
     rp = R.Replay(g)
-    agents = {c: make_agent(f"heuristic:tuned={c}", seed=0) for c in CONFIGS}
+    # a config is a heuristic JSON, or a full agent spec (e.g. ppo:...) scored by its policy logits
+    agents = {c: make_agent(c if ":" in c.split("/")[0] else f"heuristic:tuned={c}", seed=0) for c in CONFIGS}
     rows = []
     keep = (ActionType.AGENT_TURN, ActionType.ACQUIRE_CARD, ActionType.ACQUIRE_RESERVE)
 
@@ -70,7 +71,7 @@ def judge_game(path: str):
                "pid": pid, "n": len(cands), "by": {}}
         for c, ag in agents.items():
             try:
-                sc = [ag.score(gs, pid, a) for a in cands]
+                sc = ag.scores(gs, pid, cands) if hasattr(ag, "scores") else [ag.score(gs, pid, a) for a in cands]
             except Exception:
                 return
             top, bot = max(sc), min(sc)

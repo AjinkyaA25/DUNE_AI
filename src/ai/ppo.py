@@ -181,18 +181,16 @@ class PPOAgent:
         self.temperature = temperature
         self.rng = np.random.default_rng(seed)
         self.record: Optional[list] = None       # set by the trainer: decisions are appended
+        self.last: Optional[dict] = None         # the last decision's top moves (UI explanation)
 
     def reset(self) -> None:
         pass
 
-    def select_action(self, gs, pid, valid):
-        if len(valid) == 1:
-            return valid[0]
+    def _evaluate(self, gs, pid, valid):
+        """-> heuristic scores of all moves, the shortlist, its logits, value, network inputs."""
         from src.ai.features import encode_state
         from src.ai.action_features import encode_action
         h_all = [self.h.score(gs, pid, a) for a in valid]
-        if self.net_path is None:
-            return valid[int(np.argmax(h_all))]
         net = load_net(self.net_path)
         idx = shortlist(h_all)
         h = np.array([h_all[i] for i in idx], dtype=np.float32)
@@ -203,12 +201,33 @@ class PPOAgent:
         I = np.array([action_ids(gs, pid, valid[i]) for i in idx], dtype=np.int64)
         T = self.temperature if self.temperature is not None else net.T
         lg, v = net.logits(s, D, I, h * (net.T / T))
+        return h_all, idx, lg, v, (s, D, I, h)
+
+    def scores(self, gs, pid, valid) -> List[float]:
+        """Policy logit per legal move (moves outside the heuristic's top K: below every logit)."""
+        if len(valid) == 1:
+            return [0.0]
+        _, idx, lg, _, _ = self._evaluate(gs, pid, valid)
+        out = [float(lg.min()) - 10.0] * len(valid)
+        for j, i in enumerate(idx):
+            out[i] = float(lg[j])
+        return out
+
+    def select_action(self, gs, pid, valid):
+        if len(valid) == 1:
+            return valid[0]
+        if self.net_path is None:
+            return valid[int(np.argmax([self.h.score(gs, pid, a) for a in valid]))]
+        h_all, idx, lg, v, (s, D, I, h) = self._evaluate(gs, pid, valid)
+        z = lg - lg.max()
+        pr = np.exp(z) / np.exp(z).sum()
+        top = sorted(range(len(idx)), key=lambda j: -lg[j])[:6]     # for the UI's move explanation
+        self.last = {"ppo": True, "cands": [valid[idx[j]] for j in top], "prob": [float(pr[j]) for j in top],
+                     "heur": [float(h[j]) for j in top], "heur_top": valid[idx[0]], "value": float(v)}
         if self.greedy:
             k = int(np.argmax(lg))
             logp = 0.0
         else:
-            z = lg - lg.max()
-            pr = np.exp(z) / np.exp(z).sum()
             k = int(self.rng.choice(len(pr), p=pr))
             logp = float(np.log(pr[k] + 1e-12))
         if self.record is not None:

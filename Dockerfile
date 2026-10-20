@@ -13,6 +13,12 @@ COPY sard_skills/ sard_skills/
 COPY hub_images/ hub_images/
 COPY video_scrape/cards/ video_scrape/cards/
 COPY config/best_ai.json config/best_ai.json
+COPY config/ppo_ui.json config/ppo_ui.json
+COPY models_ui/ppo.npz models_ui/ppo.npz
+# small learned tables the heuristic reads (combat odds, fight forecast, tech values);
+# without them it silently falls back to its untrained defaults
+COPY models_fight/calibration.json models_fight/forecast.json models_fight/
+COPY models_tech/tech_values.json models_tech/tech_values.json
 COPY models_eval_leaders/evaluator.npz models_eval_leaders/evaluator.npz
 
 ENV DUNE_PUBLIC=1 \
