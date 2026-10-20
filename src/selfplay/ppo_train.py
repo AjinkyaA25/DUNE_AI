@@ -361,7 +361,8 @@ def main():
                     json.dump({"iter": it, **rec["eval"]}, open(best, "w"))
             log.write(json.dumps(rec) + "\n"); log.flush()
             print(json.dumps(rec), flush=True)
-            torch.save({"net": net.state_dict(), "opt": opt.state_dict(), "state": state}, ck)
+            torch.save({"net": net.state_dict(), "opt": opt.state_dict(), "state": state}, ck + ".tmp")
+            os.replace(ck + ".tmp", ck)   # atomic: a kill mid-save never leaves a broken checkpoint
 
 
 if __name__ == "__main__":

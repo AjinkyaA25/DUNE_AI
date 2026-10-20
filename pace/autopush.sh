@@ -1,6 +1,6 @@
 #!/bin/bash
 # Commits and pushes models_ppo (best.npz/best.json + resumable checkpoint) every
-# $1 seconds (default 3600) while PPO trains. Started by pace/ppo_autopush.sbatch.
+# $1 seconds (default 3600; pass "0 once" for a single push) while PPO trains. Started by pace/ppo_autopush.sbatch.
 INTERVAL=${1:-3600}
 cd "$(dirname "$0")/.."
 while true; do
@@ -16,4 +16,5 @@ while true; do
         -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" \
         && echo "[autopush $(date -Is)] committed iter $it" \
         && (git push -q origin HEAD 2>&1 || echo "[autopush] push failed, will retry next hour")
+    [ "$2" = once ] && break
 done
