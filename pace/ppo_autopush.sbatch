@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=36
 #SBATCH --gres=gpu:1
 #SBATCH --mem-per-cpu=2G
-#SBATCH -t 16:00:00
+#SBATCH -t 5:00:00     # longer trips the QOS CPU-minutes-per-job cap at 36 cores
 #SBATCH -o pace/logs/ppo_%j.log
 #SBATCH --signal=B:USR1@300
 
