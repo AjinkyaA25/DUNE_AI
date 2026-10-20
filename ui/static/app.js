@@ -348,7 +348,7 @@ function renderPlayers() {
     return `<div class="pl mat ${S.active === p.id && !S.gameOver ? "active" : ""}" data-pid="${p.id}" title="Click for everything this player holds" style="--pc:${p.color}">
       ${portrait}
       <div class="mat-body">
-        <div class="mat-hd"><span class="who">${esc(pname(p))}</span>${badges}<span class="vp" title="victory points">${p.vp}<small>VP</small></span></div>
+        <div class="mat-hd"><span class="who">${esc(pname(p))}</span>${badges}<span class="vp" title="${esc(vpTip(p))}">${p.vp}<small>VP</small></span></div>
         <div class="mat-res">
           <span title="solari">💰<b>${p.solari}</b></span><span title="spice">🟠<b>${p.spice}</b></span><span title="water">💧<b>${p.water}</b></span>
           <span title="troops in garrison (commanders included)">🛡<b>${p.garrison}</b></span>
@@ -378,6 +378,18 @@ function renderVP() {
     rows += `<div class="vprow ${v === 10 ? "end" : ""}" title="${v} VP${v === 10 ? " · reaching 10 ends the game after the round" : ""}"><span class="vpn">${v}</span><span class="vpm">${here}</span></div>`;
   }
   $("vptrack").innerHTML = `<div class="vpt-title">VP</div>${rows}`;
+}
+
+// Where a player's VP came from (server: vp_sources): "+1 Fremen friendship (R3)" ...
+const sgn = (n) => (n > 0 ? "+" : "") + n;
+const vpRounds = (e) => e.rounds.filter(([r]) => r).map(([r, d]) => `R${r}${Math.abs(d) > 1 ? ` ${sgn(d)}` : ""}`).join(", ");
+function vpTip(p) {
+  return `${p.vp} VP\n` + (p.vpSources || []).map((e) => `${sgn(e.vp)}  ${e.src}${vpRounds(e) ? ` (${vpRounds(e)})` : ""}`).join("\n");
+}
+function vpList(p) {
+  const rows = (p.vpSources || []).map((e) =>
+    `<div class="vps ${e.vp < 0 ? "neg" : ""}"><b>${sgn(e.vp)}</b><span>${esc(e.src)}</span><span class="muted">${vpRounds(e)}</span></div>`);
+  return rows.length ? `<div class="vps-list">${rows.join("")}</div>` : `<span class="muted">none</span>`;
 }
 
 const ICON_CLS = { "Crysknife": "ic-knife", "Desert Mouse": "ic-mouse", "Ornithopter": "ic-thopter", "Wild": "ic-wild" };
@@ -620,6 +632,7 @@ function renderPlayerDetail(p) {
   const cards = (list) => list.length ? list.map((c) => `<div class="pile-card">${cardEl(c)}</div>`).join("") : `<span class="muted">none</span>`;
   const hidden = `<span class="muted">hidden: tick “Show AI hands”, or watch an AI-only game</span>`;
   const h = [];
+  h.push(sec(`Victory points (${p.vp}): where they came from`, vpList(p)));
   h.push(sec(`Hand (${p.handSize})`, p.hand ? cards(p.hand) : hidden));
   h.push(sec(`Intrigues (${p.intrigueCount})`, p.intrigues ? cards(p.intrigues) : hidden));
   h.push(sec("Battle icons", p.battleIcons.length ? iconChips(p.battleIcons) : `<span class="muted">none</span>`));

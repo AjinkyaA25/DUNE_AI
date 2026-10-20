@@ -598,3 +598,10 @@ dialog select, dialog input:not([type=checkbox]) { background: var(--panel-2); b
 
 /* a once-per-round tech that has been flipped (used) this round */
 .mt-tech.used, .pd-tech.used, .chip.used { filter: grayscale(1) brightness(0.55); opacity: 0.7; }
+/* VP breakdown (player detail) */
+.vps-list { display: grid; gap: 2px; width: 100%; }
+.vps { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; font-size: 12px; align-items: baseline; }
+.vps b { color: var(--accent-2); text-align: right; }
+.vps.neg b { color: #e07a6a; }
+.vps .muted { font-size: 11px; }
+.mat-hd .vp { cursor: help; }

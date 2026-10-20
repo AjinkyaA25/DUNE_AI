@@ -686,7 +686,7 @@ class Bloodlines:
         p = self._p(pid)
         n = len(p.battle_icons)
         if n >= 2:
-            p.gain_vp(n // 2)
+            p.gain_vp(n // 2, "Ornithopter Fleet (icon pairs)")
         p.battle_icons = ["ornithopter"] * (n % 2)
 
     def _trash_spy(self, pid: int, post: str) -> None:
@@ -1010,7 +1010,7 @@ class Bloodlines:
                     if p.influence[f] <= 1:
                         gs.gain_influence_with_check(p.id, f, 1)
             if "CHOAM Transports" in names and len(p.contracts_completed) >= 4:
-                p.gain_vp(1)
+                p.gain_vp(1, "CHOAM Transports (endgame)")
             if "Holtzman Engine" in names:
                 tsmf = sum(1 for c in p.get_all_cards()
                            if c.name == "The Spice Must Flow") \
@@ -1018,11 +1018,11 @@ class Bloodlines:
                         1 for c in p.deck + p.hand + p.discard + p.in_play
                         if c.name == "The Spice Must Flow")
                 if tsmf >= 2:
-                    p.gain_vp(1)
+                    p.gain_vp(1, "Holtzman Engine (endgame)")
             if "Memocorders" in names and all(p.influence[f] >= 3 for f in FACTIONS):
-                p.gain_vp(1)
+                p.gain_vp(1, "Memocorders (endgame)")
             if "Spy Satellites" in names:
-                p.gain_vp(sum(1 for f in FACTIONS if p.influence[f] <= 1))
+                p.gain_vp(sum(1 for f in FACTIONS if p.influence[f] <= 1), "Spy Satellites (endgame)")
 
     def wins_ties(self, pid: int) -> bool:
         return self.has(pid, "Chaumurky")

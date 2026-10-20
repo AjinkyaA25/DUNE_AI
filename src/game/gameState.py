@@ -19,6 +19,7 @@ Effect ordering (per FAQ):
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple
@@ -748,7 +749,64 @@ class GameState:
 
         return [GameAction(ActionType.NO_OP, player_id)]
 
+    # ------------------------------------------------------------------
+    # VP breakdown (Player.vp_log): every VP gained / lost is labelled with
+    # the innermost context active when it happened (explicit labels for
+    # friendships, alliances, battle icons ... override it).
+    # ------------------------------------------------------------------
+    @contextmanager
+    def vp_context(self, label: str):
+        for p in self.players:
+            if not hasattr(p, "vp_ctx"):
+                p.vp_ctx = []
+            p.vp_ctx.append((label, self.round))
+        try:
+            yield
+        finally:
+            for p in self.players:
+                p.vp_ctx.pop()
+
+    def _vp_label(self, action: GameAction) -> str:
+        """Where VP gained during this action came from, for the breakdown."""
+        at, pid = action.action_type, action.player_id
+        origin = getattr(self, "_vp_origin", None)
+        if origin is None:
+            origin = self._vp_origin = {}
+        label = None
+        if at == ActionType.AGENT_TURN:
+            label = " · ".join(x for x in (action.space_name, action.card_name) if x)
+        elif at == ActionType.REVEAL_TURN:
+            label = "Reveal turn"
+        elif at == ActionType.ACQUIRE_CARD:
+            label = f"Bought {action.acquire_card_name}"
+        elif at == ActionType.ACQUIRE_RESERVE:
+            label = "Bought " + ("The Spice Must Flow" if action.reserve_type == "spice_must_flow"
+                                 else "Prepare the Way")
+        elif at == ActionType.PLAY_INTRIGUE:
+            label = f"Intrigue: {action.intrigue_card_name}"
+        elif at == ActionType.RESOLVE_CONTRACT:
+            i, board = action.contract_index, self.contracts_on_board
+            label = f"Contract: {board[i].name}" if 0 <= i < len(board) else "Contract"
+        elif at == ActionType.ACTIVATE_TECH:
+            label = f"Tech: {action.choice}"
+        elif at == ActionType.RESOLVE_OPTIONAL:
+            op = next((o for o in self.pending_optional_payments if o.player_id == pid), None)
+            label = getattr(op, "vp_src", None)
+        if label:
+            if at != ActionType.RESOLVE_OPTIONAL:
+                origin[pid] = label
+            return label
+        return origin.get(pid) or at.value.replace("_", " ").capitalize()
+
     def step(self, action: GameAction) -> Tuple[Dict, float, bool, Dict]:
+        try:
+            label = self._vp_label(action)
+        except Exception:                         # a label must never stop a game
+            label = "Other"
+        with self.vp_context(label):
+            return self._step(action)
+
+    def _step(self, action: GameAction) -> Tuple[Dict, float, bool, Dict]:
         """
         Apply action, auto-advance automated phases, return
         (state_dict, reward, done, info).
@@ -2864,7 +2922,8 @@ class GameState:
         # Apply rewards in player turn order (FAQ: resolve in turn order when order matters)
         for pid in self.turn_order:
             if pid in rewards_awarded:
-                self._apply_combat_reward(pid, rewards_awarded[pid], conflict)
+                with self.vp_context(f"Conflict: {conflict.name}"):
+                    self._apply_combat_reward(pid, rewards_awarded[pid], conflict)
 
         if conflict_card_goes_to is not None:
             self.won_conflicts[conflict_card_goes_to].append(conflict)
@@ -2977,7 +3036,7 @@ class GameState:
         p = self.players[player_id]
         if name != "wild" and name in p.battle_icons:
             p.battle_icons.remove(name)          # consume the matched pair
-            p.gain_vp(1)
+            p.gain_vp(1, f"Battle icons: {name.replace('_', ' ').title()} pair")
             return True
         p.battle_icons.append(name)
         return False
@@ -3392,6 +3451,8 @@ class GameState:
         op = PendingOptionalPayment(player_id, cost, reward, discard, label,
                                     discard_tag, tag_bonus)
         op.mandatory = getattr(self, "_intrigue_cost_for", None) == player_id
+        ctx = getattr(self.players[player_id], "vp_ctx", None)
+        op.vp_src = ctx[-1][0] if ctx else None   # VP breakdown: label of what offered it
         if self._can_pay_optional(player_id, op):
             self.pending_optional_payments.append(op)
 
@@ -3459,7 +3520,8 @@ class GameState:
             self.phase     = Phase.GAME_OVER
             _vp_before = {p.id: p.victory_points for p in self.players}
             if self.bl:
-                self.bl.endgame()
+                with self.vp_context("Tech (endgame)"):
+                    self.bl.endgame()
             self._resolve_endgame_intrigues()
             self._resolve_endgame_battle_icons()
             self._endgame_vp_gained = {
@@ -3480,7 +3542,8 @@ class GameState:
                 ok, _ = ic.can_play(p, self)
                 if ok:
                     p.play_intrigue(ic)
-                    ic.resolve(p, self)
+                    with self.vp_context(f"{ic.name} (endgame)"):
+                        ic.resolve(p, self)
 
     def _resolve_endgame_battle_icons(self) -> None:
         """
@@ -3493,7 +3556,7 @@ class GameState:
             reals = sum(1 for i in p.battle_icons if i != "wild")
             paired = min(wilds, reals)            # wild + real
             wilds -= paired
-            p.gain_vp(paired + wilds // 2)        # leftover wilds pair with each other
+            p.gain_vp(paired + wilds // 2, "Battle icons: Wild match (endgame)")   # leftover wilds pair up
             p.battle_icons = []
 
     def _determine_winner(self) -> int:

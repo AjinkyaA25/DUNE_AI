@@ -42,8 +42,13 @@ def rebuild(doc, upto=None):
     """Game state before move `upto` (None = after the last move)."""
     random.seed(doc["seed"])
     n_players = len(doc["vp"])
-    gs = setup_game(num_players=n_players, seed=doc["seed"], neutral_leaders=True,
-                    use_bloodlines=doc.get("bloodlines", True))
+    if doc.get("leaders") and all(doc["leaders"]):
+        gs = setup_game(num_players=n_players, seed=doc["seed"], leaders=doc["leaders"],
+                        use_bloodlines=doc.get("bloodlines", True))
+    else:
+        gs = setup_game(num_players=n_players, seed=doc["seed"], neutral_leaders=True,
+                        use_bloodlines=doc.get("bloodlines", True))
+    gs.manual_end_turn = set(doc.get("manual_end_turn", ()))
     moves = doc["moves"]
     for i, m in enumerate(moves[:upto] if upto is not None else moves):
         pid = active(gs)

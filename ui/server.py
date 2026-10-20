@@ -636,6 +636,21 @@ def name_counts(cards) -> List[List]:
     return [[n, k, card_img(n)] for n, k in sorted(c.items(), key=lambda t: (-t[1], t[0]))]
 
 
+def vp_sources(p) -> List[Dict]:
+    """Where a player's VP came from (Player.vp_log), grouped by source in the
+    order first earned; anything the log misses (a game started before it
+    existed) shows as 'Earlier (not recorded)' so the total always matches."""
+    out: Dict[str, Dict] = {}
+    for src, d, rnd in getattr(p, "vp_log", []):
+        e = out.setdefault(src, {"src": src, "vp": 0, "rounds": []})
+        e["vp"] += d
+        e["rounds"].append([rnd, d])
+    rest = p.victory_points - sum(e["vp"] for e in out.values())
+    if rest:
+        out["Earlier (not recorded)"] = {"src": "Earlier (not recorded)", "vp": rest, "rounds": []}
+    return [e for e in out.values() if e["vp"] or len(e["rounds"]) > 1]
+
+
 def last_combat(gs) -> Optional[Dict]:
     """The Conflict just resolved: each fighter's strength and what they got."""
     r = getattr(gs, "_last_combat_result", None)
@@ -1134,6 +1149,9 @@ class Session:
         doc = {"game_id": self.id, "source": "ui", "started": self.started.isoformat(),
                "saved": datetime.now().isoformat(), "seed": self.seed,
                "bloodlines": bool(gs.bl), "human_id": self.seat,
+               # what ui/replay.py needs to rebuild the exact game
+               "leaders": [getattr(p.leader, "name", None) for p in gs.players],
+               "manual_end_turn": sorted(getattr(gs, "manual_end_turn", ()) or ()),
                "opponents": {str(k): v for k, v in self.specs.items()},
                "finished": gs.game_over, "round": gs.round, "winner": winner,
                "you_won": None if winner is None else winner == self.seat, "vp": vp,
@@ -1266,7 +1284,7 @@ class Session:
                     "agentName": None if mine else next(
                         (o["name"] for o in OPPONENTS if o["spec"] == self.specs.get(p.id)),
                         self.specs.get(p.id)),
-                    "vp": p.victory_points, "solari": p.solari, "spice": p.spice,
+                    "vp": p.victory_points, "vpSources": vp_sources(p), "solari": p.solari, "spice": p.spice,
                     "water": p.water, "influence": pd["influence"],
                     "alliances": pd["alliances"], "agentsAvail": p.agents_available,
                     "agentsTotal": p.agents_total, "garrison": p.troops_garrison,

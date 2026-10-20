@@ -492,7 +492,7 @@ class EffectResolver:
                 icon = spec["icon"]
                 if icon in player.battle_icons:
                     player.battle_icons.remove(icon)
-                    player.gain_vp(1)
+                    player.gain_vp(1, f"{icon.replace('_', ' ').title()} match (endgame)")
             else:
                 player.gain_spice(int(spec.get("spice", 1)))
 
