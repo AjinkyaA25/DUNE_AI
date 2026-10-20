@@ -17,6 +17,8 @@ while true; do
     git commit -q -m "PPO checkpoint ($D): iteration $it ($games games); $best" \
         -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" \
         && echo "[autopush $(date -Is)] committed iter $it" \
-        && (git push -q origin HEAD 2>&1             || (git pull -q --rebase --autostash origin "$(git branch --show-current)" && git push -q origin HEAD) 2>&1             || echo "[autopush] push failed, will retry next hour")
+        && (git push -q origin HEAD 2>&1 \
+            || (git pull -q --rebase --autostash origin "$(git branch --show-current)" && git push -q origin HEAD) 2>&1 \
+            || echo "[autopush] push failed, will retry next hour")
     [ "$2" = once ] && break
 done
