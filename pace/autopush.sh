@@ -1,9 +1,9 @@
 #!/bin/bash
 # Commits and pushes models_ppo (best.npz/best.json + resumable checkpoint) every
 # $1 seconds (default 3600; pass "0 once" for a single push) while PPO trains. Started by pace/ppo_autopush.sbatch.
-# MODEL_DIR=<dir> pushes another run's folder instead (pace/ppo_wide.sbatch).
+# MODEL_DIR=<dir> (or PPO_DIR) pushes another run's folder instead (pace/ppo_wide.sbatch, pace/ppo2m_autopush.sbatch).
 INTERVAL=${1:-3600}
-D=${MODEL_DIR:-models_ppo}
+D=${MODEL_DIR:-${PPO_DIR:-models_ppo}}
 cd "$(dirname "$0")/.."
 while true; do
     sleep "$INTERVAL"

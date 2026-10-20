@@ -19,11 +19,14 @@ module load anaconda3
 eval "$(conda shell.bash hook)"
 conda activate dune
 export PYTHONHASHSEED=0
+# one BLAS thread per rollout worker: 34 workers x 36 OpenBLAS threads each
+# oversubscribe the node (2x slower with the small net, ~75x with the 2M net)
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 bash pace/autopush.sh 3600 &
 PUSH_PID=$!
 # 5 min before the walltime: stop training and push the latest state once more
 trap 'kill $TRAIN_PID; wait $TRAIN_PID; kill $PUSH_PID; bash pace/autopush.sh 0 once' USR1
 python -u -m src.selfplay.ppo_train --out models_ppo --games 700 --workers 34 \
-    --T 1.0 --eval-every 10 --eval-games 2000 &
+    --T 1.0 --eval-every 10 --eval-games 2000 --self-frac 0.6 &
 TRAIN_PID=$!
 wait $TRAIN_PID

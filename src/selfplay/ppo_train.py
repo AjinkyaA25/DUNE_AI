@@ -314,6 +314,13 @@ def main():
     ap.add_argument("--init", default="", help="checkpoint.pt to start from when --out has none")
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=2000)
+    ap.add_argument("--eval-secs", type=float, default=0,
+                    help="> 0: run the eval every this many seconds instead of every --eval-every "
+                         "iterations (which then only sets how often a self-play snapshot is saved)")
+    ap.add_argument("--self-eval-games", type=int, default=0,
+                    help="> 0: each eval also plays the policy in 1 seat vs 3 copies of the previous eval's "
+                         "snapshot (25%% = no progress since then; plateau check once Best AI is beaten)")
+    ap.add_argument("--snap-pool", type=int, default=5, help="newest snapshots the opponents are drawn from")
     ap.add_argument("--base", default=os.path.join("config", "best_ai.json"),
                     help="heuristic weights the policy starts from (copied to config/ppo/base.json once)")
     A = ap.parse_args()
@@ -355,7 +362,7 @@ def main():
         bpath = os.path.join(A.out, "eval_baseline.json")
         if os.path.exists(bpath):
             base_eval = json.load(open(bpath))
-        if A.eval_every and base_eval is None:
+        if (A.eval_every or A.eval_secs) and base_eval is None:
             res = pool.map(eval_game, [(g, A.eval_base or f"heuristic:tuned={BASE}", A.eval_opp)
                                        for g in range(A.eval_games)], chunksize=8)
             base_eval = {"share": float(np.mean([w for w, _ in res])), "wins": [w for w, _ in res],
@@ -363,11 +370,12 @@ def main():
             json.dump(base_eval, open(bpath, "w"))
             print(f"baseline: Best AI in the eval seat {base_eval['share']:.1%} | rounds {base_eval['rounds']:.2f}",
                   flush=True)
+        t_eval, g_eval = time.time(), state["games"]
         while A.iters == 0 or state["iter"] < A.iters:
             state["iter"] += 1
             it = state["iter"]
             t0 = time.time()
-            snaps = sorted(glob.glob(os.path.join(A.out, "snap_*.npz")))[-5:] + pool_nets
+            snaps = sorted(glob.glob(os.path.join(A.out, "snap_*.npz")))[-A.snap_pool:] + pool_nets
             jobs = [(100_000_000 + state["games"] + g, cur, A.ppo_seats, league, A.league_frac, snaps, A.self_frac,
                      A.cur_frac)
                     for g in range(A.games)]
@@ -398,9 +406,19 @@ def main():
                    "win": round(float(np.mean([R > 0.5 for _, R, _ in trajs])), 4),
                    "rounds": round(float(np.mean(rounds)), 3), "overrule": round(overrule, 4),
                    "rollout_s": round(t1 - t0, 1), "update_s": round(time.time() - t1, 1), **st}
+            snap = os.path.join(A.out, f"snap_{it:05d}.npz")
             if A.eval_every and it % A.eval_every == 0:
-                snap = os.path.join(A.out, f"snap_{it:05d}.npz")
-                shutil.copy(cur, snap)
+                shutil.copy(cur, snap)                # self-play opponent
+            if A.eval_secs:
+                do_eval = time.time() - t_eval >= A.eval_secs
+            else:
+                do_eval = bool(A.eval_every) and it % A.eval_every == 0
+            if do_eval:
+                if not os.path.exists(snap):
+                    shutil.copy(cur, snap)
+                if A.eval_secs:                       # throughput since the last eval (incl. that eval)
+                    rec["games_per_hour"] = round((state["games"] - g_eval) * 3600 / (time.time() - t_eval))
+                    t_eval, g_eval = time.time(), state["games"]
                 res = pool.map(eval_game, [(g, f"ppo:net={snap}:tuned={BASE}:greedy", A.eval_opp)
                                            for g in range(A.eval_games)], chunksize=8)
                 w = np.array([x for x, _ in res])
@@ -409,7 +427,16 @@ def main():
                                "diff": round(float(d.mean()), 4),
                                "se": round(float(d.std() / math.sqrt(len(d))), 4),
                                "rounds": round(float(np.mean([r for _, r in res])), 3)}
-                best = os.path.join(A.out, "best.json")
+                prev = state.get("eval_snap")
+                if A.self_eval_games and prev and os.path.exists(prev):
+                    opp = f"ppo:net={prev}:tuned={BASE}:greedy"
+                    res = pool.map(eval_game, [(g, f"ppo:net={snap}:tuned={BASE}:greedy", opp)
+                                               for g in range(A.self_eval_games)], chunksize=8)
+                    w = np.array([x for x, _ in res])
+                    rec["eval_vs_prev"] = {"prev": os.path.basename(prev), "share": round(float(w.mean()), 4),
+                                           "se": round(float(w.std() / math.sqrt(len(w))), 4)}
+                state["eval_snap"] = snap
+                best =os.path.join(A.out, "best.json")
                 b = json.load(open(best)) if os.path.exists(best) else {"diff": -1}
                 if rec["eval"]["diff"] > b["diff"]:
                     shutil.copy(snap, os.path.join(A.out, "best.npz"))
