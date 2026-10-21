@@ -106,6 +106,22 @@ def make_torch_net(S, A, sizes, T, w=(256, 128, 128, EMB)):
     return Net()
 
 
+def load_npz(net, p: dict) -> None:
+    """Weights of an exported net (net.npz / the UI's ppo.npz) back into the
+    PyTorch net (the final-VP head is not exported: it starts fresh)."""
+    import torch
+    sd = net.state_dict()
+    t = lambda x: torch.as_tensor(np.asarray(x, np.float32))
+    new = {"s1.weight": t(p["s1.w"]), "s1.bias": t(p["s1.b"]), "s2.weight": t(p["s2.w"]), "s2.bias": t(p["s2.b"]),
+           "v.weight": t(p["v.w"])[None, :], "v.bias": t(p["v.b"]).reshape(1),
+           "a1.weight": t(p["a1.w"]), "a1.bias": t(p["a1.b"]),
+           "a2.weight": t(p["a2.w"])[None, :], "a2.bias": t(p["a2.b"]).reshape(1)}
+    for j in range(len(net.emb)):
+        new[f"emb.{j}.weight"] = t(p[f"e{j}"])
+    sd.update({k: v.to(sd[k].device) for k, v in new.items()})
+    net.load_state_dict(sd)
+
+
 def widen(net, old: dict) -> None:
     """Load a smaller network's weights into a wider `net` so it plays EXACTLY the
     same: old units keep their weights, new units get a fresh random input side
@@ -348,7 +364,7 @@ def main():
     ap.add_argument("--widths", default="256,128,128,16",
                     help="state layer 1, state layer 2, move layer, embedding size; a checkpoint of a smaller "
                          "net is widened (same play, new units start silent); --init <checkpoint.pt> starts from one")
-    ap.add_argument("--init", default="", help="checkpoint.pt to start from when --out has none")
+    ap.add_argument("--init", default="", help="checkpoint.pt or exported net .npz to start from when --out has none")
     ap.add_argument("--k", type=int, default=16,
                     help="moves the policy chooses among: the heuristic's top k (0 = every legal move)")
     ap.add_argument("--dense", type=float, default=0.0,
@@ -376,12 +392,20 @@ def main():
     from src.ai.features import FEATURE_DIM
     from src.ai.action_features import ACTION_FEATURE_DIM
     widths = tuple(int(x) for x in A.widths.split(","))
+    ck = os.path.join(A.out, "checkpoint.pt")
+    src = ck if os.path.exists(ck) else A.init
+    npz = dict(np.load(src)) if src and src.endswith(".npz") else None
+    if npz is not None:                          # a played net (e.g. the UI's): its own widths and T
+        widths = (npz["s1.w"].shape[0], npz["s2.w"].shape[0], npz["a1.w"].shape[0], npz["e0"].shape[1])
+        A.T = float(npz["T"])
     net = make_torch_net(FEATURE_DIM, ACTION_FEATURE_DIM, id_sizes(), A.T, widths).to(dev)
     net.K = A.k
     opt = torch.optim.Adam(net.parameters(), lr=A.lr)
-    ck = os.path.join(A.out, "checkpoint.pt")
     state = {"iter": 0, "games": 0}
-    src = ck if os.path.exists(ck) else A.init
+    if npz is not None:
+        load_npz(net, npz)
+        print(f"started from {src} (widths {widths}, T {A.T}); fresh optimiser and final-VP head", flush=True)
+        src = None
     c = torch.load(src, map_location=dev) if src else None
     if c and any(v.shape != net.state_dict()[k].shape for k, v in c["net"].items() if k in net.state_dict()):
         widen(net, c["net"])

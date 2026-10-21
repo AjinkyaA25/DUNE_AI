@@ -19,6 +19,7 @@ Effect ordering (per FAQ):
 """
 from __future__ import annotations
 
+import itertools
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
@@ -216,6 +217,7 @@ class QueuedEffect:
 
 VP_TO_WIN   = 10
 MAX_ROUNDS  = 10
+_STATE_SERIALS = itertools.count(1)   # GameState.state_key
 FACTIONS    = ("emperor", "spacing_guild", "bene_gesserit", "fremen")
 
 
@@ -794,6 +796,7 @@ class GameState:
         return origin.get(pid) or at.value.replace("_", " ").capitalize()
 
     def step(self, action: GameAction) -> Tuple[Dict, float, bool, Dict]:
+        self._nstep = self.__dict__.get("_nstep", 0) + 1     # state_key: the position changed
         try:
             label = self._vp_label(action)
         except Exception:                         # a label must never stop a game
@@ -3669,7 +3672,18 @@ class GameState:
         for pl in self.players:
             for ct in pl.contracts_active + pl.contracts_completed:
                 memo[id(ct)] = ct
-        return _copy.deepcopy(self, memo)
+        c = _copy.deepcopy(self, memo)
+        c.__dict__.pop("_serial", None)          # a copy is a different state (state_key)
+        return c
+
+    def state_key(self) -> tuple:
+        """Identifies this exact position for per-decision caches: a serial
+        unique to this object (copies get their own) and its step count."""
+        d = self.__dict__
+        s = d.get("_serial")
+        if s is None:
+            s = d["_serial"] = next(_STATE_SERIALS)
+        return s, d.get("_nstep", 0)
 
     def __repr__(self) -> str:
         return (

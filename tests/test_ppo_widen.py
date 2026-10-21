@@ -47,3 +47,22 @@ def test_widen_keeps_play_and_value():
         lg, v = net.logits(s[0], D[0], I[0], H[0])
     assert np.allclose(lg, l1[0].numpy(), atol=1e-4)
     assert abs(v - float(v1[0])) < 1e-4
+
+
+def test_load_npz_round_trip():
+    from src.selfplay.ppo_train import load_npz
+    S, A, sizes = 20, 10, [5, 7, 3]
+    torch.manual_seed(2)
+    a = make_torch_net(S, A, sizes, 1.0, (12, 8, 9, 4))
+    for p in a.parameters():
+        torch.nn.init.normal_(p, std=0.3)
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "net.npz")
+        a.export(path)
+        b = make_torch_net(S, A, sizes, 1.0, (12, 8, 9, 4))
+        load_npz(b, dict(np.load(path)))
+    x = _inputs(S, A, sizes)
+    with torch.no_grad():
+        la, va, _ = a(*x)
+        lb, vb, _ = b(*x)
+    assert torch.allclose(la, lb, atol=1e-5) and torch.allclose(va, vb, atol=1e-5)

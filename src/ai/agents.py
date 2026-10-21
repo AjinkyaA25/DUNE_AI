@@ -326,6 +326,93 @@ _INFLUENCE_BASE = 4.5      # per-point value of influence when _FACTION_FOCUS
 _FRIENDSHIP_GATE_BONUS = {"fremen": 2.5, "spacing_guild": 2.0, "emperor": 2.0}
 
 
+# ---------------------------------------------------------------------------
+# Per-decision cache (speed, 2026-10-21). While one decision's legal moves are
+# scored, the position doesn't change, so position-only parts of the score
+# (rival fight forecasts, deck access, objective model) are computed once per
+# decision instead of once per move. Keys: the exact position
+# (GameState.state_key: serial + step count), the tuning in force, _DC_EPOCH
+# (a fresh one while scoring temporarily edits the state, the old one back
+# after), the card-play context and busy flags some values depend on, and
+# the arguments. Off outside decision_cache(): direct score() calls are unchanged.
+# src/selfplay/parity.py checks the play stays identical.
+# ---------------------------------------------------------------------------
+_DC: Optional[dict] = None
+_DC_EPOCH = 0
+_DC_NEXT = 0
+
+
+class decision_cache:
+    """with decision_cache(): ... score every legal move of one decision."""
+
+    def __enter__(self):
+        global _DC
+        self.outer = _DC
+        if _DC is None:
+            _DC = {}
+
+    def __exit__(self, *exc):
+        global _DC
+        if self.outer is None:
+            _DC = None
+
+
+def _dc_enter() -> int:
+    """Scoring is about to edit the state temporarily: cache under a fresh
+    epoch until _dc_exit(previous) puts the state - and the epoch - back."""
+    global _DC_EPOCH, _DC_NEXT
+    prev = _DC_EPOCH
+    _DC_NEXT += 1
+    _DC_EPOCH = _DC_NEXT
+    return prev
+
+
+def _dc_exit(prev: int) -> None:
+    global _DC_EPOCH
+    _DC_EPOCH = prev
+
+
+_PLAIN = (int, float, str, bool, type(None))
+
+
+def _decision_cached(fn):
+    def wrapped(gs, *args, **kw):
+        d = _DC
+        if d is None:
+            return fn(gs, *args, **kw)
+        # objects (tech tiles, cards ...) by identity: they live all decision
+        key = (fn, gs.state_key(), _DC_EPOCH, id(_TUNE), _PLAY_KEY, _DP_BUSY, _TRASH_BUSY,
+               tuple(a if isinstance(a, _PLAIN) else id(a) for a in args),
+               tuple(sorted((k, v if isinstance(v, _PLAIN) else id(v)) for k, v in kw.items())))
+        try:
+            return d[key]
+        except KeyError:
+            v = d[key] = fn(gs, *args, **kw)
+            return v
+    wrapped.__name__ = fn.__name__
+    wrapped.__doc__ = fn.__doc__
+    return wrapped
+
+
+def _decision_cached_cards(fn):
+    """_decision_cached for values that read only the players' cards (never
+    edited while scoring, never read through the card-play context)."""
+    def wrapped(gs, *args):
+        d = _DC
+        if d is None:
+            return fn(gs, *args)
+        key = (fn, gs.state_key(), id(_TUNE), args)
+        try:
+            return d[key]
+        except KeyError:
+            v = d[key] = fn(gs, *args)
+            return v
+    wrapped.__name__ = fn.__name__
+    wrapped.__doc__ = fn.__doc__
+    return wrapped
+
+
+@_decision_cached_cards
 def _faction_access_strength(gs: GameState, pid: int, fac: str) -> float:
     """
     How much of this player's own deck (deck/discard/hand/in_play) actually
@@ -357,6 +444,7 @@ def _faction_access_strength(gs: GameState, pid: int, fac: str) -> float:
     return n / max(1, len(all_cards))
 
 
+@_decision_cached
 def _game_urgency(gs: GameState, pid: int) -> float:
     """
     Scales VP-chasing behavior up as the game nears its likely end. Winning
@@ -384,6 +472,7 @@ def _game_urgency(gs: GameState, pid: int) -> float:
     return 1.0 + 2.5 * max(round_component, vp_component, race)
 
 
+@_decision_cached
 def _influence_gain_value(gs: GameState, pid: int, fac: str, amt: float, _shift: int = 0) -> float:
     """
     Value of adding `amt` influence to one faction track — or, if fac == "any"
@@ -589,6 +678,7 @@ def _flatten(eff: dict) -> dict:
 
 # Known-at-play-time condition values (set while scoring an agent move).
 _PLAY_CTX: Optional[dict] = None
+_PLAY_KEY: Optional[tuple] = None          # _PLAY_CTX's contents, for the per-decision cache key
 
 
 def _cond_weight(gs: GameState, pid: int, key: str) -> float:
@@ -1109,13 +1199,14 @@ def _skill_swords(gs: GameState, pid: int, assume_commander: bool = False) -> fl
         return float(bl.strength_bonus(pid))
     if not assume_commander:
         return 0.0
-    bl.commanders_in_conflict[pid] = 1
+    bl.commanders_in_conflict[pid] = 1        # (nothing cached runs in here)
     try:
         return float(bl.strength_bonus(pid))
     finally:
         bl.commanders_in_conflict[pid] = 0
 
 
+@_decision_cached
 def _opp_fight(gs: GameState, q: int, viewer: Optional[int] = None):
     """(expected final strength, spread, can_place) of opponent q, as player
     `viewer` sees it. can_place may be a probability (learned forecast:
@@ -1233,6 +1324,7 @@ def _combat_space_ev(gs: GameState, pid: int, a) -> float:
     return best
 
 
+@_decision_cached
 def fight_ev(gs: GameState, pid: int, my_strength: float, my_units: int,
              worm: Optional[bool] = None) -> float:
     """Expected value of this Conflict's rewards for pid at this strength."""
@@ -1532,10 +1624,12 @@ def _influence_loss_value(gs: GameState, pid: int, fac: str) -> float:
     if cur <= 0:
         return 0.0
     p.influence[fac] = cur - 1
+    prev = _dc_enter()
     try:
         return _influence_gain_value(gs, pid, fac, 1)
     finally:
         p.influence[fac] = cur
+        _dc_exit(prev)
 
 
 def _choice_option_value(gs: GameState, pid: int, eff: dict) -> float:
@@ -1861,6 +1955,7 @@ def _worm_gain(gs: GameState, pid: int, n: float = 1.0, wall_open: bool = False)
     return max(0.0, ev1 - ev0)
 
 
+@_decision_cached
 def _conflict_worth(gs: GameState, pid: int, worm: Optional[bool] = None) -> float:
     """
     How valuable is winning the current Conflict for this player. Scaled by
@@ -2094,7 +2189,7 @@ def _card_agent_play_value(gs: GameState, pid: int, a) -> float:
     in hand to send. Relative, so agent-vs-Reveal balance is unchanged and
     only the choice of card moves.
     """
-    global _PLAY_CTX
+    global _PLAY_CTX, _PLAY_KEY
     from src.game.board.board import MAKER_SPACE_OPTIONS
     p = gs.players[pid]
     card = next((c for c in p.hand if c.name == a.card_name), None)
@@ -2109,12 +2204,14 @@ def _card_agent_play_value(gs: GameState, pid: int, a) -> float:
                      if any(getattr(t, "value", t) == tag for t in getattr(c, "tags", ())))
         ctx["tag_other_" + short] = 1.0 if others else 0.0
     _PLAY_CTX = ctx
+    _PLAY_KEY = tuple(sorted(ctx.items()))
     try:
         v = sum(_card_effect_value(gs, pid, e) for e in card.agent_effects or [])
         if card.name == "Signet Ring":
             v += _signet_value(gs, pid, a.space_name)
     finally:
         _PLAY_CTX = None
+        _PLAY_KEY = None
     lost = _card_reveal_worth(gs, pid, card)
     cheapest = min(_card_reveal_worth(gs, pid, c) for c in p.hand)
     return v - (lost - cheapest)
@@ -2342,14 +2439,20 @@ class Agent:
         raise NotImplementedError
 
 
+@_decision_cached
+def _objective_probs(gs: GameState, pid: int):
+    from src.ai.playstyle import objective_probs
+    return objective_probs(gs, pid)
+
+
 def _style_bonus(gs: GameState, pid: int, a: GameAction,
                  fixed: Optional[dict] = None) -> float:
     """P(objective | position) for the objective this action buys (or half
     of it for an agent move that opens the purchase); see the style knob.
     `fixed` replaces the probabilities with a fixed weight per objective
     (the fixated playstyles)."""
-    from src.ai.playstyle import action_objective, objective_probs
-    probs = fixed if fixed is not None else objective_probs(gs, pid)
+    from src.ai.playstyle import action_objective
+    probs = fixed if fixed is not None else _objective_probs(gs, pid)
     if probs is None:
         return 0.0
     obj = action_objective(gs, pid, a)
@@ -2437,10 +2540,12 @@ class HeuristicAgent(Agent):
                 and not getattr(p, "no_deploy_this_turn", False)):
             # his Signet turn deploys nothing: no Conflict, worm or deploy value
             p.no_deploy_this_turn = True
+            prev = _dc_enter()
             try:
                 s = self._score_core(gs, pid, a)
             finally:
                 p.no_deploy_this_turn = False
+                _dc_exit(prev)
         else:
             s = self._score_core(gs, pid, a)
         if getattr(gs, "bl", None) is not None:
@@ -2851,7 +2956,8 @@ class HeuristicAgent(Agent):
         return s
 
     def select_action(self, gs, pid, valid_actions):
-        scores = [self.score(gs, pid, a) for a in valid_actions]
+        with decision_cache():
+            scores = [self.score(gs, pid, a) for a in valid_actions]
         if self.near > 0:
             top = max(scores)
             pool = [a for a, s in zip(valid_actions, scores)

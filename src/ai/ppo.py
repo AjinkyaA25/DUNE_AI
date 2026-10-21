@@ -200,7 +200,9 @@ class PPOAgent:
         """-> heuristic scores of all moves, the shortlist, its logits, value, network inputs."""
         from src.ai.features import encode_state
         from src.ai.action_features import encode_action
-        h_all = [self.h.score(gs, pid, a) for a in valid]
+        from src.ai.agents import decision_cache
+        with decision_cache():
+            h_all = [self.h.score(gs, pid, a) for a in valid]
         net = load_net(self.net_path)
         idx = shortlist(h_all, k=net.K if self.k is None else self.k)
         h = np.array([h_all[i] for i in idx], dtype=np.float32)
