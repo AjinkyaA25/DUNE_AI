@@ -43,6 +43,7 @@ import numpy as np
 def determinize(gs, pid: int, rng: np.random.Generator):
     gs2 = gs.clone()
     gs2.rng = np.random.default_rng(int(rng.integers(0, 2**31 - 1)))
+    gs2._shuffle_salt = int(rng.integers(1, 2**31 - 1))    # future reshuffles unknown too
 
     # --- opponents' hand/deck: known composition, hidden split + order ---
     for p in gs2.players:

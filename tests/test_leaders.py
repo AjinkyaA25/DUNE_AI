@@ -8,7 +8,7 @@ from src.game.leader.leader_definitions import create_leaders, assign_leaders
 
 def test_all_leaders_assignable_and_distinct():
     names = [ld.name for ld in create_leaders()]
-    assert len(names) == len(set(names)) == 9
+    assert len(names) == len(set(names)) == 18        # 9 Uprising (Jessica is double-sided) + 9 Bloodlines
     gs = setup_game(4, seed=1, leaders=names[:4])
     assert [p.leader.name for p in gs.players] == names[:4]
 
@@ -32,9 +32,16 @@ def test_signet_fires_on_signet_ring():
         for s in (AccessSymbol.LANDSRAAD, AccessSymbol.CITY, AccessSymbol.DESERT):
             ring.add_access_symbol(s)
         p.hand.append(ring)
-    solari_before = p.solari
+    p.solari = 5                                  # both options affordable
+    solari_before, troops_before = p.solari, p.troops_garrison
     gs.apply_agent_turn(0, ring, "Assembly Hall")
-    assert p.solari == solari_before + 2          # Shaddam signet = +2 solari
+    # Shaddam (verified card): no deploying this turn; 1 solari + 1 troop OR pay 3 -> contract
+    assert p.no_deploy_this_turn
+    pc = gs.pending_choice_for(0)
+    assert pc is not None and {o[0] for o in pc.options} >= {"troop"}
+    gs.step(next(a for a in gs.get_valid_actions(0)
+                 if a.action_type == ActionType.RESOLVE_CHOICE and a.choice == "troop"))
+    assert p.solari == solari_before + 1 and p.troops_garrison == troops_before + 1
 
 
 def test_leader_games_complete():

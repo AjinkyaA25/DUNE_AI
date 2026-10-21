@@ -1,0 +1,46 @@
+human agreement: 301 of your UI decisions
+bench gen 0: champion 23.5% vs start | VP r6 4.665 (start 4.614) | rounds 9.0
+gen 1: champion 24.7% (fit 0.353) | mutants 26.3% (0.364) 23.3% (0.343) 25.7% (0.368) -> champion stays | rounds 8.913
+gen 2 [Lady Jessica]: champion seat 12.7% | mutants 14.7% 13.3% 14.0% -> mutant 3 wins {'L.Lady Jessica.card_play': 0.8076, 'L.Lady Jessica.intrigue_love': 1.745, 'L.Lady Jessica.combat': 0.579}
+gen 3: champion 26.3% (fit 0.365) | mutants 25.3% (0.366) 25.7% (0.379) 22.7% (0.319) -> champion stays | rounds 8.943
+gen 4 [Shaddam Corrino IV]: champion seat 19.3% | mutants 18.7% 20.7% 16.7% -> no change
+gen 5: champion 25.0% (fit 0.341) | mutants 25.0% (0.341) 24.3% (0.328) 25.7% (0.375) -> champion stays | rounds 9.023
+gen 6 [Feyd-Rautha Harkonnen]: champion seat 19.3% | mutants 20.0% 17.3% 24.7% -> mutant 3 wins {'L.Feyd-Rautha Harkonnen.contracts': 2.5625, 'L.Feyd-Rautha Harkonnen.deploy_hold': 0.8218, 'L.Feyd-Rautha Harkonnen.ptw_tax': 0.8347}
+gen 7: champion 19.3% (fit 0.268) | mutants 20.7% (0.281) 30.7% (0.446) 29.3% (0.421) -> mutant 2 wins {'res_spy': 1.551206, 'res_contract': 0.942941} | rounds 8.963
+gen 8 [Lady Amber Metulli]: champion seat 18.0% | mutants 19.3% 20.0% 21.3% -> mutant 3 wins {'L.Lady Amber Metulli.contract_stack': 0.7735, 'L.Lady Amber Metulli.card_play': 1.1571, 'L.Lady Amber Metulli.res_spice': 1.779}
+gen 9: champion 32.0% (fit 0.475) | mutants 26.0% (0.369) 22.3% (0.325) 19.7% (0.266) -> champion stays | rounds 8.907
+gen 10 [Kota Odax of Ix]: champion seat 23.3% | mutants 23.3% 23.3% 20.0% -> no change
+bench gen 10: champion 29.0% vs start | VP r6 4.737 (start 4.657) | rounds 8.877
+gen 11: champion 28.0% (fit 0.388) | mutants 25.0% (0.366) 22.7% (0.309) 24.3% (0.342) -> champion stays | rounds 8.997
+gen 12 [Gaius Helen Mohiam]: champion seat 28.0% | mutants 24.7% 26.7% 26.7% -> no change
+gen 13: champion 25.0% (fit 0.377) | mutants 28.3% (0.402) 21.7% (0.302) 25.0% (0.344) -> champion stays | rounds 8.913
+gen 14 [Esmar Tuek]: champion seat 26.7% | mutants 27.3% 22.7% 25.3% -> no change
+gen 15: champion 26.7% (fit 0.373) | mutants 27.3% (0.405) 23.7% (0.348) 22.3% (0.329) -> champion stays | rounds 8.903
+gen 16 [Liet Kynes]: champion seat 21.3% | mutants 9.3% 29.3% 22.7% -> mutant 2 wins {'L.Liet Kynes.tsmf': 0.5472, 'L.Liet Kynes.intrigue_love': 0.5657}
+gen 17: champion 29.3% (fit 0.436) | mutants 21.7% (0.293) 23.0% (0.330) 26.0% (0.375) -> champion stays | rounds 8.92
+gen 18 [Princess Irulan]: champion seat 17.3% | mutants 19.3% 16.0% 16.0% -> no change
+gen 19: champion 24.0% (fit 0.348) | mutants 24.3% (0.342) 26.3% (0.383) 25.3% (0.382) -> champion stays | rounds 8.9
+gen 20 [Duncan Idaho]: champion seat 30.0% | mutants 35.3% 35.3% 32.7% -> mutant 2 wins {'L.Duncan Idaho.spy_post': 0.4073, 'L.Duncan Idaho.style': 0.6894, 'L.Duncan Idaho.plot_hold': 0.8594}
+bench gen 20: champion 25.8% vs start | VP r6 4.662 (start 4.626) | rounds 8.905
+gen 21: champion 27.3% (fit 0.401) | mutants 23.7% (0.366) 30.3% (0.427) 18.7% (0.263) -> champion stays | rounds 8.863
+gen 22 [Muad'Dib]: champion seat 29.3% | mutants 23.3% 30.0% 29.3% -> no change
+gen 23: champion 20.3% (fit 0.293) | mutants 26.7% (0.383) 27.0% (0.393) 26.0% (0.368) -> mutant 2 wins {'deck_k': 1.481613, 'spy_post': 0.601607, 'ci_hold': 1.170586} | rounds 8.923
+gen 24 [Steersman Y'rkoon]: champion seat 28.0% | mutants 30.7% 28.0% 32.0% -> mutant 3 wins {"L.Steersman Y'rkoon.res_water": 2.8143, "L.Steersman Y'rkoon.res_solari": 0.6014}
+gen 25: champion 28.7% (fit 0.423) | mutants 21.3% (0.293) 24.0% (0.356) 26.0% (0.373) -> champion stays | rounds 8.897
+gen 26 [Staban Tuek]: champion seat 19.3% | mutants 19.3% 20.0% 25.3% -> mutant 3 wins {'L.Staban Tuek.deck_plan': 0.6291, 'L.Staban Tuek.ci_hold': 0.5468, 'L.Staban Tuek.combat': 1.2607}
+gen 27: champion 29.0% (fit 0.427) | mutants 25.3% (0.344) 21.3% (0.286) 24.3% (0.354) -> champion stays | rounds 8.967
+gen 28 [Chani]: champion seat 28.7% | mutants 26.7% 23.3% 28.7% -> no change
+gen 29: champion 24.3% (fit 0.346) | mutants 24.0% (0.343) 25.7% (0.367) 26.0% (0.366) -> champion stays | rounds 8.957
+gen 30 [Lady Margot Fenring]: champion seat 25.3% | mutants 24.0% 22.7% 24.0% -> no change
+bench gen 30: champion 28.2% vs start | VP r6 4.585 (start 4.628) | rounds 8.935
+gen 31: champion 27.3% (fit 0.381) | mutants 27.3% (0.384) 19.7% (0.268) 25.7% (0.370) -> champion stays | rounds 8.993
+gen 32 [Piter De Vries]: champion seat 31.3% | mutants 31.3% 25.3% 23.3% -> no change
+gen 33: champion 25.3% (fit 0.369) | mutants 29.3% (0.408) 21.7% (0.316) 23.7% (0.336) -> champion stays | rounds 8.893
+gen 34 [Count Hasimir Fenring]: champion seat 30.0% | mutants 33.3% 35.3% 27.3% -> mutant 2 wins {'L.Count Hasimir Fenring.maker_bonus': 0.6216, 'L.Count Hasimir Fenring.sm_solari': 1.7296, 'L.Count Hasimir Fenring.tsmf': 0.4548}
+gen 35: champion 26.0% (fit 0.356) | mutants 21.0% (0.278) 26.7% (0.383) 26.3% (0.374) -> champion stays | rounds 9.023
+gen 36 [Gurney Halleck]: champion seat 39.3% | mutants 32.0% 30.7% 39.3% -> no change
+gen 37: champion 25.3% (fit 0.359) | mutants 27.7% (0.401) 28.7% (0.424) 18.3% (0.256) -> mutant 2 wins {'early.influence': 2.748256} | rounds 8.907
+gen 38 [Lady Jessica]: champion seat 14.7% | mutants 16.7% 12.7% 13.3% -> no change
+gen 39: champion 24.0% (fit 0.348) | mutants 24.0% (0.341) 23.7% (0.316) 28.3% (0.420) -> mutant 3 wins {'maker_bonus': 1.0981, 'alliance': 1.0564} | rounds 8.93
+gen 40 [Shaddam Corrino IV]: champion seat 18.7% | mutants 17.3% 16.0% 18.0% -> no change
+bench gen 40: champion 23.5% vs start | VP r6 4.61 (start 4.638) | rounds 8.925

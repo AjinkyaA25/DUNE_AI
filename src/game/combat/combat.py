@@ -54,11 +54,12 @@ class Combat:
         Returns:
             Total strength value (always >= 0).
         """
-        total_units = troops_committed + sandworms_committed
+        duncan = getattr(game_state, "duncan_in_conflict", {}).get(player.id, 0)  # Into the Fray
+        total_units = troops_committed + sandworms_committed + (1 if duncan else 0)
         if total_units == 0:
             return 0
 
-        strength = (troops_committed * 2) + (sandworms_committed * 3) + swords
+        strength = (troops_committed * 2) + (sandworms_committed * 3) + swords + duncan
 
         # Apply any active combat strength modifiers (Tech tiles, leader abilities)
         strength += Combat._get_active_modifiers(player, game_state)

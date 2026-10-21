@@ -106,8 +106,8 @@ def create_bloodlines_imperium_cards() -> List:
                                     "landsraad"], tags=["fremen"],
           agent={"bl_opponents_lose_troop": 1}, persuasion=1,
           reveal={"troops": 1, "if_fremen_bond": {"grant_deploy": 0}},
-          notes="Agent: each opponent loses one troop. NOT modelled: each "
-                "opponent spying on that space must move the Spy."),
+          notes="Agent: each opponent loses one troop and moves any Spy on a post "
+                "connected to that space to another post."),
         m("I Believe", 3, I, access=["fremen", "city"], tags=["fremen"],
           agent={"discard_then": {"draw": 1}}, persuasion=1,
           reveal={"command": {"troops": 2}}),

@@ -45,7 +45,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from src.game.bloodlines.techs import TECHS, TECH_BY_NAME, TechTile
+from src.game.bloodlines.techs import TECHS, TECH_BY_NAME, TechTile, tech_pool
 from src.game.effects import EffectResolver
 
 if TYPE_CHECKING:
@@ -94,9 +94,9 @@ class PendingBLChoice:
 
 
 class Bloodlines:
-    def __init__(self, gs: "GameState"):
+    def __init__(self, gs: "GameState", ix_techs: bool = False):
         self.gs = gs
-        pool = [d for d in TECHS]
+        pool = tech_pool(ix_techs)
         order = list(range(len(pool)))
         gs.rng.shuffle(order)
         pool = [pool[i] for i in order]
@@ -152,24 +152,43 @@ class Bloodlines:
     def has_pending(self, pid: int) -> bool:
         return any(c.player_id == pid for c in self.pending)
 
+    # Purchases stay open while the player can still raise the price: a Plot
+    # Intrigue played mid-turn may bring the spice / solari (user, 2026-10-21:
+    # High Council with 3 spice, then a spice Intrigue -> Panopticon for 4).
+    PURCHASES = ("tech_buy", "tech_offer", "commander")
+
+    def purchase_pending(self, pid: int) -> bool:
+        c = next((c for c in self.pending if c.player_id == pid), None)
+        return c is not None and c.kind in self.PURCHASES
+
+    def can_raise_funds(self, pid: int) -> bool:
+        """The player may play a Plot Intrigue right now (it may pay for a purchase)."""
+        gs = self.gs
+        return gs.phase.value == "player_turns" and gs.get_current_player_id() == pid \
+            and not gs.is_in_atomic_block() and gs._has_playable_plot(pid)
+
     def pending_options(self, pid: int) -> List[str]:
         """Legal choices right now: purchases are re-checked against current
-        resources (another pending choice may have spent them meanwhile)."""
+        resources both ways - another choice may have spent them, or a Plot
+        Intrigue may just have paid for one that was out of reach."""
         c = next((c for c in self.pending if c.player_id == pid), None)
         if c is None:
             return []
-        if c.kind == "tech_buy":
-            live = {f"stack:{i}" for i in self.buyable_stacks(pid)}
-            c.options = [o for o in c.options if o in live or o == "decline"]
-        elif c.kind == "commander":
-            live = set(self.recruit_options(pid, c.space))
-            c.options = [o for o in c.options if o in live or o == "decline"]
+        if c.kind in self.PURCHASES:
+            if c.kind == "commander":
+                live = self.recruit_options(pid, c.space)
+            else:
+                live = [f"stack:{i}" for i in self.buyable_stacks(pid, c.discount)]
+            if not live and not self.can_raise_funds(pid):
+                self.pending.remove(c)             # nothing affordable, no way to pay: skipped
+                return []
+            c.options = live + ["decline"]
         elif c.kind == "plasteel":
             live = {f"skill:{k}" for k in self.row_skills(pid)}
             c.options = [o for o in c.options if o in live or o == "decline"]
-        elif c.kind == "tech_offer":
-            live = {f"stack:{i}" for i in self.buyable_stacks(pid, c.discount)}
-            c.options = [o for o in c.options if o in live or o == "decline"]
+        elif c.kind == "ada_spy":
+            p = self._p(pid)
+            c.options = [o for o in c.options if p.spies_on_board.get(o.split(":", 1)[1], 0) > 0]
         elif c.kind == "effect":
             c.options = [o for o in c.options
                          if self.option_legal(pid, c.payloads[o])]
@@ -208,6 +227,28 @@ class Bloodlines:
         elif c.kind == "plasteel":
             self._trash_tile(pid, "Plasteel Blades")
             self.take_skill(pid, choice.split(":", 1)[1])
+        elif c.kind == "ada_spy":
+            self._trash_spy(pid, choice.split(":", 1)[1])
+        elif c.kind == "complete_contract":
+            p = self._p(pid)
+            ct = next((x for x in p.contracts_active if x.name == choice.split(":", 1)[1]), None)
+            if ct is not None:
+                self.gs.complete_contract(pid, ct)
+        elif c.kind == "vault":
+            if choice == "intrigue":
+                self.gs.draw_intrigue_for_player(pid, 1)
+            else:
+                self.gs.draw_cards_for_player(pid, 1)
+        elif c.kind == "forbidden":
+            p = self._p(pid)
+            if choice == "swords":
+                self.gs.swords_this_reveal[pid] = self.gs.swords_this_reveal.get(pid, 0) + 3
+                if any(v > 0 for v in p.influence.values()):      # must lose one if you can
+                    EffectResolver.resolve_single_effect({"lose_influence_any": 1}, p, self.gs)
+            else:
+                p.spice = 0
+                self._trash_tile(pid, "Forbidden Weapons")
+            self.gs.update_combat_strength(pid)
         elif c.kind == "desperate":
             p = self._p(pid)
             p.skills.discard("Desperate")
@@ -228,33 +269,63 @@ class Bloodlines:
     def tech_price(self, pid: int, d, discount: int = 0) -> int:
         return max(0, d.cost - discount - (1 if self._p(pid).has_councilor else 0))
 
-    def buyable_stacks(self, pid: int, discount: int = 0) -> List[int]:
+    def kota_tile(self, pid: int):
+        """Kota Odax's face-down Secret Project tile (stack index -1)."""
+        return getattr(self, "kota_secret", {}).get(pid)
+
+    def tech_at(self, pid: int, i: int):
+        """(tech, extra discount) for a buy choice index: -1 = Kota's secret
+        tile (1 spice cheaper), else the top of tech stack i (None if empty)."""
+        if i < 0:
+            return self.kota_tile(pid), 1
+        stack = self.tech_stacks[i] if i < len(self.tech_stacks) else []
+        return (stack[0] if stack else None), 0
+
+    def buyable_stacks(self, pid: int, discount: int = 0, free: bool = False) -> List[int]:
+        """Tech stacks the player can buy now (free=True: ignoring the price)."""
         p = self._p(pid)
         out = []
         for i, stack in enumerate(self.tech_stacks):
             if not stack:
                 continue
             d = stack[0]
-            if self.has(pid, d.name) or p.spice < self.tech_price(pid, d, discount):
+            if self.has(pid, d.name) or (not free and p.spice < self.tech_price(pid, d, discount)):
                 continue
             if d.name == "Advanced Data Analysis" and not any(p.spies_on_board.values()):
                 continue
             out.append(i)
+        k = self.kota_tile(pid)                    # Kota: the secret tile costs 1 spice less
+        if k is not None and not self.has(pid, k.name) \
+                and (free or p.spice >= self.tech_price(pid, k, discount + 1)) \
+                and not (k.name == "Advanced Data Analysis" and not any(p.spies_on_board.values())):
+            out.append(-1)
         return out
 
     def buy_tech(self, pid: int, stack_idx: int, discount: int = 0) -> None:
         p = self._p(pid)
-        d = self.tech_stacks[stack_idx].pop(0)
+        if stack_idx == -1:                        # Kota Odax: the Secret Project tile
+            d = self.kota_secret.pop(pid)
+            discount += 1
+        else:
+            d = self.tech_stacks[stack_idx].pop(0)
+        p.bl_tech_bought_this_turn = True
         p.spice -= self.tech_price(pid, d, discount)
-        if d.name == "Advanced Data Analysis":      # trash one of your Spies
-            post = next(k for k, v in p.spies_on_board.items() if v > 0)
-            p.spies_on_board[post] -= 1
-            if p.spies_on_board[post] == 0:
-                del p.spies_on_board[post]
+        if d.name == "Advanced Data Analysis":      # trash one of your Spies (your pick)
+            posts = sorted(k for k, v in p.spies_on_board.items() if v > 0)
+            if len(posts) == 1:
+                self._trash_spy(pid, posts[0])
+            else:
+                self.pending.append(PendingBLChoice(pid, "ada_spy", [f"post:{x}" for x in posts]))
+        if d.name == "Gene-Locked Vault":          # an Intrigue OR a card
+            self.pending.append(PendingBLChoice(pid, "vault", ["intrigue", "draw"]))
         p.techs.append(TechTile(d))
+        if d.name == "Ornithopter Fleet":
+            self.ornithopter_convert(pid)
         self._resolve(pid, d.acquire)
         if d.name == "Servo-Receivers" and p.leader is not None \
                 and getattr(p.leader, "signet", None) is not None:
+            if getattr(self.gs, "leader_log", None) is not None:
+                self.gs.leader_log.append((pid, p.leader.name, "signet (Servo-Receivers)"))
             p.leader.signet(p, self.gs)
 
     # ------------------------------------------------------------------
@@ -264,31 +335,35 @@ class Bloodlines:
         """After the space and card effects: offer a tech (green space) and a
         commander recruit (commander space)."""
         p = self._p(pid)
-        if card is not None and p.bl_shigawire and self._is_bene(card):
+        if getattr(p, "bl_shigawire_fresh", False):
+            p.bl_shigawire_fresh = False           # Shigawire itself doesn't get its bonus
+        elif card is not None and p.bl_shigawire and self._is_bene(card):
             p.bl_shigawire = False
             self.gs.draw_cards_for_player(pid, 1)
+        p.bl_space_this_turn = space
         if space in GREEN_SPACES:
             stacks = self.buyable_stacks(pid)
-            if stacks:
+            if stacks or (self.buyable_stacks(pid, free=True) and self.can_raise_funds(pid)):
                 self.pending.append(PendingBLChoice(
                     pid, "tech_buy", [f"stack:{i}" for i in stacks] + ["decline"]))
-        if space in COMMANDER_SPACES:
-            opts = self.recruit_options(pid, space)
-            if opts:
-                self.pending.append(PendingBLChoice(
-                    pid, "commander", opts + ["decline"], space=space))
+        # The board commander is recruited on its own space; a commander from
+        # your supply can be re-recruited on ANY Agent turn (user, 2026-10-14)
+        opts = self.recruit_options(pid, space)
+        if opts or (self.recruit_options(pid, space, free=True) and self.can_raise_funds(pid)):
+            self.pending.append(PendingBLChoice(
+                pid, "commander", opts + ["decline"], space=space))
 
     def commander_cost(self, pid: int) -> int:
         return max(0, COMMANDER_COST
                    - (1 if self.has(pid, "Sardaukar High Command") else 0)
                    - self._p(pid).bl_commander_discount)
 
-    def recruit_options(self, pid: int, space: str) -> List[str]:
-        """On a commander space you may recruit the board commander AND
-        re-recruit one from your supply (2 solari each); never more than one
-        supply re-recruit per turn."""
+    def recruit_options(self, pid: int, space: str, free: bool = False) -> List[str]:
+        """On a commander space you may recruit the board commander; on any
+        Agent turn you may re-recruit one from your supply (2 solari each);
+        never more than one supply re-recruit per turn."""
         p = self._p(pid)
-        if p.solari < self.commander_cost(pid):
+        if not free and p.solari < self.commander_cost(pid):
             return []
         opts = []
         if self.commander_on_space.get(space) and not p.bl_recruited_this_turn:
@@ -311,7 +386,14 @@ class Bloodlines:
             self.skill_row.remove(skill)
             if self.skill_deck:
                 self.skill_row.append(self.skill_deck.pop(0))
-        self._p(pid).skills.add(skill)
+        p = self._p(pid)
+        p.skills.add(skill)
+        if skill == "Desperate":
+            # a new Desperate tile (e.g. via Plasteel Blades after re-recruiting
+            # on the Reveal turn, user 2026-10-19) can be trashed this turn too
+            p.bl_desperate_offered = False
+            if self.gs.player_in_reveal_buy == pid:
+                self._offer_desperate(pid)
 
     def recruit(self, pid: int, space: str, choice: str) -> None:
         p = self._p(pid)
@@ -327,6 +409,9 @@ class Bloodlines:
                 self.take_skill(pid, skill)
         p.commanders_garrison += 1
         p.troops_garrison += 1
+        if self.gs.in_own_turn(pid):                 # deployable this turn
+            p.troops_recruited_this_turn = getattr(p, "troops_recruited_this_turn", 0) + 1
+            p.cmd_recruited_this_turn = getattr(p, "cmd_recruited_this_turn", 0) + 1   # as a commander only
         # the other kind of recruit (board / supply) may still follow
         more = self.recruit_options(pid, space) if space in COMMANDER_SPACES else []
         if more:
@@ -336,11 +421,19 @@ class Bloodlines:
             self.pending.append(PendingBLChoice(
                 pid, "plasteel", [f"skill:{k}" for k in self.row_skills(pid)] + ["decline"]))
 
-    def deploy_commanders(self, pid: int, n: int) -> None:
-        """Called when n units leave the garrison for the Conflict: commanders
-        go first (their skills only work while one is in the Conflict)."""
+    def deploy_commanders(self, pid: int, n: int, cmd: Optional[int] = None) -> None:
+        self._deploy_commanders(pid, n, cmd)
+        if self.gs.player_in_reveal_buy == pid:     # deployed during the Reveal turn
+            self._reveal_skill_rewards(pid)
+
+    def _deploy_commanders(self, pid: int, n: int, cmd: Optional[int] = None) -> None:
+        """Called when n units leave the garrison for the Conflict. `cmd`: how
+        many of them are commanders (the player's choice on a deploy); None =
+        commanders first (their skills only work while one is in the Conflict)."""
         p = self._p(pid)
         c = min(n, p.commanders_garrison)
+        if cmd is not None:            # at least the units plain troops can't cover
+            c = max(min(cmd, c), n - (p.troops_garrison - p.commanders_garrison))
         p.commanders_garrison -= c
         self.commanders_in_conflict[pid] += c
 
@@ -368,6 +461,31 @@ class Bloodlines:
     # ------------------------------------------------------------------
     # activations (flip icon)
     # ------------------------------------------------------------------
+    def late_choices(self, pid: int) -> List[str]:
+        """The space's purchase / recruit stays open for the whole Agent turn
+        (user): once the player can afford it (e.g. solari from a Plot
+        Intrigue), buy the green space's tech or recruit the commander."""
+        p = self._p(pid)
+        space = getattr(p, "bl_space_this_turn", None)
+        if space is None or any(c.player_id == pid for c in self.pending):
+            return []
+        out = []
+        if space in GREEN_SPACES and not getattr(p, "bl_tech_bought_this_turn", False):
+            out += [f"techbuy:{i}" for i in self.buyable_stacks(pid)]
+        out += [f"recruit:{o}" for o in self.recruit_options(pid, space)]
+        return out
+
+    def activatable_after_placement(self, pid: int) -> List[str]:
+        """Flip techs usable later in the same Agent turn (not Litany, not
+        'ignore blocking', which only matters before placing)."""
+        out = []
+        for name in self.activatable(pid, agent_turn=True):
+            t = self._tile(pid, name)
+            if name == LITANY or t is None or t.d.activation.get("flag") == "ignore_blocking":
+                continue
+            out.append(name)
+        return out
+
     def activatable(self, pid: int, agent_turn: bool) -> List[str]:
         p = self._p(pid)
         out = []
@@ -411,6 +529,11 @@ class Bloodlines:
         flag = a.get("flag")
         if flag in ("dropships", "ignore_blocking"):
             p.bl_flags.add(flag)
+        gs = self.gs
+        if flag == "dropships" and pid in (gs._agent_turn_open, gs._post_agent_window):
+            # flipped after the Agent was placed (e.g. bought at Assembly Hall
+            # this turn): this Agent turn now counts as a combat space
+            p.deploy_icon_this_turn = True
         elif flag == "spy_drones" and getattr(p, "recalled_spy_this_turn", False):
             self.gs.add_pending_trash(pid, 1)
         elif flag == "cycle_intrigues":
@@ -429,6 +552,7 @@ class Bloodlines:
         """Inside apply_reveal_turn, after the cards' own reveal effects and
         before combat strength is computed."""
         gs, p = self.gs, self._p(pid)
+        p.bl_supply_recruited_this_turn = False     # the Reveal turn is a new turn
         for t in list(p.techs):
             self._resolve(pid, t.d.reveal)
             if t.name == "Artillery":
@@ -438,28 +562,46 @@ class Bloodlines:
             elif t.name == "Restricted Ordnance" and p.has_councilor:
                 gs.swords_this_reveal[pid] = gs.swords_this_reveal.get(pid, 0) + 4
             elif t.name == "Forbidden Weapons":
-                # "you must choose": swords + lose an influence while you have
-                # one to lose, else lose all spice and trash the tile
-                if any(p.influence[f] > 0 for f in FACTIONS):
-                    gs.swords_this_reveal[pid] = gs.swords_this_reveal.get(pid, 0) + 3
-                    EffectResolver.resolve_single_effect(
-                        {"lose_influence_any": 1}, p, gs)
-                else:
-                    p.spice = 0
-                    self._trash_tile(pid, t.name)
+                # "you must choose": 3 swords and lose 1 influence, OR lose all
+                # your spice and trash this. No arrow: the swords option is
+                # always open - the influence loss applies only if you have
+                # influence to lose (user, 2026-10-15)
+                self.pending.append(PendingBLChoice(pid, "forbidden", ["swords", "spice"]))
         if getattr(p, "bl_reveal_bonus", 0):            # Recruitment Mission
             gs.gain_persuasion(pid, p.bl_reveal_bonus)
             p.bl_reveal_bonus = 0
+        p.bl_reveal_skills_fired = False
+        p.bl_desperate_offered = False
+        self._reveal_skill_rewards(pid)
+
+    def _reveal_skill_rewards(self, pid: int) -> None:
+        """Hardy / Driven / Charismatic / Desperate: on your Reveal turn with a
+        commander in the Conflict - also if it only gets there later in that
+        Reveal turn (user rule). Retreating it afterwards keeps the reward."""
+        gs, p = self.gs, self._p(pid)
+        if getattr(p, "bl_reveal_skills_fired", True):
+            return
         if self.commanders_in_conflict[pid] > 0:
+            self._offer_desperate(pid)
+            p.bl_reveal_skills_fired = True
             if "Hardy" in p.skills:
                 p.gain_troops(1)
+                p.troops_recruited_this_turn = getattr(p, "troops_recruited_this_turn", 0) + 1
             if "Driven" in p.skills:
                 p.gain_spice(1)
             if "Charismatic" in p.skills:
                 gs.gain_persuasion(pid, 1)
-            if "Desperate" in p.skills:
-                self.pending.append(PendingBLChoice(pid, "desperate",
-                                                    ["use", "decline"]))
+
+    def _offer_desperate(self, pid: int) -> None:
+        """Desperate: on your Reveal turn with a commander in the Conflict you
+        may trash it for 3 swords - once per tile held (a second copy taken
+        later in the same turn is offered again; never two at once)."""
+        p = self._p(pid)
+        if ("Desperate" in p.skills and self.commanders_in_conflict[pid] > 0
+                and not getattr(p, "bl_desperate_offered", False)
+                and not any(c.player_id == pid and c.kind == "desperate" for c in self.pending)):
+            p.bl_desperate_offered = True
+            self.pending.append(PendingBLChoice(pid, "desperate", ["use", "decline"]))
 
     def open_command_window(self, pid: int) -> None:
         """Reveal done, buying starts: count persuasion from here on."""
@@ -537,16 +679,63 @@ class Bloodlines:
         """Suspensor Suits: per Intrigue drawn during your own turn, a troop
         straight into the Conflict."""
         gs, p = self.gs, self._p(pid)
-        if n <= 0 or not self.has(pid, "Suspensor Suits") or gs.current_conflict is None:
+        if n <= 0 or gs.phase.value != "player_turns" or gs.get_current_player_id() != pid:
             return
-        if gs.phase.value != "player_turns" or gs.get_current_player_id() != pid:
+        if not self.has(pid, "Suspensor Suits") or gs.current_conflict is None:
             return
         k = min(n, p.troops_supply)
         p.troops_supply -= k
+        if getattr(p, "no_deploy_this_turn", False):     # Shaddam's Signet: garrison
+            p.troops_garrison += k
+            return
         gs.troops_in_conflict[pid] = gs.troops_in_conflict.get(pid, 0) + k
+        gs.note_units_deployed(pid, k)
+        gs.update_combat_strength(pid)
 
     def battle_icon(self, pid: int, name: str) -> str:
-        return "wild" if self.has(pid, "Ornithopter Fleet") else name
+        """Ornithopter Fleet (user rule, 2026-10-14): every battle icon you
+        hold is an Ornithopter, "?" (wild) ones included - so any two match."""
+        return "ornithopter" if self.has(pid, "Ornithopter Fleet") else name
+
+    def ornithopter_convert(self, pid: int) -> None:
+        """On acquiring Ornithopter Fleet: the icons already held all become
+        Ornithopters and pair off at once (1 VP per pair). Endgame Intrigue
+        icons are not battle icons here, so they are unaffected."""
+        p = self._p(pid)
+        n = len(p.battle_icons)
+        if n >= 2:
+            p.gain_vp(n // 2, "Ornithopter Fleet (icon pairs)")
+        p.battle_icons = ["ornithopter"] * (n % 2)
+
+    def _trash_spy(self, pid: int, post: str) -> None:
+        """Advanced Data Analysis: the Spy leaves the game (not back to supply),
+        so the player plays on with one Spy fewer."""
+        p = self._p(pid)
+        p.spies_on_board[post] -= 1
+        if p.spies_on_board[post] == 0:
+            del p.spies_on_board[post]
+
+    def _move_watching_spies(self, o, space: str) -> None:
+        """Holy War: an opponent's Spy on a post connected to `space` moves to
+        another post (not watching this space): a free post if there is one,
+        else one shared with another player; with nowhere to go it returns to
+        the supply. (The moving player's pick is automated.)"""
+        from src.game.board.board import OBSERVATION_POST_CONNECTIONS as POSTS
+        gs = self.gs
+        watching = [k for k, v in POSTS.items() if space in v and o.spies_on_board.get(k, 0) > 0]
+        for post in watching:
+            others = sorted(k for k, v in POSTS.items() if space not in v and o.spies_on_board.get(k, 0) == 0)
+            free = [k for k in others if not any(q.spies_on_board.get(k, 0) for q in gs.players)]
+            o.spies_on_board[post] -= 1
+            if o.spies_on_board[post] == 0:
+                del o.spies_on_board[post]
+            target = (free or others or [None])[0]
+            if target is None:
+                o.spies_available += 1
+                gs.note(f"P{o.id + 1}'s Spy on {post} returns to supply (Holy War)")
+            else:
+                o.spies_on_board[target] = o.spies_on_board.get(target, 0) + 1
+                gs.note(f"P{o.id + 1}'s Spy moves {post} -> {target} (Holy War)")
 
     def steal_protected(self, pid: int) -> bool:
         return self.has(pid, "Gene-Locked Vault") and len(self._p(pid).intrigue_cards) < 5
@@ -680,18 +869,24 @@ class Bloodlines:
                     for eff in getattr(card, "trash_effects", []):
                         EffectResolver.resolve_single_effect(eff, p, gs)
             elif k == "bl_retreat":
-                n = min(int(v), gs.troops_in_conflict.get(p.id, 0))
-                gs.troops_in_conflict[p.id] -= n
-                p.troops_garrison += n
-                self.retreat_to_garrison(p.id, n)
-                gs.update_combat_strength(p.id)
+                gs.retreat_with_choice(p.id, int(v))
             elif k == "bl_discard_for":
                 gs.add_pending_optional_payment(
                     p.id, {}, v["reward"], discard=v.get("n", 1), label="bl_discard_for",
                     discard_tag=v.get("tag"), tag_bonus=v.get("bonus"))
             elif k == "bl_complete_contract":
-                if p.contracts_active:
+                # CHOAM Demands: a reward like any other - on the Agent turn it
+                # waits until claimed, so a contract taken this turn (Dutiful
+                # Service, Accept Contract) can be the one completed (user)
+                if gs.defer_reward_for(p.id):
+                    gs.defer_reward(p.id, "effect", 0, effect={"bl_complete_contract": 1},
+                                    cond="has_contract")
+                elif len(p.contracts_active) == 1:
                     gs.complete_contract(p.id, p.contracts_active[0])
+                elif p.contracts_active:            # the player picks which
+                    self.pending.append(PendingBLChoice(
+                        p.id, "complete_contract",
+                        [f"contract:{c.name}" for c in p.contracts_active]))
             elif k == "bl_force_retreat":
                 self._force_retreat(p.id)
             elif k == "bl_trash_from_hand":
@@ -701,16 +896,36 @@ class Bloodlines:
                         sorted({c.name for c in p.hand}) + ["decline"],
                         bonus=v["bonus"], tag=v["tag"]))
             elif k == "bl_opponents_lose_troop":
+                # Holy War: each opponent loses a troop (a plain troop before a
+                # commander) and must move any Spy watching this space
+                from src.game.board.board import OBSERVATION_POST_CONNECTIONS
+                space = getattr(gs, "_current_agent_space", None)
                 for o in gs.players:
                     if o.id == p.id:
                         continue
+                    lost = o.troops_garrison > 0 or gs.troops_in_conflict.get(o.id, 0) > 0
+                    if lost:
+                        gs.note(f"P{o.id + 1} loses a troop (Holy War)")
+                        if o.leader is not None:            # Chani: any troop lost counts (user)
+                            o.leader.trigger("on_units_left_conflict", o, gs, 1)
                     if o.troops_garrison > 0:
                         o.troops_garrison -= 1
-                        o.troops_supply += 1
+                        if o.troops_garrison < getattr(o, "commanders_garrison", 0):
+                            o.commanders_garrison -= 1          # only commanders were left
+                            o.commanders_supply += 1
+                        else:
+                            o.troops_supply += 1
                     elif gs.troops_in_conflict.get(o.id, 0) > 0:
+                        cin = self.commanders_in_conflict.get(o.id, 0)
                         gs.troops_in_conflict[o.id] -= 1
-                        o.troops_supply += 1
+                        if gs.troops_in_conflict[o.id] < cin:
+                            self.commanders_in_conflict[o.id] -= 1
+                            o.commanders_supply += 1
+                        else:
+                            o.troops_supply += 1
                         gs.update_combat_strength(o.id)
+                    if space:
+                        self._move_watching_spies(o, space)
             elif k == "bl_after_turn":
                 p.bl_after_turn.append(v)
             elif k == "bl_conflict_bonus":
@@ -739,11 +954,12 @@ class Bloodlines:
                 p.bl_envoy = True
             elif k == "bl_shigawire":
                 p.bl_shigawire = True
+                p.bl_shigawire_fresh = True       # set by the card being played now
             elif k == "bl_commander_discount":
                 p.bl_commander_discount += int(v)
             elif k == "bl_tech_offer":
                 stacks = self.buyable_stacks(p.id, int(v))
-                if stacks:
+                if stacks or (self.buyable_stacks(p.id, free=True) and self.can_raise_funds(p.id)):
                     self.pending.append(PendingBLChoice(
                         p.id, "tech_offer", [f"stack:{i}" for i in stacks] + ["decline"],
                         discount=int(v)))
@@ -812,7 +1028,7 @@ class Bloodlines:
                     if p.influence[f] <= 1:
                         gs.gain_influence_with_check(p.id, f, 1)
             if "CHOAM Transports" in names and len(p.contracts_completed) >= 4:
-                p.gain_vp(1)
+                p.gain_vp(1, "CHOAM Transports (endgame)")
             if "Holtzman Engine" in names:
                 tsmf = sum(1 for c in p.get_all_cards()
                            if c.name == "The Spice Must Flow") \
@@ -820,11 +1036,11 @@ class Bloodlines:
                         1 for c in p.deck + p.hand + p.discard + p.in_play
                         if c.name == "The Spice Must Flow")
                 if tsmf >= 2:
-                    p.gain_vp(1)
+                    p.gain_vp(1, "Holtzman Engine (endgame)")
             if "Memocorders" in names and all(p.influence[f] >= 3 for f in FACTIONS):
-                p.gain_vp(1)
+                p.gain_vp(1, "Memocorders (endgame)")
             if "Spy Satellites" in names:
-                p.gain_vp(sum(1 for f in FACTIONS if p.influence[f] <= 1))
+                p.gain_vp(sum(1 for f in FACTIONS if p.influence[f] <= 1), "Spy Satellites (endgame)")
 
     def wins_ties(self, pid: int) -> bool:
         return self.has(pid, "Chaumurky")

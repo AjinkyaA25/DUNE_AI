@@ -1,0 +1,2 @@
+{"gen": 0, "games": 0, "eval_policy": {"games": 200, "win_share": 0.0, "vp": 3.13, "opp_vp": 8.665, "rounds": 9.12}}
+{"gen": 1, "games": 5000, "play_s": 1289, "eps": 0.3, "credited": 11.387, "train_s": 141, "rounds": 9.9756, "steps": 339.3008, "full_per_game": 7.8668, "vp_mean": 5.2692, "vp_max": 7.8034, "pl": 1.6484, "vl": 0.0653, "ent": 1.4601, "acc": 0.2809}

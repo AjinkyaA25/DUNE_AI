@@ -42,8 +42,9 @@ def test_market_is_three_stacks_without_ix_only_tiles():
     stacks = gs.bl.tech_stacks
     assert len(stacks) == 3
     names = {d.name for s in stacks for d in s}
-    assert len(names) == 34
-    assert "Detonation Devices" not in names and "Troop Transports" not in names
+    # only the 18 Bloodlines tiles (Rise of Ix tiles are replay-only, user 2026-10-14)
+    from src.game.bloodlines.techs import BLOODLINES_TECHS
+    assert names == BLOODLINES_TECHS and len(names) == 18
 
 
 def test_green_space_offers_tech_and_council_seat_discounts_it():
@@ -136,7 +137,10 @@ def test_navigation_chamber_and_ornithopter_fleet():
     _give_tech(gs, p, "Ornithopter Fleet")
     p.battle_icons = []
     gs._award_battle_icon(p.id, "crysknife")
-    assert p.battle_icons == ["wild"]
+    assert p.battle_icons == ["ornithopter"]          # every icon is an Ornithopter (user)
+    vp = p.victory_points
+    gs._award_battle_icon(p.id, "wild")
+    assert p.battle_icons == [] and p.victory_points == vp + 1
 
 
 def test_chaumurky_wins_ties():
@@ -308,3 +312,42 @@ def test_high_council_tech_discount_floors_at_zero():
     assert gs.bl.tech_price(p.id, cheap) == 1 and gs.bl.tech_price(p.id, dear) == 4
     p.has_councilor = True
     assert gs.bl.tech_price(p.id, cheap) == 0 and gs.bl.tech_price(p.id, dear) == 3
+
+
+def test_plasteel_desperate_twice_in_one_reveal_turn():
+    """User, 2026-10-19: Desperate trashed on the Reveal turn, a commander
+    re-recruited from supply that same turn triggers Plasteel Blades, which
+    takes the row's other Desperate - and that one can be trashed too."""
+    gs, p = _game()
+    bl = gs.bl
+    gs.player_in_reveal_buy = p.id
+    p.skills = {"Desperate"}
+    bl.commanders_in_conflict[p.id] = 1
+    bl.skill_row = ["Desperate", "Hardy", "Loyal", "Fierce"]
+    _give_tech(gs, p, "Plasteel Blades")
+    sw0 = gs.swords_this_reveal.get(p.id, 0)
+    bl.on_reveal(p.id, [])
+    assert "use" in bl.pending_options(p.id)
+    bl.resolve_choice(p.id, "use")                          # first Desperate: +3, trashed
+    assert "Desperate" not in p.skills
+    assert gs.swords_this_reveal[p.id] == sw0 + 3
+    p.commanders_supply, p.solari = 1, 2
+    bl.recruit(p.id, None, "supply")                        # re-recruit on the Reveal turn
+    assert "skill:Desperate" in bl.pending_options(p.id)    # Plasteel: the row's Desperate
+    bl.resolve_choice(p.id, "skill:Desperate")
+    assert "Desperate" in p.skills and not bl.has(p.id, "Plasteel Blades")
+    assert "use" in bl.pending_options(p.id)                # the new tile can be trashed too
+    bl.resolve_choice(p.id, "use")
+    assert gs.swords_this_reveal[p.id] == sw0 + 6
+
+
+def test_plasteel_cannot_take_a_skill_already_held():
+    gs, p = _game()
+    bl = gs.bl
+    p.skills = {"Desperate"}
+    bl.skill_row = ["Desperate", "Hardy", "Loyal", "Fierce"]
+    _give_tech(gs, p, "Plasteel Blades")
+    p.commanders_supply, p.solari = 1, 2
+    bl.recruit(p.id, None, "supply")
+    opts = bl.pending_options(p.id)
+    assert "skill:Desperate" not in opts and "skill:Hardy" in opts

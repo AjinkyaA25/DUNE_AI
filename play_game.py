@@ -69,9 +69,18 @@ def action_label(action: GameAction) -> str:
     if at == ActionType.PLAY_INTRIGUE:
         return f"Play Intrigue '{action.intrigue_card_name}'"
     if at == ActionType.RESOLVE_DEPLOY:
+        c = action.deploy_cmd
+        if c:
+            t = action.deploy_count - c
+            what = (f"{t} troop(s) + " if t else "") + f"{c} Sardaukar commander(s)"
+            return f"Deploy {what} to the Conflict"
+        if c == 0:
+            return f"Deploy {action.deploy_count} troop(s) to the Conflict (keep commanders home)"
         return f"Deploy {action.deploy_count} troop(s) to the Conflict"
     if at == ActionType.RESOLVE_TRASH:
-        return (f"Trash '{action.trash_card_name}'" if action.trash_card_name
+        where = {"hand": " from your hand", "discard": " from your discard pile",
+                 "in_play": " from your cards played this round"}.get(action.trash_from, "")
+        return (f"Trash '{action.trash_card_name}'{where}" if action.trash_card_name
                 else "Trash nothing")
     if at == ActionType.RESOLVE_INFLUENCE:
         return f"Gain 1 influence with {action.influence_faction}"

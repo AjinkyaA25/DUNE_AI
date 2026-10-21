@@ -1,0 +1,48 @@
+champion vs previous AI: 25.2% (fit 0.346, 8000 games, rounds 9.07)
+bench gen 0 (lookahead): champion 27.2% vs previous AI | rounds 9.017 | ended by R8 27.8%
+gen 1: champion 25.2% (fit 0.346, n 8000) | 25.6% z+0.2 24.6% z-0.7 23.8% z-1.1 -> champion stays | rounds 9.07
+gen 2: champion 25.2% (fit 0.346, n 8000) | 25.0% z-0.5 24.9% z-0.2 24.1% z-1.5 -> champion stays | rounds 9.07
+gen 3 [Lady Margot Fenring]: champion 24.3% (fit 0.330, n 3000) | 23.9% z-0.2 23.8% z-0.2 26.3% z+2.1 -> mutant 3 wins {'L.Lady Margot Fenring.spy_post': 1.1499, 'L.Lady Margot Fenring.tech_love': 0.5019} | rounds 9.08
+gen 4: champion 25.2% (fit 0.346, n 8000) | 24.9% z+0.1 22.8% z-3.9 22.7% z-2.9 -> champion stays | rounds 9.07
+gen 5: champion 25.2% (fit 0.346, n 8000) | 25.8% z+0.7 24.7% z-0.4 26.2% z+1.4 -> champion stays | rounds 9.04
+gen 6 [Shaddam Corrino IV]: champion 19.5% (fit 0.261, n 3000) | 16.8% z-3.0 7.2% z-14.8 19.5% z-0.2 -> champion stays | rounds 9.05
+gen 7: champion 25.2% (fit 0.346, n 8000) | 24.0% z-1.2 24.6% z-0.6 26.4% z+1.6 -> champion stays | rounds 9.05
+gen 8: champion 25.2% (fit 0.346, n 8000) | 25.7% z+0.6 24.9% z-0.1 24.8% z-1.0 -> champion stays | rounds 9.07
+gen 9 [Chani]: champion 28.0% (fit 0.387, n 3000) | 27.1% z-0.4 29.3% z+1.1 29.8% z+1.8 -> champion stays | rounds 9.03
+gen 10: champion 25.2% (fit 0.346, n 8000) | 24.8% z-0.3 25.4% z-0.2 25.8% z-0.0 -> champion stays | rounds 9.07
+gen 11: champion 25.2% (fit 0.346, n 8000) | 24.3% z-0.7 25.1% z-0.3 24.4% z-0.8 -> champion stays | rounds 9.08
+gen 12 [Duncan Idaho]: champion 26.8% (fit 0.367, n 3000) | 27.8% z+1.4 28.1% z+1.1 27.9% z+0.6 -> champion stays | rounds 9.10
+gen 13: champion 25.2% (fit 0.346, n 8000) | 25.7% z+0.6 25.2% z-0.1 23.1% z-2.2 -> champion stays | rounds 9.06
+gen 14: champion 25.2% (fit 0.346, n 8000) | 26.3% z+1.4 25.6% z+0.7 25.4% z+0.1 -> champion stays | rounds 9.06
+gen 15 [Gaius Helen Mohiam]: champion 22.7% (fit 0.311, n 3000) | 23.0% z+0.5 22.5% z-0.2 22.9% z+0.4 -> champion stays | rounds 9.08
+bench gen 15 (lookahead): champion 23.8% vs previous AI | rounds 8.927 | ended by R8 32.5%
+gen 16: champion 25.2% (fit 0.346, n 8000) | 23.8% z-0.9 25.2% z+0.3 24.3% z-1.6 -> champion stays | rounds 9.06
+gen 17: champion 25.2% (fit 0.346, n 8000) | 25.5% z+1.1 24.2% z-1.5 24.8% z-0.5 -> champion stays | rounds 9.07
+gen 18 [Staban Tuek]: champion 28.3% (fit 0.380, n 3000) | 27.9% z+0.1 28.1% z+0.2 28.3% z+0.1 -> champion stays | rounds 9.08
+gen 19: champion 25.2% (fit 0.346, n 8000) | 25.7% z+0.7 26.0% z+0.5 24.1% z-1.0 -> champion stays | rounds 9.08
+gen 20: champion 25.2% (fit 0.346, n 8000) | 24.5% z-1.0 25.4% z-0.1 24.6% z-1.3 -> champion stays | rounds 9.07
+gen 21 [Muad'Dib]: champion 29.6% (fit 0.408, n 3000) | 25.3% z-3.9 23.8% z-4.3 28.9% z-0.4 -> champion stays | rounds 9.04
+gen 22: champion 25.2% (fit 0.346, n 8000) | 25.6% z-0.3 25.3% z+0.4 25.7% z+0.4 -> champion stays | rounds 9.07
+gen 23: champion 25.2% (fit 0.346, n 8000) | 25.2% z+0.1 24.8% z-0.8 25.7% z+0.5 -> champion stays | rounds 9.09
+gen 24 [Piter De Vries]: champion 26.7% (fit 0.366, n 3000) | 25.5% z-0.5 17.2% z-8.2 20.9% z-5.6 -> champion stays | rounds 9.06
+gen 25: champion 25.2% (fit 0.346, n 8000) | 24.3% z-0.8 24.8% z-0.8 25.0% z-0.5 -> champion stays | rounds 9.08
+gen 26: champion 25.2% (fit 0.346, n 8000) | 25.5% z+0.0 26.0% z+1.2 24.1% z-1.7 -> champion stays | rounds 9.06
+gen 27 [Feyd-Rautha Harkonnen]: champion 24.9% (fit 0.332, n 3000) | 25.2% z+0.5 26.3% z+1.6 23.5% z-1.7 -> champion stays | rounds 9.11
+gen 28: champion 25.2% (fit 0.346, n 8000) | 23.5% z-2.2 25.6% z+0.3 22.9% z-2.7 -> champion stays | rounds 9.08
+gen 29: champion 25.2% (fit 0.346, n 8000) | 22.9% z-3.0 25.2% z+0.0 25.2% z+0.0 -> champion stays | rounds 9.06
+gen 30 [Kota Odax of Ix]: champion 26.6% (fit 0.361, n 3000) | 25.4% z-0.5 25.7% z-0.6 26.2% z-0.2 -> champion stays | rounds 9.07
+bench gen 30 (lookahead): champion 27.3% vs previous AI | rounds 8.94 | ended by R8 31.8%
+gen 31: champion 25.2% (fit 0.346, n 8000) | 24.9% z-0.3 23.9% z-1.7 24.8% z-0.3 -> champion stays | rounds 9.06
+gen 32: champion 25.2% (fit 0.346, n 8000) | 25.0% z-0.5 25.1% z+0.1 25.0% z+0.1 -> champion stays | rounds 9.07
+gen 33 [Steersman Y'rkoon]: champion 27.8% (fit 0.408, n 3000) | 27.2% z-0.9 20.7% z-6.5 26.5% z-0.6 -> champion stays | rounds 9.01
+gen 34: champion 25.2% (fit 0.346, n 8000) | 25.0% z-0.3 24.8% z-0.1 24.4% z-1.4 -> champion stays | rounds 9.06
+gen 35: champion 25.2% (fit 0.346, n 8000) | 23.9% z-1.4 24.9% z-0.3 24.3% z-1.4 -> champion stays | rounds 9.06
+gen 36 [Count Hasimir Fenring]: champion 31.7% (fit 0.440, n 3000) | 32.4% z+0.7 32.8% z+1.4 30.5% z-1.0 -> champion stays | rounds 9.06
+gen 37: champion 25.2% (fit 0.346, n 8000) | 25.8% z+0.3 25.4% z-0.5 24.5% z-1.2 -> champion stays | rounds 9.08
+gen 38: champion 25.2% (fit 0.346, n 8000) | 24.5% z-0.9 22.9% z-2.2 24.4% z-0.9 -> champion stays | rounds 9.07
+gen 39 [Lady Amber Metulli]: champion 19.6% (fit 0.262, n 3000) | 21.3% z+1.5 20.5% z+1.3 21.5% z+2.0 -> champion stays | rounds 9.08
+gen 40: champion 25.2% (fit 0.346, n 8000) | 26.0% z+0.8 24.9% z-0.4 24.4% z-0.1 -> champion stays | rounds 9.06
+gen 41: champion 25.2% (fit 0.346, n 8000) | 26.0% z+0.9 26.9% z+2.0 25.2% z+0.3 -> mutant 2 wins {'worm_bonus': 3.812269} | rounds 9.07
+gen 42 [Princess Irulan]: champion 20.9% (fit 0.281, n 3000) | 21.4% z+0.7 22.9% z+1.7 18.4% z-1.9 -> champion stays | rounds 9.06
+gen 43: champion 24.2% (fit 0.329, n 4000) | 23.9% z-0.2 24.3% z+0.6 26.6% z+2.4 -> mutant 3 wins {'leader_play': 0.971235, 'contracts': 3.128559} | rounds 9.06
+gen 44: champion 25.7% (fit 0.349, n 4000) | 26.9% z+1.7 25.4% z+0.1 26.1% z+0.9 -> champion stays | rounds 9.06

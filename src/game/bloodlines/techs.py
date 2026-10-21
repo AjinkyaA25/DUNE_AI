@@ -1,6 +1,7 @@
 """
 Bloodlines tech tiles (plus the Rise of Ix tiles the user's TTS games also
-use), transcribed from the tile images in `Tech tiles/`.
+used), transcribed from the tile images in `Tech tiles/`. Only the Bloodlines
+tiles go in the market (BLOODLINES_TECHS); the Ix ones are kept for replays.
 
 Market: the pool is shuffled into 3 face-up stacks; buying a tile reveals the
 next one of that stack. A tile may be bought (with spice) when you send an
@@ -74,10 +75,10 @@ TECHS: List[TechDef] = [
             note="Acquire: a troop and you may break the Shield Wall. Reveal "
                  "Turn: you must choose: 3 swords and lose 1 influence with any "
                  "faction, OR lose all your spice and trash this."),
-    TechDef("Gene-Locked Vault", 2, acquire=[{"intrigue": 1}],
-            note="Acquire: an Intrigue OR draw a card (engine takes the "
-                 "Intrigue). Your Intrigue cards can't be stolen unless you "
-                 "have five or more."),
+    TechDef("Gene-Locked Vault", 2,
+            note="Acquire: an Intrigue OR draw a card (the player's choice). "
+                 "Your Intrigue cards can't be stolen unless you have five "
+                 "or more."),
     TechDef("Glowglobes", 2, acquire=[{"influence_any": 1}],
             note="You may look at the top card of your deck at any time."),
     TechDef("Holoprojectors", 3,
@@ -148,6 +149,28 @@ TECHS: List[TechDef] = [
     TechDef("Windtraps", 2, acquire=[{"water": 1}],
             on_win_conflict=[{"water": 1}]),
 ]
+
+# The 18 Bloodlines tiles (dunecardshub.com, Bloodlines > Tech, ids 162-179).
+# Uprising itself has no tech tiles; every other TECHS entry is a Rise of Ix
+# tile. Games use only these; the Ix tiles stay defined (feature indices,
+# and the user's recorded TTS games, which used them).
+BLOODLINES_TECHS = frozenset({
+    "Advanced Data Analysis", "CHOAM Transports", "Delivery Bay",
+    "Forbidden Weapons", "Gene-Locked Vault", "Glowglobes",
+    "Navigation Chamber", "Ornithopter Fleet", "Panopticon",
+    "Planetary Array", "Plasteel Blades", "Rapid Dropships",
+    "Sardaukar High Command", "Self-Destroying Messages", "Servo-Receivers",
+    "Spy Drones", "Suspensor Suits", "Training Depot",
+})
+
+
+BLOODLINES_TECH_NAMES = BLOODLINES_TECHS
+
+
+def tech_pool(ix_techs: bool = False) -> List[TechDef]:
+    """Tiles in the market: Bloodlines only, or (ix_techs) every defined tile."""
+    return [t for t in TECHS if ix_techs or t.name in BLOODLINES_TECHS]
+
 
 # In the user's tile folder but not in the engine pool (Rise of Ix pieces).
 EXCLUDED = {

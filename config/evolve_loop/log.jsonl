@@ -1,0 +1,35 @@
+{"time": "2026-10-18 22:25", "event": "confirm", "agent": "heuristic", "candidate": "config/evolve_plan/champion.json", "share": 0.2504, "z": 0.08, "vp": 8.124, "rounds": 9.07, "ended_by_r8": 0.2674}
+{"time": "2026-10-18 22:25", "event": "decision", "candidate": "config/evolve_plan/champion.json", "promoted": false}
+{"time": "2026-10-18 22:25", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261018_2225"}
+{"time": "2026-10-18 23:11", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261018_2311"}
+{"time": "2026-10-18 23:50", "event": "confirm", "agent": "heuristic", "candidate": "config/gap/all25.json", "share": 0.3466, "z": 19.96, "vp": 8.928, "rounds": 8.976, "ended_by_r8": 0.2981}
+{"time": "2026-10-19 00:03", "event": "confirm", "agent": "lookahead", "candidate": "config/gap/all25.json", "share": 0.344, "z": 8.41, "vp": 8.911, "rounds": 8.871, "ended_by_r8": 0.3473}
+{"time": "2026-10-19 00:03", "event": "decision", "candidate": "config/gap/all25.json", "promoted": true}
+{"time": "2026-10-19 00:03", "event": "promoted", "new_best": "config/gap/all25.json", "previous_saved_as": "config\\best_ai_history\\best_ai_20261019_0003_candidate.json"}
+{"time": "2026-10-19 00:03", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261019_0003"}
+{"time": "2026-10-19 00:27", "event": "confirm", "agent": "heuristic", "candidate": "config/gap/j_deck.json", "share": 0.2776, "z": 5.71, "vp": 8.728, "rounds": 8.831, "ended_by_r8": 0.3513}
+{"time": "2026-10-19 00:41", "event": "confirm", "agent": "lookahead", "candidate": "config/gap/j_deck.json", "share": 0.2873, "z": 3.34, "vp": 8.662, "rounds": 8.703, "ended_by_r8": 0.4133}
+{"time": "2026-10-19 00:41", "event": "decision", "candidate": "config/gap/j_deck.json", "promoted": true}
+{"time": "2026-10-19 00:41", "event": "promoted", "new_best": "config/gap/j_deck.json", "previous_saved_as": "config\\best_ai_history\\best_ai_20261019_0041_candidate.json"}
+{"time": "2026-10-19 00:41", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261019_0041"}
+{"time": "2026-10-19 03:24", "event": "confirm", "agent": "heuristic", "candidate": "config/gap/cycle1_g12.json", "share": 0.2776, "z": 6.37, "vp": 8.745, "rounds": 8.823, "ended_by_r8": 0.3543}
+{"time": "2026-10-19 03:44", "event": "confirm", "agent": "lookahead", "candidate": "config/gap/cycle1_g12.json", "share": 0.258, "z": 0.72, "vp": 8.489, "rounds": 8.732, "ended_by_r8": 0.39}
+{"time": "2026-10-19 03:44", "event": "decision", "candidate": "config/gap/cycle1_g12.json", "promoted": true}
+{"time": "2026-10-19 03:44", "event": "promoted", "new_best": "config/gap/cycle1_g12.json", "previous_saved_as": "config\\best_ai_history\\best_ai_20261019_0344_candidate.json"}
+{"time": "2026-10-19 03:46", "event": "recalib_failed", "version": 2}
+{"time": "2026-10-19 03:46", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261019_0346"}
+{"time": "2026-10-19 08:33", "event": "cycle_end", "cycle": 1, "result": "no change kept"}
+{"time": "2026-10-19 08:33", "event": "cycle_start", "cycle": 2, "out": "config\\evolve_loop\\cycle_20261019_0833"}
+{"time": "2026-10-19 13:47", "event": "confirm", "agent": "heuristic", "candidate": "config/gap/tech_learned_deny.json", "share": 0.2685, "z": 4.27, "vp": 8.61, "rounds": 8.777, "ended_by_r8": 0.38}
+{"time": "2026-10-19 14:03", "event": "confirm", "agent": "lookahead", "candidate": "config/gap/tech_learned_deny.json", "share": 0.2633, "z": 1.19, "vp": 8.546, "rounds": 8.674, "ended_by_r8": 0.4247}
+{"time": "2026-10-19 14:03", "event": "decision", "candidate": "config/gap/tech_learned_deny.json", "promoted": true}
+{"time": "2026-10-19 14:03", "event": "promoted", "new_best": "config/gap/tech_learned_deny.json", "previous_saved_as": "config\\best_ai_history\\best_ai_20261019_1403_candidate.json"}
+{"time": "2026-10-19 14:05", "event": "recalib", "version": 2, "games": 1500, "fit": {"0.5": {"n": 185616, "source": "reports\\deploy_heuristic_tuned_config_best_ai.json.json", "a": 1.3, "b": -0.4, "test_logloss_before": 0.5249, "test_logloss_after": 0.4991, "rev": {"a": 1.7, "b": -0.7, "n": 4551, "test_logloss_before": 0.3411, "test_logloss_after": 0.3173}, "unrev": {"a": 1.2, "b": -0.4, "n": 181065, "test_logloss_before": 0.5294, "test_logloss_after": 0.5029}}}}
+{"time": "2026-10-19 14:13", "event": "confirm", "agent": "heuristic", "candidate": "config\\evolve_loop\\recalib_v2.json", "share": 0.2536, "z": 0.83, "vp": 8.565, "rounds": 8.748, "ended_by_r8": 0.3925}
+{"time": "2026-10-19 14:13", "event": "decision", "candidate": "config\\evolve_loop\\recalib_v2.json", "promoted": false}
+{"time": "2026-10-19 14:13", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261019_1413"}
+{"time": "2026-10-19 15:06", "event": "recalib", "version": 3, "games": 1500, "fit": {"0.5": {"n": 185616, "source": "reports\\deploy_heuristic_tuned_config_best_ai.json.json", "a": 1.3, "b": -0.4, "test_logloss_before": 0.5249, "test_logloss_after": 0.4991, "rev": {"a": 1.7, "b": -0.7, "n": 4551, "test_logloss_before": 0.3411, "test_logloss_after": 0.3173}, "unrev": {"a": 1.2, "b": -0.4, "n": 181065, "test_logloss_before": 0.5294, "test_logloss_after": 0.5029}}}}
+{"time": "2026-10-19 15:22", "event": "confirm", "agent": "heuristic", "candidate": "config\\evolve_loop\\recalib_v3.json", "share": 0.2618, "z": 2.73, "vp": 8.594, "rounds": 8.749, "ended_by_r8": 0.3844}
+{"time": "2026-10-19 16:07", "event": "confirm", "agent": "lookahead", "candidate": "config\\evolve_loop\\recalib_v3.json", "share": 0.2427, "z": -0.66, "vp": 8.446, "rounds": 8.663, "ended_by_r8": 0.4287}
+{"time": "2026-10-19 16:07", "event": "decision", "candidate": "config\\evolve_loop\\recalib_v3.json", "promoted": false}
+{"time": "2026-10-19 16:07", "event": "cycle_start", "cycle": 1, "out": "config\\evolve_loop\\cycle_20261019_1607"}

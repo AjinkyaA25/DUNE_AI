@@ -198,14 +198,14 @@ def build(gs: "GameState", p: "Player", key: str, spec) -> Optional[Tuple[str, s
         for give in FACTIONS:
             if p.influence.get(give, 0) <= 0:
                 continue
-            for gain in FACTIONS:
-                if gain != give:
-                    opts.append((f"{give}>{gain}", f"-1 {FNAME[give]}, +1 {FNAME[gain]}",
-                                 {"_lose_influence": give, "_gain_influences": [gain]}))
+            for gain in FACTIONS:                 # the same Faction is allowed (user)
+                opts.append((f"{give}>{gain}", f"-1 {FNAME[give]}, +1 {FNAME[gain]}",
+                             {"_lose_influence": give, "_gain_influences": [gain]}))
         if not opts:
             return None
-        opts.append(("decline", "Don't swap", {}))
-        return ("influence_swap", "Move 1 influence to another Faction", opts)
+        if getattr(gs, "_intrigue_cost_for", None) != pid:      # the Intrigue's only ability: must do it
+            opts.append(("decline", "Don't swap", {}))
+        return ("influence_swap", "Move 1 influence (the same Faction is allowed)", opts)
 
     if key == "take_contract_from_reserve":                   # Coercive Negotiation
         if not getattr(gs, "use_choam", False):
@@ -233,7 +233,16 @@ def build(gs: "GameState", p: "Player", key: str, spec) -> Optional[Tuple[str, s
         for i, o in enumerate(spec.get("options", [])):
             eff = o.get("effect", {})
             if affordable(gs, p, eff) and _option_possible(gs, p, eff):
-                opts.append((f"o{i}", o.get("label", _fx(eff)), eff))
+                need = int(eff.get("_recall_spy", 0) or 0)
+                posts = sorted(k for k, v in p.spies_on_board.items() if v > 0)
+                if need and len(posts) > need:            # which Spy: the player's pick
+                    for combo in itertools.combinations(posts, need):
+                        e2 = {k: v for k, v in eff.items() if k != "_recall_spy"}
+                        e2["_recall_posts"] = list(combo)
+                        opts.append((f"o{i}:{'|'.join(combo)}",
+                                     f"{o.get('label', _fx(eff))} (recall from {', '.join(combo)})", e2))
+                else:
+                    opts.append((f"o{i}", o.get("label", _fx(eff)), eff))
         if spec.get("may", True):
             opts.append(("decline", "Neither", {}))
         real = [o for o in opts if o[0] != "decline"]
@@ -267,11 +276,24 @@ def build(gs: "GameState", p: "Player", key: str, spec) -> Optional[Tuple[str, s
 
 
 def _option_possible(gs, p, eff: Dict) -> bool:
+    # requirements of Leader / Twisted Intrigue options
+    if eff.get("_need_troops") or eff.get("_need_conflict_troops"):
+        from src.game.leader.twisted import _plain_garrison, _plain_conflict
+        if eff.get("_need_troops") and _plain_garrison(gs, p) + _plain_conflict(gs, p) < eff["_need_troops"]:
+            return False
+        if eff.get("_need_conflict_troops") and _plain_conflict(gs, p) < eff["_need_conflict_troops"]:
+            return False
+    if eff.get("_need_alliance") and not any(p.alliances.values()):
+        return False
+    if eff.get("_need_contracts") and len(p.contracts_completed) < eff["_need_contracts"]:
+        return False
+    if eff.get("_need_behind"):
+        from src.game.leader.twisted import _behind
+        if not _behind(gs, p):
+            return False
     if eff.get("_recall_spy_any") and not p.spies_on_board:
         return False
-    if "spy" in eff and p.spies_available <= 0 and not eff.get("_pay"):
-        return p.spies_available > 0
-    if "spy" in eff and p.spies_available <= 0:
+    if "spy" in eff and p.spies_available <= 0 and not p.spies_on_board:
         return False
     if eff.get("if_units_in_conflict_any") and _units_in_conflict(gs, p.id) == 0:
         return False
@@ -289,12 +311,26 @@ def apply_internal(gs: "GameState", p: "Player", eff: Dict) -> None:
     for k, v in (eff.get("_pay") or {}).items():
         setattr(p, k, getattr(p, k) - v)
     if eff.get("_recall_spy"):
-        for post in list(p.spies_on_board)[:eff["_recall_spy"]]:
+        gs.recall_spies_choice(pid, int(eff["_recall_spy"]))     # the player picks which
+    if "_trash_in_play" in eff:                   # trash this (revealed / played) card
+        card = next((c for c in p.in_play if c.name == eff["_trash_in_play"]), None)
+        if card is not None:
+            p.in_play.remove(card)
+            gs._to_trash(p, card)
+    for post in eff.get("_recall_posts", []):
+        if p.spies_on_board.get(post, 0) > 0:
             p.recall_spy(post)
-        p.recalled_spy_this_turn = True
+            p.recalled_spy_this_turn = True
+    if "_recall_post" in eff:
+        if p.spies_on_board.get(eff["_recall_post"], 0) > 0:
+            p.recall_spy(eff["_recall_post"])
+        q = getattr(gs, "_recall_queue", {})
+        if q.get(pid):
+            q[pid] -= 1
+            gs.recall_spies_choice(pid, 1)
     if eff.get("_peek_after_shuffle"):
         nd = list(p.discard)
-        gs.rng.shuffle(nd)
+        gs.shuffle_pile(nd, 1, p.id)
         p.deck, p.discard = nd + p.deck, []
         built = build(gs, p, "peek_top", 1)
         if built and len(built[2]) > 1:
@@ -327,10 +363,10 @@ def apply_internal(gs: "GameState", p: "Player", eff: Dict) -> None:
             p.reserved_discount = int(eff.get("_discount", 1))
             gs.refill_imperium_row()
     if eff.get("_retreat_n"):
-        n = min(int(eff["_retreat_n"]), gs.troops_in_conflict.get(pid, 0))
-        gs.troops_in_conflict[pid] -= n
-        p.troops_garrison += n
-        gs.update_combat_strength(pid)           # step() re-syncs commanders
+        gs.retreat_with_choice(pid, int(eff["_retreat_n"]))     # troops and/or commanders
+    if eff.get("_retreat_mix"):
+        n, c = eff["_retreat_mix"]
+        gs.retreat_units(pid, int(n), int(c))
     if "_trash_discard" in eff:
         card = next((c for c in p.discard if c.name == eff["_trash_discard"]), None)
         if card is not None:
@@ -353,19 +389,74 @@ def apply_internal(gs: "GameState", p: "Player", eff: Dict) -> None:
             if best.is_immediate() and (not best.requires_intrigue() or p.intrigue_cards):
                 gs.complete_contract(pid, best)
     if eff.get("_deploy_n"):
-        n = min(int(eff["_deploy_n"]), p.troops_garrison)
-        if n > 0 and gs.current_conflict is not None:
-            if getattr(gs, "bl", None) is not None:
-                gs.bl.deploy_commanders(pid, n)
-            p.troops_garrison -= n
-            gs.troops_in_conflict[pid] = gs.troops_in_conflict.get(pid, 0) + n
-            gs.update_combat_strength(pid)
+        gs.deploy_with_choice(pid, int(eff["_deploy_n"]))     # troops and/or commanders
+    if eff.get("_deploy_mix"):
+        n, c = eff["_deploy_mix"]
+        gs.deploy_units(pid, int(n), int(c))
+    if "_swap_intrigue" in eff:
+        ic = next((c for c in p.intrigue_cards if c.name == eff["_swap_intrigue"]), None)
+        if ic is not None:
+            p.intrigue_cards.remove(ic)
+            gs.discard_intrigue_card(ic)
+            gs.draw_intrigue_for_player(pid, 1)
+    if "_leader_fx" in eff:
+        from src.game.leader.leader_definitions import run_fx
+        run_fx(gs, p, eff["_leader_fx"])
+    if "_llf" in eff:
+        _llf_pick(gs, p, *eff["_llf"])
     if eff.get("_grant_emperor_access"):
         p.grant_emperor_access_this_turn = True
     if eff.get("_city_spy"):
         gs.add_pending_spy_placement(pid, 1, allow_occupied=False,
                                      allowed_posts=["Arrakeen Post", "Research Station Left Post",
                                                     "Research Station Right Post"])
+
+
+def _llf_value(c) -> float:
+    """Rough card strength, for the AI's suggested pick."""
+    return (c.persuasion or 0) + (c.swords or 0) + len(getattr(c, "agent_effects", None) or []) \
+        + len(getattr(c, "access_symbols", None) or [])
+
+
+def _llf_step(gs, p, step: str) -> None:
+    """Long Live the Fighters: the looked-at cards are in p.llf_cards. 'draw':
+    pick the one for your hand; 'trash': pick the one to trash, the other is
+    discarded. A single card left is handled without asking."""
+    cards = getattr(p, "llf_cards", None) or []
+    if not cards:
+        return
+    if len(cards) == 1:
+        return _llf_pick(gs, p, step, 0)
+    best = max(range(len(cards)), key=lambda i: _llf_value(cards[i]))
+    worst = min(range(len(cards)), key=lambda i: _llf_value(cards[i]))
+    if step == "draw":
+        prompt = "Long Live the Fighters: which card do you draw?"
+        opts = [(f"llf_draw:{i}", f"Draw {c.name}",
+                 {"_llf": ["draw", i], "_v": {"solari": 1} if i == best else {}})
+                for i, c in enumerate(cards)]
+    else:
+        prompt = "Long Live the Fighters: which card do you trash? (the other is discarded)"
+        opts = [(f"llf_trash:{i}", f"Trash {c.name}, discard {cards[1 - i].name}",
+                 {"_llf": ["trash", i], "_v": {"solari": 1} if i == worst else {}})
+                for i, c in enumerate(cards)]
+    gs.add_pending_choice(p.id, "llf", prompt, opts)
+
+
+def _llf_pick(gs, p, step: str, i: int) -> None:
+    from src.game.effects import EffectResolver
+    cards = getattr(p, "llf_cards", None) or []
+    if not 0 <= i < len(cards):
+        return
+    card = cards.pop(i)
+    if step == "draw":
+        p.hand.append(card)
+        _llf_step(gs, p, "trash")
+    else:
+        gs._to_trash(p, card)
+        for c in cards:                              # the one left is discarded
+            p.discard.append(c)
+            EffectResolver._note_discard(p, c)
+        p.llf_cards = []
 
 
 def _call_to_arms(gs, p) -> None:
@@ -409,6 +500,10 @@ def condition_met(gs: "GameState", p: "Player", key: str) -> Optional[bool]:
         return len(p.contracts_completed) >= int(key[10:])
     if key.startswith("spies_"):
         return sum(p.spies_on_board.values()) >= int(key[6:])
+    if key == "turn_start":                 # start of your Agent turn (nothing placed yet)
+        return gs.turn_start_for(p.id)
+    if key.startswith("units_deployed_"):
+        return getattr(p, "units_deployed_this_turn", 0) >= int(key.rsplit("_", 1)[1])
     if key.startswith("units_in_conflict_"):
         return _units_in_conflict(gs, p.id) >= int(key.rsplit("_", 1)[1])
     if key == "sandworm_in_conflict":
@@ -432,7 +527,7 @@ def effect_possible(gs: "GameState", p: "Player", e: Dict) -> bool:
                 return True                      # "up to" includes 0
             return True
         if k == "spy" or k == "spy_special":
-            if p.spies_available > 0:
+            if p.spies_available > 0 or p.spies_on_board:      # recall one to place it
                 return True
         elif k == "pay_then":
             cost = v.get("cost", {})

@@ -145,7 +145,8 @@ class Replay:
     def __init__(self, game: dict, seed: int = 0):
         self.game = game
         self.gs = setup_game(num_players=4, seed=seed, neutral_leaders=True,
-                             use_bloodlines=True)
+                             use_bloodlines=True, ix_techs=True,
+                             community_pool=True)
         self.h = HeuristicAgent(seed=seed)
         self.factory = _card_factory()
         self.stats = collections.Counter()

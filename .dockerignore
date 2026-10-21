@@ -1,0 +1,14 @@
+.git
+.venv
+**/__pycache__
+data
+models*
+!models_eval_leaders/evaluator.npz
+!models_ui/ppo.npz
+!models_fight/calibration.json
+!models_fight/forecast.json
+!models_tech/tech_values.json
+game_logs
+config/evolve*
+video_scrape/*
+!video_scrape/cards

@@ -11,6 +11,11 @@ if TYPE_CHECKING:
     from src.game.tech import Tech
 
 
+def faction_label(faction: str) -> str:
+    """'bene_gesserit' -> 'Bene Gesserit' (VP breakdown labels)."""
+    return faction.replace("_", " ").title()
+
+
 class Player:
     """
     Represents a player in Dune Imperium Uprising
@@ -34,6 +39,10 @@ class Player:
         self.spice = 0
         self.water = 0
         self.victory_points = 1  # All players start with 1 VP
+        # where every VP came from (UI breakdown): (source, +/-VP, round);
+        # vp_ctx = stack of (label, round) set by GameState while resolving
+        self.vp_log: List[tuple] = [("Starting point", 1, 0)]
+        self.vp_ctx: List[tuple] = []
 
         # ===== DECK MANAGEMENT (PLAYER CARDS) =====
         # These cards cycle: hand → in_play → discard → deck (reshuffled)
@@ -47,6 +56,7 @@ class Player:
         # Intrigue cards are one-time use
         # After played, they go to GLOBAL intrigue discard (not player's discard)
         self.intrigue_cards: List['IntrigueCard'] = []
+        self.tsmf_acquired = 0      # The Spice Must Flow copies acquired this game
 
         # ===== AGENTS =====
         self.agents_total = 2  # Total agents (starts at 2, can increase to 3 with Swordmaster)
@@ -80,6 +90,8 @@ class Player:
         # recruited this turn.  Multiple deploy icons do NOT stack the +2.
         self.deploy_budget_this_turn = 0
         self.deployed_this_turn = 0
+        self.deployed_cmd_this_turn = 0     # commanders among them
+        self.cmd_recruited_this_turn = 0    # commanders recruited this turn (deploy as commanders only)
         # Undercover Asset / Insider Information: ignore a board space's Influence
         # requirement.  Emperor's Invitation: the card you play may reach an
         # Emperor space regardless of its icons.  Cleared at end of Agent turn
@@ -168,13 +180,24 @@ class Player:
         """Gain water"""
         self.water += amount
 
-    def gain_vp(self, amount: int):
+    def gain_vp(self, amount: int, source: Optional[str] = None):
         """Gain victory points"""
         self.victory_points += amount
+        self._log_vp(amount, source)
 
-    def lose_vp(self, amount: int):
+    def lose_vp(self, amount: int, source: Optional[str] = None):
         """Lose victory points"""
+        old = self.victory_points
         self.victory_points = max(0, self.victory_points - amount)
+        self._log_vp(self.victory_points - old, source)
+
+    def _log_vp(self, delta: int, source: Optional[str]) -> None:
+        if not delta:
+            return
+        ctx = getattr(self, "vp_ctx", None) or [("Other", None)]
+        if not hasattr(self, "vp_log"):
+            self.vp_log = []
+        self.vp_log.append((source or ctx[-1][0], delta, ctx[-1][1]))
 
     def can_afford(self, cost_dict: Dict[str, int]) -> bool:
         """
@@ -569,7 +592,7 @@ class Player:
         if old_influence < 2 and new_influence >= 2:
             if not self.faction_friendships[faction]:
                 self.faction_friendships[faction] = True
-                self.gain_vp(1)  # Friendship worth 1 VP
+                self.gain_vp(1, f"{faction_label(faction)} friendship")  # Friendship worth 1 VP
 
         # Check for alliance (at influence 4)
         # Alliance checking is handled by GameState to check all players
@@ -597,13 +620,13 @@ class Player:
         if old_influence >= 2 and new_influence < 2:
             if self.faction_friendships[faction]:
                 self.faction_friendships[faction] = False
-                self.lose_vp(1)  # Lose 1 VP
+                self.lose_vp(1, f"{faction_label(faction)} friendship lost")  # Lose 1 VP
 
         # Check if lost alliance (drops below 4)
         if old_influence >= 4 and new_influence < 4:
             if self.alliances[faction]:
                 self.alliances[faction] = False
-                self.lose_vp(1)  # Lose 1 VP
+                self.lose_vp(1, f"{faction_label(faction)} alliance lost")  # Lose 1 VP
                 # GameState will handle granting alliance to next highest player
 
     def grant_alliance(self, faction: str):
@@ -616,7 +639,7 @@ class Player:
         """
         if not self.alliances[faction]:
             self.alliances[faction] = True
-            self.gain_vp(1)
+            self.gain_vp(1, f"{faction_label(faction)} alliance")
 
     def lose_alliance(self, faction: str):
         """
@@ -628,7 +651,7 @@ class Player:
         """
         if self.alliances[faction]:
             self.alliances[faction] = False
-            self.lose_vp(1)
+            self.lose_vp(1, f"{faction_label(faction)} alliance lost")
 
     def has_alliance(self, faction: str) -> bool:
         """

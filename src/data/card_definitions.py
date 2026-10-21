@@ -10,7 +10,7 @@ source extraction.
 Conflicts, contracts and intrigue are still placeholder data (a later pass).
 """
 from __future__ import annotations
-from typing import List
+from typing import Dict, List
 
 from src.game.cards.card import Card, CardType, AccessSymbol, CardTag
 from src.game.combat.conflict import Conflict, BattleIcon
@@ -262,9 +262,12 @@ def create_imperium_cards() -> List[Card]:
                 "Reveal: 2 persuasion + 2 solari. Acquire: gain 2 solari."),
         m("Priority Contracts", 6, I, access=["landsraad", "desert"], tags=["spacing_guild"],
           agent={"contract": 1}, persuasion=0,
-          reveal={"choose_by_contracts": {"n": 4, "yes": {"vp": 1}, "no": {"spice": 2}}},
-          notes="No reveal persuasion. Reveal: gain 2 spice, OR — with 4+ "
-                "contracts completed — 1 VP instead (auto-takes the VP)."),
+          reveal={"choose_one": {"prompt": "Priority Contracts", "may": False, "options": [
+              {"label": "2 spice", "effect": {"spice": 2}},
+              {"label": "Trash this card -> 1 VP (4+ completed contracts)",
+               "effect": {"_need_contracts": 4, "_trash_in_play": "Priority Contracts", "vp": 1}}]}},
+          notes="No reveal persuasion. Reveal: 2 spice, OR with 4+ completed "
+                "contracts: trash this card -> 1 VP (the player's choice)."),
         m("Public Spectacle", 4, I, access=["spy"], tags=["emperor"],
           agent={"if_spy_recalled": {"influence_any": 1}}, persuasion=1,
           reveal={"spy": 1}),
@@ -560,7 +563,9 @@ def create_intrigue_deck() -> List[IntrigueCard]:
         # (optional wall-break icon). Two copies in the deck.
         IC("Detonation", _PLOT, [_DETONATION]),
         IC("Detonation", _PLOT, [_DETONATION]),
-        IC("Distraction", _PLOT, [{"if_units_in_conflict_3": {"spy_special": 1}}]),
+        # Distraction: "When you deploy three or more units to the Conflict in a
+        # single turn: place a Spy (may share another player's post)".
+        IC("Distraction", _PLOT, [{"if_units_deployed_3": {"spy_special": 1}}]),
         IC("Imperium Politics", _PLOT,
            [{"pay_then": {"cost": {"solari": 1}, "influence_emperor_or_spacing": 1}}]),
         IC("Inspire Awe", _PLOT,
@@ -667,6 +672,48 @@ def create_intrigue_deck() -> List[IntrigueCard]:
 # Full game setup
 # ---------------------------------------------------------------------------
 
+# Imperium cards printed twice (dunecardshub.com "(x2)"): Uprising 54 names /
+# 69 cards, Bloodlines 26 / 32. The factories return one of each (feature
+# indices are built from them); setup_game deals the second copy.
+IMPERIUM_COPIES: Dict[str, int] = {n: 2 for n in (
+    # Uprising
+    "Bene Gesserit Operative", "Calculus of Power", "Desert Survival",
+    "Double Agent", "Maker Keeper", "Maula Pistol", "Public Spectacle",
+    "Rebel Supplier", "Sardaukar Coordination", "Smuggler's Harvester",
+    "Spacing Guild's Favor", "Tread in Darkness", "Truthtrance",
+    "Unswerving Loyalty", "Weirding Woman",
+    # Bloodlines
+    "Delivery Logistics", "Intelligence Training", "Ixian Ambassador",
+    "Quash Rebellion", "Sandwalk", "Urgent Shigawire",
+    # Uprising Intrigue (Contingency Plan x3, Detonation / Special Mission x2
+    # are already dealt as separate cards)
+    "Distraction",
+)}
+
+# Cards from other expansions (Rise of Ix, Immortality, base game) that the
+# TTS mod's community pool added; out of the default deck (user, 2026-10-14:
+# Uprising + Bloodlines + promo cards only). Dealt with community_pool=True.
+NOT_UPRISING = frozenset((
+    # Imperium (community pool)
+    "Gene Manipulation", "High Priority Travel", "Imperial Bashar",
+    "Imperial Shock Trooper", "Imperium Ceremony", "Keys to Power",
+    "Local Fence", "Piter de Vries", "Satellite Ban", "Sietch Reverend Mother",
+    "Smuggler's Thopter", "Spice Trader", "Stillsuit Manufacturer", "Truthsayer",
+    # Intrigue
+    "Bribery", "Poison Snooper", "Counterattack", "Ixian Probe", "War Chest",
+    "Recruitment Mission", "Dispatch an Envoy",
+))
+
+
+def with_imperium_copies(cards: List) -> List:
+    """`cards` plus the extra printed copies (distinct objects)."""
+    import copy
+    out = list(cards)
+    for c in cards:
+        out += [copy.deepcopy(c) for _ in range(IMPERIUM_COPIES.get(c.name, 1) - 1)]
+    return out
+
+
 def setup_game(
     num_players: int = 2,
     seed: int = None,
@@ -674,6 +721,8 @@ def setup_game(
     leaders=None,
     neutral_leaders: bool = False,
     use_bloodlines: bool = False,
+    ix_techs: bool = False,
+    community_pool: bool = False,
 ) -> GameState:
     """
     Return a fully initialized GameState with round 1 started and hands dealt.
@@ -685,12 +734,18 @@ def setup_game(
     `neutral_leaders=True` gives every player a no-op Leader instead (ignores
     `leaders`) — Leader ability text is still unverified, so self-play/eval
     tooling defaults to this; pass real leader names to opt back in.
+    Bloodlines games use only the 18 Bloodlines tech tiles; `ix_techs=True`
+    adds the Rise of Ix tiles too (replaying the user's recorded TTS games).
+    Card pool = Uprising + Bloodlines + their promo cards, with printed copy
+    counts; `community_pool=True` restores the TTS mod's community-pool cards
+    from other expansions (replays of the user's recorded games).
     """
     if not (2 <= num_players <= 4):
         raise ValueError("num_players must be 2–4")
 
     gs = GameState(num_players=num_players, seed=seed, use_choam=use_choam,
-                   use_bloodlines=use_bloodlines)
+                   use_bloodlines=use_bloodlines, ix_techs=ix_techs)
+    pool_ok = (lambda c: True) if community_pool else (lambda c: c.name not in NOT_UPRISING)
 
     imperium, intrigues = create_imperium_cards(), create_intrigue_deck()
     if use_bloodlines:
@@ -699,6 +754,8 @@ def setup_game(
             create_community_imperium_cards, create_community_intrigues)
         imperium += create_bloodlines_imperium_cards() + create_community_imperium_cards()
         intrigues += create_bloodlines_intrigues() + create_community_intrigues()
+    imperium = with_imperium_copies([c for c in imperium if pool_ok(c)])
+    intrigues = with_imperium_copies([c for c in intrigues if pool_ok(c)])
     gs.setup_conflict_deck(create_conflict_deck(gs.rng))
     gs.setup_imperium_deck(
         imperium,
@@ -715,10 +772,8 @@ def setup_game(
     from src.game.leader.leader_definitions import assign_leaders
     assign_leaders(gs, leaders, neutral=neutral_leaders)
 
-    # Begin round 1 (deals 5 cards to each player, flips first conflict)
-    gs.start_new_round()
-
-    # All leaders start with 1 water, 0 solari, 0 spice (then leader setup tweaks)
+    # All leaders start with 1 water, 0 solari, 0 spice; then leader setup
+    # (before round 1, so round-start abilities - Piter's Twisted Intrigue - see it)
     for player in gs.players:
         player.water  = 1
         player.solari = 0
@@ -726,5 +781,15 @@ def setup_game(
     for player in gs.players:
         if getattr(player, "leader", None) is not None:
             player.leader.apply_setup(player, gs)
+
+    # Leader setup choices (Steersman's Navigation cards, Kota's Tech) come
+    # after every Leader is picked and BEFORE round 1: the Conflict isn't
+    # revealed and no cards are dealt until they're all made (step() starts it)
+    from src.game.gameState import Phase
+    if any(gs._has_mandatory_pending_for(q) for q in range(num_players)):
+        gs.phase = Phase.SETUP
+    else:
+        # Begin round 1 (deals 5 cards to each player, flips first conflict)
+        gs.start_new_round()
 
     return gs

@@ -1,0 +1,1555 @@
+{
+ "specs": {
+  "best_ai": "heuristic:tuned=config/ppo/base.json",
+  "pool_iter1340": "ppo:net=models_ppo_self/pool/iter1340.npz:tuned=config/ppo/base.json:greedy",
+  "pool_iter1490": "ppo:net=models_ppo_self/pool/iter1490.npz:tuned=config/ppo/base.json:greedy",
+  "pool_iter1555": "ppo:net=models_ppo_self/pool/iter1555.npz:tuned=config/ppo/base.json:greedy",
+  "pool_iter470": "ppo:net=models_ppo_self/pool/iter470.npz:tuned=config/ppo/base.json:greedy",
+  "iter01560": "ppo:net=models_ppo_self/snap_01560.npz:tuned=config/ppo/base.json:greedy",
+  "iter01570": "ppo:net=models_ppo_self/snap_01570.npz:tuned=config/ppo/base.json:greedy",
+  "iter01580": "ppo:net=models_ppo_self/snap_01580.npz:tuned=config/ppo/base.json:greedy",
+  "iter01590": "ppo:net=models_ppo_self/snap_01590.npz:tuned=config/ppo/base.json:greedy",
+  "iter01600": "ppo:net=models_ppo_self/snap_01600.npz:tuned=config/ppo/base.json:greedy",
+  "iter01610": "ppo:net=models_ppo_self/snap_01610.npz:tuned=config/ppo/base.json:greedy",
+  "iter01620": "ppo:net=models_ppo_self/snap_01620.npz:tuned=config/ppo/base.json:greedy",
+  "iter01630": "ppo:net=models_ppo_self/snap_01630.npz:tuned=config/ppo/base.json:greedy",
+  "iter01640": "ppo:net=models_ppo_self/snap_01640.npz:tuned=config/ppo/base.json:greedy",
+  "iter01650": "ppo:net=models_ppo_self/snap_01650.npz:tuned=config/ppo/base.json:greedy",
+  "iter01660": "ppo:net=models_ppo_self/snap_01660.npz:tuned=config/ppo/base.json:greedy",
+  "iter01670": "ppo:net=models_ppo_self/snap_01670.npz:tuned=config/ppo/base.json:greedy",
+  "iter01680": "ppo:net=models_ppo_self/snap_01680.npz:tuned=config/ppo/base.json:greedy",
+  "iter01690": "ppo:net=models_ppo_self/snap_01690.npz:tuned=config/ppo/base.json:greedy",
+  "iter01700": "ppo:net=models_ppo_self/snap_01700.npz:tuned=config/ppo/base.json:greedy",
+  "iter01710": "ppo:net=models_ppo_self/snap_01710.npz:tuned=config/ppo/base.json:greedy",
+  "iter01720": "ppo:net=models_ppo_self/snap_01720.npz:tuned=config/ppo/base.json:greedy",
+  "iter01730": "ppo:net=models_ppo_self/snap_01730.npz:tuned=config/ppo/base.json:greedy",
+  "iter01740": "ppo:net=models_ppo_self/snap_01740.npz:tuned=config/ppo/base.json:greedy",
+  "iter01750": "ppo:net=models_ppo_self/snap_01750.npz:tuned=config/ppo/base.json:greedy",
+  "iter01760": "ppo:net=models_ppo_self/snap_01760.npz:tuned=config/ppo/base.json:greedy",
+  "iter01770": "ppo:net=models_ppo_self/snap_01770.npz:tuned=config/ppo/base.json:greedy",
+  "iter01780": "ppo:net=models_ppo_self/snap_01780.npz:tuned=config/ppo/base.json:greedy",
+  "iter01790": "ppo:net=models_ppo_self/snap_01790.npz:tuned=config/ppo/base.json:greedy",
+  "iter01800": "ppo:net=models_ppo_self/snap_01800.npz:tuned=config/ppo/base.json:greedy",
+  "iter01810": "ppo:net=models_ppo_self/snap_01810.npz:tuned=config/ppo/base.json:greedy",
+  "iter01820": "ppo:net=models_ppo_self/snap_01820.npz:tuned=config/ppo/base.json:greedy",
+  "iter01830": "ppo:net=models_ppo_self/snap_01830.npz:tuned=config/ppo/base.json:greedy",
+  "iter01840": "ppo:net=models_ppo_self/snap_01840.npz:tuned=config/ppo/base.json:greedy",
+  "iter01850": "ppo:net=models_ppo_self/snap_01850.npz:tuned=config/ppo/base.json:greedy",
+  "iter01860": "ppo:net=models_ppo_self/snap_01860.npz:tuned=config/ppo/base.json:greedy",
+  "iter01870": "ppo:net=models_ppo_self/snap_01870.npz:tuned=config/ppo/base.json:greedy",
+  "iter01880": "ppo:net=models_ppo_self/snap_01880.npz:tuned=config/ppo/base.json:greedy",
+  "iter01890": "ppo:net=models_ppo_self/snap_01890.npz:tuned=config/ppo/base.json:greedy",
+  "iter01900": "ppo:net=models_ppo_self/snap_01900.npz:tuned=config/ppo/base.json:greedy",
+  "iter01910": "ppo:net=models_ppo_self/snap_01910.npz:tuned=config/ppo/base.json:greedy",
+  "iter01920": "ppo:net=models_ppo_self/snap_01920.npz:tuned=config/ppo/base.json:greedy",
+  "iter01930": "ppo:net=models_ppo_self/snap_01930.npz:tuned=config/ppo/base.json:greedy",
+  "iter01940": "ppo:net=models_ppo_self/snap_01940.npz:tuned=config/ppo/base.json:greedy",
+  "iter01950": "ppo:net=models_ppo_self/snap_01950.npz:tuned=config/ppo/base.json:greedy",
+  "iter01960": "ppo:net=models_ppo_self/snap_01960.npz:tuned=config/ppo/base.json:greedy",
+  "iter01970": "ppo:net=models_ppo_self/snap_01970.npz:tuned=config/ppo/base.json:greedy",
+  "iter01980": "ppo:net=models_ppo_self/snap_01980.npz:tuned=config/ppo/base.json:greedy",
+  "iter01990": "ppo:net=models_ppo_self/snap_01990.npz:tuned=config/ppo/base.json:greedy",
+  "iter02000": "ppo:net=models_ppo_self/snap_02000.npz:tuned=config/ppo/base.json:greedy",
+  "iter02010": "ppo:net=models_ppo_self/snap_02010.npz:tuned=config/ppo/base.json:greedy",
+  "iter02020": "ppo:net=models_ppo_self/snap_02020.npz:tuned=config/ppo/base.json:greedy",
+  "iter02030": "ppo:net=models_ppo_self/snap_02030.npz:tuned=config/ppo/base.json:greedy",
+  "iter02040": "ppo:net=models_ppo_self/snap_02040.npz:tuned=config/ppo/base.json:greedy",
+  "iter02050": "ppo:net=models_ppo_self/snap_02050.npz:tuned=config/ppo/base.json:greedy",
+  "iter02060": "ppo:net=models_ppo_self/snap_02060.npz:tuned=config/ppo/base.json:greedy",
+  "iter02070": "ppo:net=models_ppo_self/snap_02070.npz:tuned=config/ppo/base.json:greedy",
+  "iter02080": "ppo:net=models_ppo_self/snap_02080.npz:tuned=config/ppo/base.json:greedy",
+  "iter02090": "ppo:net=models_ppo_self/snap_02090.npz:tuned=config/ppo/base.json:greedy",
+  "iter02100": "ppo:net=models_ppo_self/snap_02100.npz:tuned=config/ppo/base.json:greedy",
+  "iter02110": "ppo:net=models_ppo_self/snap_02110.npz:tuned=config/ppo/base.json:greedy",
+  "iter02120": "ppo:net=models_ppo_self/snap_02120.npz:tuned=config/ppo/base.json:greedy",
+  "iter02130": "ppo:net=models_ppo_self/snap_02130.npz:tuned=config/ppo/base.json:greedy",
+  "iter02140": "ppo:net=models_ppo_self/snap_02140.npz:tuned=config/ppo/base.json:greedy",
+  "iter02150": "ppo:net=models_ppo_self/snap_02150.npz:tuned=config/ppo/base.json:greedy",
+  "iter02160": "ppo:net=models_ppo_self/snap_02160.npz:tuned=config/ppo/base.json:greedy",
+  "iter02170": "ppo:net=models_ppo_self/snap_02170.npz:tuned=config/ppo/base.json:greedy",
+  "iter02180": "ppo:net=models_ppo_self/snap_02180.npz:tuned=config/ppo/base.json:greedy",
+  "iter02190": "ppo:net=models_ppo_self/snap_02190.npz:tuned=config/ppo/base.json:greedy",
+  "iter02200": "ppo:net=models_ppo_self/snap_02200.npz:tuned=config/ppo/base.json:greedy",
+  "iter02210": "ppo:net=models_ppo_self/snap_02210.npz:tuned=config/ppo/base.json:greedy",
+  "iter02220": "ppo:net=models_ppo_self/snap_02220.npz:tuned=config/ppo/base.json:greedy",
+  "iter02230": "ppo:net=models_ppo_self/snap_02230.npz:tuned=config/ppo/base.json:greedy",
+  "iter02240": "ppo:net=models_ppo_self/snap_02240.npz:tuned=config/ppo/base.json:greedy",
+  "iter02250": "ppo:net=models_ppo_self/snap_02250.npz:tuned=config/ppo/base.json:greedy",
+  "iter02260": "ppo:net=models_ppo_self/snap_02260.npz:tuned=config/ppo/base.json:greedy",
+  "iter02270": "ppo:net=models_ppo_self/snap_02270.npz:tuned=config/ppo/base.json:greedy",
+  "iter02280": "ppo:net=models_ppo_self/snap_02280.npz:tuned=config/ppo/base.json:greedy",
+  "iter02290": "ppo:net=models_ppo_self/snap_02290.npz:tuned=config/ppo/base.json:greedy",
+  "iter02300": "ppo:net=models_ppo_self/snap_02300.npz:tuned=config/ppo/base.json:greedy",
+  "iter02310": "ppo:net=models_ppo_self/snap_02310.npz:tuned=config/ppo/base.json:greedy",
+  "iter02320": "ppo:net=models_ppo_self/snap_02320.npz:tuned=config/ppo/base.json:greedy",
+  "iter02330": "ppo:net=models_ppo_self/snap_02330.npz:tuned=config/ppo/base.json:greedy",
+  "iter02340": "ppo:net=models_ppo_self/snap_02340.npz:tuned=config/ppo/base.json:greedy",
+  "iter02350": "ppo:net=models_ppo_self/snap_02350.npz:tuned=config/ppo/base.json:greedy",
+  "iter02360": "ppo:net=models_ppo_self/snap_02360.npz:tuned=config/ppo/base.json:greedy",
+  "iter02370": "ppo:net=models_ppo_self/snap_02370.npz:tuned=config/ppo/base.json:greedy",
+  "iter02380": "ppo:net=models_ppo_self/snap_02380.npz:tuned=config/ppo/base.json:greedy",
+  "iter02390": "ppo:net=models_ppo_self/snap_02390.npz:tuned=config/ppo/base.json:greedy",
+  "iter02400": "ppo:net=models_ppo_self/snap_02400.npz:tuned=config/ppo/base.json:greedy",
+  "iter02410": "ppo:net=models_ppo_self/snap_02410.npz:tuned=config/ppo/base.json:greedy",
+  "iter02420": "ppo:net=models_ppo_self/snap_02420.npz:tuned=config/ppo/base.json:greedy",
+  "iter02430": "ppo:net=models_ppo_self/snap_02430.npz:tuned=config/ppo/base.json:greedy",
+  "iter02440": "ppo:net=models_ppo_self/snap_02440.npz:tuned=config/ppo/base.json:greedy",
+  "iter02450": "ppo:net=models_ppo_self/snap_02450.npz:tuned=config/ppo/base.json:greedy",
+  "iter02460": "ppo:net=models_ppo_self/snap_02460.npz:tuned=config/ppo/base.json:greedy",
+  "iter02470": "ppo:net=models_ppo_self/snap_02470.npz:tuned=config/ppo/base.json:greedy",
+  "iter02480": "ppo:net=models_ppo_self/snap_02480.npz:tuned=config/ppo/base.json:greedy",
+  "iter02490": "ppo:net=models_ppo_self/snap_02490.npz:tuned=config/ppo/base.json:greedy",
+  "iter02500": "ppo:net=models_ppo_self/snap_02500.npz:tuned=config/ppo/base.json:greedy",
+  "iter02510": "ppo:net=models_ppo_self/snap_02510.npz:tuned=config/ppo/base.json:greedy",
+  "iter02520": "ppo:net=models_ppo_self/snap_02520.npz:tuned=config/ppo/base.json:greedy",
+  "iter02530": "ppo:net=models_ppo_self/snap_02530.npz:tuned=config/ppo/base.json:greedy",
+  "iter02540": "ppo:net=models_ppo_self/snap_02540.npz:tuned=config/ppo/base.json:greedy",
+  "iter02550": "ppo:net=models_ppo_self/snap_02550.npz:tuned=config/ppo/base.json:greedy",
+  "iter02560": "ppo:net=models_ppo_self/snap_02560.npz:tuned=config/ppo/base.json:greedy",
+  "iter02570": "ppo:net=models_ppo_self/snap_02570.npz:tuned=config/ppo/base.json:greedy",
+  "iter02580": "ppo:net=models_ppo_self/snap_02580.npz:tuned=config/ppo/base.json:greedy",
+  "iter02590": "ppo:net=models_ppo_self/snap_02590.npz:tuned=config/ppo/base.json:greedy",
+  "iter02600": "ppo:net=models_ppo_self/snap_02600.npz:tuned=config/ppo/base.json:greedy",
+  "iter02610": "ppo:net=models_ppo_self/snap_02610.npz:tuned=config/ppo/base.json:greedy",
+  "iter02620": "ppo:net=models_ppo_self/snap_02620.npz:tuned=config/ppo/base.json:greedy",
+  "iter02630": "ppo:net=models_ppo_self/snap_02630.npz:tuned=config/ppo/base.json:greedy",
+  "iter02640": "ppo:net=models_ppo_self/snap_02640.npz:tuned=config/ppo/base.json:greedy",
+  "iter02650": "ppo:net=models_ppo_self/snap_02650.npz:tuned=config/ppo/base.json:greedy",
+  "iter02660": "ppo:net=models_ppo_self/snap_02660.npz:tuned=config/ppo/base.json:greedy",
+  "iter02670": "ppo:net=models_ppo_self/snap_02670.npz:tuned=config/ppo/base.json:greedy",
+  "iter02680": "ppo:net=models_ppo_self/snap_02680.npz:tuned=config/ppo/base.json:greedy",
+  "iter02690": "ppo:net=models_ppo_self/snap_02690.npz:tuned=config/ppo/base.json:greedy",
+  "iter02700": "ppo:net=models_ppo_self/snap_02700.npz:tuned=config/ppo/base.json:greedy",
+  "iter02710": "ppo:net=models_ppo_self/snap_02710.npz:tuned=config/ppo/base.json:greedy",
+  "iter02720": "ppo:net=models_ppo_self/snap_02720.npz:tuned=config/ppo/base.json:greedy",
+  "iter02730": "ppo:net=models_ppo_self/snap_02730.npz:tuned=config/ppo/base.json:greedy",
+  "iter02740": "ppo:net=models_ppo_self/snap_02740.npz:tuned=config/ppo/base.json:greedy",
+  "iter02750": "ppo:net=models_ppo_self/snap_02750.npz:tuned=config/ppo/base.json:greedy",
+  "iter02760": "ppo:net=models_ppo_self/snap_02760.npz:tuned=config/ppo/base.json:greedy",
+  "iter02770": "ppo:net=models_ppo_self/snap_02770.npz:tuned=config/ppo/base.json:greedy",
+  "iter02780": "ppo:net=models_ppo_self/snap_02780.npz:tuned=config/ppo/base.json:greedy",
+  "iter02790": "ppo:net=models_ppo_self/snap_02790.npz:tuned=config/ppo/base.json:greedy",
+  "iter02800": "ppo:net=models_ppo_self/snap_02800.npz:tuned=config/ppo/base.json:greedy",
+  "iter02810": "ppo:net=models_ppo_self/snap_02810.npz:tuned=config/ppo/base.json:greedy",
+  "iter02820": "ppo:net=models_ppo_self/snap_02820.npz:tuned=config/ppo/base.json:greedy",
+  "iter02830": "ppo:net=models_ppo_self/snap_02830.npz:tuned=config/ppo/base.json:greedy",
+  "iter02840": "ppo:net=models_ppo_self/snap_02840.npz:tuned=config/ppo/base.json:greedy",
+  "iter02850": "ppo:net=models_ppo_self/snap_02850.npz:tuned=config/ppo/base.json:greedy",
+  "iter02860": "ppo:net=models_ppo_self/snap_02860.npz:tuned=config/ppo/base.json:greedy",
+  "iter02870": "ppo:net=models_ppo_self/snap_02870.npz:tuned=config/ppo/base.json:greedy",
+  "iter02880": "ppo:net=models_ppo_self/snap_02880.npz:tuned=config/ppo/base.json:greedy",
+  "iter02890": "ppo:net=models_ppo_self/snap_02890.npz:tuned=config/ppo/base.json:greedy",
+  "iter02900": "ppo:net=models_ppo_self/snap_02900.npz:tuned=config/ppo/base.json:greedy",
+  "iter02910": "ppo:net=models_ppo_self/snap_02910.npz:tuned=config/ppo/base.json:greedy",
+  "iter02920": "ppo:net=models_ppo_self/snap_02920.npz:tuned=config/ppo/base.json:greedy",
+  "iter02930": "ppo:net=models_ppo_self/snap_02930.npz:tuned=config/ppo/base.json:greedy",
+  "iter02940": "ppo:net=models_ppo_self/snap_02940.npz:tuned=config/ppo/base.json:greedy",
+  "iter02950": "ppo:net=models_ppo_self/snap_02950.npz:tuned=config/ppo/base.json:greedy",
+  "iter02960": "ppo:net=models_ppo_self/snap_02960.npz:tuned=config/ppo/base.json:greedy",
+  "iter02970": "ppo:net=models_ppo_self/snap_02970.npz:tuned=config/ppo/base.json:greedy",
+  "iter02980": "ppo:net=models_ppo_self/snap_02980.npz:tuned=config/ppo/base.json:greedy",
+  "iter02990": "ppo:net=models_ppo_self/snap_02990.npz:tuned=config/ppo/base.json:greedy",
+  "iter03000": "ppo:net=models_ppo_self/snap_03000.npz:tuned=config/ppo/base.json:greedy",
+  "iter03010": "ppo:net=models_ppo_self/snap_03010.npz:tuned=config/ppo/base.json:greedy",
+  "iter03020": "ppo:net=models_ppo_self/snap_03020.npz:tuned=config/ppo/base.json:greedy",
+  "iter03030": "ppo:net=models_ppo_self/snap_03030.npz:tuned=config/ppo/base.json:greedy",
+  "iter03040": "ppo:net=models_ppo_self/snap_03040.npz:tuned=config/ppo/base.json:greedy",
+  "iter03050": "ppo:net=models_ppo_self/snap_03050.npz:tuned=config/ppo/base.json:greedy",
+  "iter03060": "ppo:net=models_ppo_self/snap_03060.npz:tuned=config/ppo/base.json:greedy",
+  "iter03070": "ppo:net=models_ppo_self/snap_03070.npz:tuned=config/ppo/base.json:greedy",
+  "iter03080": "ppo:net=models_ppo_self/snap_03080.npz:tuned=config/ppo/base.json:greedy",
+  "iter03090": "ppo:net=models_ppo_self/snap_03090.npz:tuned=config/ppo/base.json:greedy",
+  "iter03100": "ppo:net=models_ppo_self/snap_03100.npz:tuned=config/ppo/base.json:greedy",
+  "iter03110": "ppo:net=models_ppo_self/snap_03110.npz:tuned=config/ppo/base.json:greedy",
+  "iter03120": "ppo:net=models_ppo_self/snap_03120.npz:tuned=config/ppo/base.json:greedy",
+  "iter03130": "ppo:net=models_ppo_self/snap_03130.npz:tuned=config/ppo/base.json:greedy",
+  "iter03140": "ppo:net=models_ppo_self/snap_03140.npz:tuned=config/ppo/base.json:greedy",
+  "iter03150": "ppo:net=models_ppo_self/snap_03150.npz:tuned=config/ppo/base.json:greedy",
+  "iter03160": "ppo:net=models_ppo_self/snap_03160.npz:tuned=config/ppo/base.json:greedy",
+  "iter03170": "ppo:net=models_ppo_self/snap_03170.npz:tuned=config/ppo/base.json:greedy",
+  "iter03180": "ppo:net=models_ppo_self/snap_03180.npz:tuned=config/ppo/base.json:greedy",
+  "iter03190": "ppo:net=models_ppo_self/snap_03190.npz:tuned=config/ppo/base.json:greedy",
+  "iter03200": "ppo:net=models_ppo_self/snap_03200.npz:tuned=config/ppo/base.json:greedy",
+  "iter03210": "ppo:net=models_ppo_self/snap_03210.npz:tuned=config/ppo/base.json:greedy",
+  "iter03220": "ppo:net=models_ppo_self/snap_03220.npz:tuned=config/ppo/base.json:greedy",
+  "iter03230": "ppo:net=models_ppo_self/snap_03230.npz:tuned=config/ppo/base.json:greedy",
+  "iter03240": "ppo:net=models_ppo_self/snap_03240.npz:tuned=config/ppo/base.json:greedy",
+  "iter03250": "ppo:net=models_ppo_self/snap_03250.npz:tuned=config/ppo/base.json:greedy",
+  "iter03260": "ppo:net=models_ppo_self/snap_03260.npz:tuned=config/ppo/base.json:greedy",
+  "iter03270": "ppo:net=models_ppo_self/snap_03270.npz:tuned=config/ppo/base.json:greedy",
+  "iter03280": "ppo:net=models_ppo_self/snap_03280.npz:tuned=config/ppo/base.json:greedy",
+  "iter03290": "ppo:net=models_ppo_self/snap_03290.npz:tuned=config/ppo/base.json:greedy",
+  "iter03300": "ppo:net=models_ppo_self/snap_03300.npz:tuned=config/ppo/base.json:greedy",
+  "iter03310": "ppo:net=models_ppo_self/snap_03310.npz:tuned=config/ppo/base.json:greedy",
+  "iter03320": "ppo:net=models_ppo_self/snap_03320.npz:tuned=config/ppo/base.json:greedy",
+  "iter03330": "ppo:net=models_ppo_self/snap_03330.npz:tuned=config/ppo/base.json:greedy",
+  "iter03340": "ppo:net=models_ppo_self/snap_03340.npz:tuned=config/ppo/base.json:greedy",
+  "iter03350": "ppo:net=models_ppo_self/snap_03350.npz:tuned=config/ppo/base.json:greedy",
+  "iter03360": "ppo:net=models_ppo_self/snap_03360.npz:tuned=config/ppo/base.json:greedy",
+  "iter03370": "ppo:net=models_ppo_self/snap_03370.npz:tuned=config/ppo/base.json:greedy",
+  "iter03380": "ppo:net=models_ppo_self/snap_03380.npz:tuned=config/ppo/base.json:greedy",
+  "iter03390": "ppo:net=models_ppo_self/snap_03390.npz:tuned=config/ppo/base.json:greedy",
+  "iter03400": "ppo:net=models_ppo_self/snap_03400.npz:tuned=config/ppo/base.json:greedy",
+  "iter03410": "ppo:net=models_ppo_self/snap_03410.npz:tuned=config/ppo/base.json:greedy",
+  "iter03420": "ppo:net=models_ppo_self/snap_03420.npz:tuned=config/ppo/base.json:greedy",
+  "iter03430": "ppo:net=models_ppo_self/snap_03430.npz:tuned=config/ppo/base.json:greedy",
+  "iter03440": "ppo:net=models_ppo_self/snap_03440.npz:tuned=config/ppo/base.json:greedy",
+  "iter03450": "ppo:net=models_ppo_self/snap_03450.npz:tuned=config/ppo/base.json:greedy",
+  "iter03460": "ppo:net=models_ppo_self/snap_03460.npz:tuned=config/ppo/base.json:greedy",
+  "iter03470": "ppo:net=models_ppo_self/snap_03470.npz:tuned=config/ppo/base.json:greedy",
+  "iter03480": "ppo:net=models_ppo_self/snap_03480.npz:tuned=config/ppo/base.json:greedy",
+  "iter03490": "ppo:net=models_ppo_self/snap_03490.npz:tuned=config/ppo/base.json:greedy",
+  "iter03500": "ppo:net=models_ppo_self/snap_03500.npz:tuned=config/ppo/base.json:greedy",
+  "iter03510": "ppo:net=models_ppo_self/snap_03510.npz:tuned=config/ppo/base.json:greedy",
+  "iter03520": "ppo:net=models_ppo_self/snap_03520.npz:tuned=config/ppo/base.json:greedy",
+  "iter03530": "ppo:net=models_ppo_self/snap_03530.npz:tuned=config/ppo/base.json:greedy",
+  "iter03540": "ppo:net=models_ppo_self/snap_03540.npz:tuned=config/ppo/base.json:greedy",
+  "iter03550": "ppo:net=models_ppo_self/snap_03550.npz:tuned=config/ppo/base.json:greedy",
+  "iter03560": "ppo:net=models_ppo_self/snap_03560.npz:tuned=config/ppo/base.json:greedy",
+  "iter03570": "ppo:net=models_ppo_self/snap_03570.npz:tuned=config/ppo/base.json:greedy",
+  "iter03580": "ppo:net=models_ppo_self/snap_03580.npz:tuned=config/ppo/base.json:greedy",
+  "iter03590": "ppo:net=models_ppo_self/snap_03590.npz:tuned=config/ppo/base.json:greedy",
+  "iter03600": "ppo:net=models_ppo_self/snap_03600.npz:tuned=config/ppo/base.json:greedy",
+  "iter03610": "ppo:net=models_ppo_self/snap_03610.npz:tuned=config/ppo/base.json:greedy",
+  "iter03620": "ppo:net=models_ppo_self/snap_03620.npz:tuned=config/ppo/base.json:greedy",
+  "iter03630": "ppo:net=models_ppo_self/snap_03630.npz:tuned=config/ppo/base.json:greedy",
+  "iter03640": "ppo:net=models_ppo_self/snap_03640.npz:tuned=config/ppo/base.json:greedy",
+  "iter03650": "ppo:net=models_ppo_self/snap_03650.npz:tuned=config/ppo/base.json:greedy",
+  "iter03660": "ppo:net=models_ppo_self/snap_03660.npz:tuned=config/ppo/base.json:greedy",
+  "iter03670": "ppo:net=models_ppo_self/snap_03670.npz:tuned=config/ppo/base.json:greedy",
+  "iter03680": "ppo:net=models_ppo_self/snap_03680.npz:tuned=config/ppo/base.json:greedy",
+  "iter03690": "ppo:net=models_ppo_self/snap_03690.npz:tuned=config/ppo/base.json:greedy",
+  "iter03700": "ppo:net=models_ppo_self/snap_03700.npz:tuned=config/ppo/base.json:greedy",
+  "iter03710": "ppo:net=models_ppo_self/snap_03710.npz:tuned=config/ppo/base.json:greedy",
+  "iter03720": "ppo:net=models_ppo_self/snap_03720.npz:tuned=config/ppo/base.json:greedy",
+  "iter03730": "ppo:net=models_ppo_self/snap_03730.npz:tuned=config/ppo/base.json:greedy",
+  "iter03740": "ppo:net=models_ppo_self/snap_03740.npz:tuned=config/ppo/base.json:greedy",
+  "iter03750": "ppo:net=models_ppo_self/snap_03750.npz:tuned=config/ppo/base.json:greedy",
+  "iter03760": "ppo:net=models_ppo_self/snap_03760.npz:tuned=config/ppo/base.json:greedy",
+  "iter03770": "ppo:net=models_ppo_self/snap_03770.npz:tuned=config/ppo/base.json:greedy",
+  "iter03780": "ppo:net=models_ppo_self/snap_03780.npz:tuned=config/ppo/base.json:greedy",
+  "iter03790": "ppo:net=models_ppo_self/snap_03790.npz:tuned=config/ppo/base.json:greedy",
+  "iter03800": "ppo:net=models_ppo_self/snap_03800.npz:tuned=config/ppo/base.json:greedy",
+  "iter03810": "ppo:net=models_ppo_self/snap_03810.npz:tuned=config/ppo/base.json:greedy",
+  "iter03820": "ppo:net=models_ppo_self/snap_03820.npz:tuned=config/ppo/base.json:greedy",
+  "iter03830": "ppo:net=models_ppo_self/snap_03830.npz:tuned=config/ppo/base.json:greedy",
+  "iter03840": "ppo:net=models_ppo_self/snap_03840.npz:tuned=config/ppo/base.json:greedy",
+  "iter03850": "ppo:net=models_ppo_self/snap_03850.npz:tuned=config/ppo/base.json:greedy",
+  "iter03860": "ppo:net=models_ppo_self/snap_03860.npz:tuned=config/ppo/base.json:greedy",
+  "iter03870": "ppo:net=models_ppo_self/snap_03870.npz:tuned=config/ppo/base.json:greedy",
+  "iter03880": "ppo:net=models_ppo_self/snap_03880.npz:tuned=config/ppo/base.json:greedy",
+  "iter03890": "ppo:net=models_ppo_self/snap_03890.npz:tuned=config/ppo/base.json:greedy",
+  "iter03900": "ppo:net=models_ppo_self/snap_03900.npz:tuned=config/ppo/base.json:greedy",
+  "iter03910": "ppo:net=models_ppo_self/snap_03910.npz:tuned=config/ppo/base.json:greedy",
+  "iter03920": "ppo:net=models_ppo_self/snap_03920.npz:tuned=config/ppo/base.json:greedy",
+  "iter03930": "ppo:net=models_ppo_self/snap_03930.npz:tuned=config/ppo/base.json:greedy",
+  "iter03940": "ppo:net=models_ppo_self/snap_03940.npz:tuned=config/ppo/base.json:greedy",
+  "iter03950": "ppo:net=models_ppo_self/snap_03950.npz:tuned=config/ppo/base.json:greedy",
+  "iter03960": "ppo:net=models_ppo_self/snap_03960.npz:tuned=config/ppo/base.json:greedy",
+  "iter03970": "ppo:net=models_ppo_self/snap_03970.npz:tuned=config/ppo/base.json:greedy",
+  "iter03980": "ppo:net=models_ppo_self/snap_03980.npz:tuned=config/ppo/base.json:greedy",
+  "iter03990": "ppo:net=models_ppo_self/snap_03990.npz:tuned=config/ppo/base.json:greedy",
+  "iter04000": "ppo:net=models_ppo_self/snap_04000.npz:tuned=config/ppo/base.json:greedy",
+  "iter04010": "ppo:net=models_ppo_self/snap_04010.npz:tuned=config/ppo/base.json:greedy",
+  "iter04020": "ppo:net=models_ppo_self/snap_04020.npz:tuned=config/ppo/base.json:greedy",
+  "iter04030": "ppo:net=models_ppo_self/snap_04030.npz:tuned=config/ppo/base.json:greedy",
+  "iter04040": "ppo:net=models_ppo_self/snap_04040.npz:tuned=config/ppo/base.json:greedy",
+  "iter04050": "ppo:net=models_ppo_self/snap_04050.npz:tuned=config/ppo/base.json:greedy",
+  "iter04060": "ppo:net=models_ppo_self/snap_04060.npz:tuned=config/ppo/base.json:greedy",
+  "iter04070": "ppo:net=models_ppo_self/snap_04070.npz:tuned=config/ppo/base.json:greedy",
+  "iter04080": "ppo:net=models_ppo_self/snap_04080.npz:tuned=config/ppo/base.json:greedy"
+ },
+ "ratings": {
+  "best_ai": [
+   1500.0,
+   0.0,
+   58787
+  ],
+  "iter01560": [
+   1708.1,
+   3.4,
+   3850
+  ],
+  "iter01570": [
+   1707.1,
+   3.5,
+   3759
+  ],
+  "iter01580": [
+   1705.2,
+   3.6,
+   3556
+  ],
+  "iter01590": [
+   1701.3,
+   3.6,
+   3483
+  ],
+  "iter01600": [
+   1705.7,
+   3.7,
+   3321
+  ],
+  "iter01610": [
+   1707.3,
+   3.6,
+   3412
+  ],
+  "iter01620": [
+   1712.4,
+   3.8,
+   3151
+  ],
+  "iter01630": [
+   1710.2,
+   3.8,
+   3155
+  ],
+  "iter01640": [
+   1705.8,
+   3.8,
+   3076
+  ],
+  "iter01650": [
+   1711.6,
+   3.9,
+   2971
+  ],
+  "iter01660": [
+   1710.7,
+   3.9,
+   2952
+  ],
+  "iter01670": [
+   1709.9,
+   3.9,
+   2853
+  ],
+  "iter01680": [
+   1708.7,
+   4.0,
+   2753
+  ],
+  "iter01690": [
+   1716.5,
+   4.0,
+   2760
+  ],
+  "iter01700": [
+   1702.0,
+   4.1,
+   2620
+  ],
+  "iter01710": [
+   1700.0,
+   4.1,
+   2590
+  ],
+  "iter01720": [
+   1710.2,
+   4.0,
+   2720
+  ],
+  "iter01730": [
+   1709.8,
+   4.2,
+   2561
+  ],
+  "iter01740": [
+   1714.9,
+   4.1,
+   2594
+  ],
+  "iter01750": [
+   1718.8,
+   4.2,
+   2577
+  ],
+  "iter01760": [
+   1712.7,
+   4.2,
+   2495
+  ],
+  "iter01770": [
+   1720.6,
+   4.3,
+   2456
+  ],
+  "iter01780": [
+   1715.4,
+   4.3,
+   2422
+  ],
+  "iter01790": [
+   1724.2,
+   4.3,
+   2359
+  ],
+  "iter01800": [
+   1713.5,
+   4.4,
+   2317
+  ],
+  "iter01810": [
+   1719.8,
+   4.3,
+   2374
+  ],
+  "iter01820": [
+   1714.5,
+   4.4,
+   2323
+  ],
+  "iter01830": [
+   1715.7,
+   4.5,
+   2167
+  ],
+  "iter01840": [
+   1714.0,
+   4.4,
+   2256
+  ],
+  "iter01850": [
+   1723.6,
+   4.4,
+   2294
+  ],
+  "iter01860": [
+   1721.5,
+   4.5,
+   2148
+  ],
+  "iter01870": [
+   1709.4,
+   4.5,
+   2155
+  ],
+  "iter01880": [
+   1715.5,
+   4.5,
+   2206
+  ],
+  "iter01890": [
+   1712.0,
+   4.5,
+   2146
+  ],
+  "iter01900": [
+   1717.0,
+   4.5,
+   2161
+  ],
+  "iter01910": [
+   1719.0,
+   4.7,
+   2030
+  ],
+  "iter01920": [
+   1723.8,
+   4.6,
+   2068
+  ],
+  "iter01930": [
+   1712.9,
+   4.6,
+   2033
+  ],
+  "iter01940": [
+   1720.5,
+   4.6,
+   2049
+  ],
+  "iter01950": [
+   1711.1,
+   4.7,
+   2009
+  ],
+  "iter01960": [
+   1737.4,
+   4.7,
+   1974
+  ],
+  "iter01970": [
+   1727.9,
+   4.7,
+   2019
+  ],
+  "iter01980": [
+   1725.1,
+   4.7,
+   1975
+  ],
+  "iter01990": [
+   1719.4,
+   4.7,
+   1985
+  ],
+  "iter02000": [
+   1714.5,
+   4.8,
+   1890
+  ],
+  "iter02010": [
+   1727.5,
+   4.9,
+   1877
+  ],
+  "iter02020": [
+   1717.9,
+   4.9,
+   1811
+  ],
+  "iter02030": [
+   1713.0,
+   4.8,
+   1875
+  ],
+  "iter02040": [
+   1725.5,
+   5.0,
+   1790
+  ],
+  "iter02050": [
+   1716.8,
+   5.0,
+   1782
+  ],
+  "iter02060": [
+   1714.2,
+   5.0,
+   1768
+  ],
+  "iter02070": [
+   1724.4,
+   5.1,
+   1686
+  ],
+  "iter02080": [
+   1721.6,
+   5.1,
+   1714
+  ],
+  "iter02090": [
+   1728.1,
+   4.9,
+   1833
+  ],
+  "iter02100": [
+   1726.6,
+   5.1,
+   1713
+  ],
+  "iter02110": [
+   1727.3,
+   5.0,
+   1731
+  ],
+  "iter02120": [
+   1726.8,
+   5.2,
+   1641
+  ],
+  "iter02130": [
+   1731.5,
+   5.1,
+   1707
+  ],
+  "iter02140": [
+   1728.7,
+   5.2,
+   1635
+  ],
+  "iter02150": [
+   1717.7,
+   5.2,
+   1597
+  ],
+  "iter02160": [
+   1731.9,
+   5.2,
+   1626
+  ],
+  "iter02170": [
+   1723.5,
+   5.2,
+   1612
+  ],
+  "iter02180": [
+   1717.6,
+   5.3,
+   1568
+  ],
+  "iter02190": [
+   1723.6,
+   5.2,
+   1600
+  ],
+  "iter02200": [
+   1718.1,
+   5.3,
+   1584
+  ],
+  "iter02210": [
+   1724.2,
+   5.4,
+   1519
+  ],
+  "iter02220": [
+   1727.9,
+   5.3,
+   1546
+  ],
+  "iter02230": [
+   1730.7,
+   5.4,
+   1529
+  ],
+  "iter02240": [
+   1718.7,
+   5.3,
+   1551
+  ],
+  "iter02250": [
+   1717.2,
+   5.3,
+   1583
+  ],
+  "iter02260": [
+   1721.1,
+   5.3,
+   1534
+  ],
+  "iter02270": [
+   1728.1,
+   5.5,
+   1470
+  ],
+  "iter02280": [
+   1715.4,
+   5.4,
+   1493
+  ],
+  "iter02290": [
+   1722.6,
+   5.5,
+   1454
+  ],
+  "iter02300": [
+   1716.5,
+   5.4,
+   1482
+  ],
+  "iter02310": [
+   1733.9,
+   5.5,
+   1434
+  ],
+  "iter02320": [
+   1719.7,
+   5.5,
+   1437
+  ],
+  "iter02330": [
+   1726.7,
+   5.5,
+   1474
+  ],
+  "iter02340": [
+   1725.5,
+   5.6,
+   1406
+  ],
+  "iter02350": [
+   1722.5,
+   5.6,
+   1404
+  ],
+  "iter02360": [
+   1727.6,
+   5.6,
+   1402
+  ],
+  "iter02370": [
+   1712.2,
+   5.6,
+   1367
+  ],
+  "iter02380": [
+   1724.8,
+   5.7,
+   1342
+  ],
+  "iter02390": [
+   1715.7,
+   5.7,
+   1339
+  ],
+  "iter02400": [
+   1729.9,
+   5.8,
+   1324
+  ],
+  "iter02410": [
+   1732.9,
+   5.7,
+   1334
+  ],
+  "iter02420": [
+   1729.6,
+   5.6,
+   1383
+  ],
+  "iter02430": [
+   1731.8,
+   5.8,
+   1312
+  ],
+  "iter02440": [
+   1736.9,
+   5.7,
+   1348
+  ],
+  "iter02450": [
+   1725.9,
+   5.8,
+   1287
+  ],
+  "iter02460": [
+   1722.5,
+   5.8,
+   1293
+  ],
+  "iter02470": [
+   1726.0,
+   5.9,
+   1244
+  ],
+  "iter02480": [
+   1731.4,
+   5.8,
+   1298
+  ],
+  "iter02490": [
+   1710.5,
+   5.8,
+   1282
+  ],
+  "iter02500": [
+   1729.2,
+   5.9,
+   1256
+  ],
+  "iter02510": [
+   1726.8,
+   6.0,
+   1242
+  ],
+  "iter02520": [
+   1738.1,
+   6.0,
+   1235
+  ],
+  "iter02530": [
+   1728.4,
+   6.1,
+   1200
+  ],
+  "iter02540": [
+   1737.8,
+   6.0,
+   1233
+  ],
+  "iter02550": [
+   1735.8,
+   6.1,
+   1186
+  ],
+  "iter02560": [
+   1741.1,
+   6.1,
+   1179
+  ],
+  "iter02570": [
+   1733.6,
+   6.0,
+   1209
+  ],
+  "iter02580": [
+   1736.3,
+   6.2,
+   1156
+  ],
+  "iter02590": [
+   1735.8,
+   6.0,
+   1226
+  ],
+  "iter02600": [
+   1745.3,
+   6.2,
+   1165
+  ],
+  "iter02610": [
+   1728.3,
+   6.1,
+   1197
+  ],
+  "iter02620": [
+   1731.3,
+   6.1,
+   1179
+  ],
+  "iter02630": [
+   1727.5,
+   6.1,
+   1195
+  ],
+  "iter02640": [
+   1736.3,
+   6.2,
+   1129
+  ],
+  "iter02650": [
+   1719.3,
+   6.2,
+   1121
+  ],
+  "iter02660": [
+   1743.2,
+   6.3,
+   1104
+  ],
+  "iter02670": [
+   1723.2,
+   6.3,
+   1115
+  ],
+  "iter02680": [
+   1727.8,
+   6.3,
+   1091
+  ],
+  "iter02690": [
+   1749.1,
+   6.3,
+   1101
+  ],
+  "iter02700": [
+   1729.9,
+   6.4,
+   1087
+  ],
+  "iter02710": [
+   1732.6,
+   6.2,
+   1157
+  ],
+  "iter02720": [
+   1739.4,
+   6.3,
+   1106
+  ],
+  "iter02730": [
+   1737.9,
+   6.3,
+   1110
+  ],
+  "iter02740": [
+   1732.7,
+   6.5,
+   1056
+  ],
+  "iter02750": [
+   1733.0,
+   6.5,
+   1044
+  ],
+  "iter02760": [
+   1741.7,
+   6.4,
+   1078
+  ],
+  "iter02770": [
+   1730.8,
+   6.3,
+   1103
+  ],
+  "iter02780": [
+   1748.7,
+   6.5,
+   1063
+  ],
+  "iter02790": [
+   1748.0,
+   6.5,
+   1047
+  ],
+  "iter02800": [
+   1739.3,
+   6.5,
+   1047
+  ],
+  "iter02810": [
+   1738.1,
+   6.5,
+   1039
+  ],
+  "iter02820": [
+   1728.9,
+   6.8,
+   968
+  ],
+  "iter02830": [
+   1723.9,
+   6.5,
+   1045
+  ],
+  "iter02840": [
+   1721.4,
+   6.5,
+   1028
+  ],
+  "iter02850": [
+   1744.8,
+   6.8,
+   967
+  ],
+  "iter02860": [
+   1741.6,
+   6.8,
+   970
+  ],
+  "iter02870": [
+   1736.0,
+   6.8,
+   943
+  ],
+  "iter02880": [
+   1728.7,
+   6.7,
+   969
+  ],
+  "iter02890": [
+   1730.1,
+   6.8,
+   938
+  ],
+  "iter02900": [
+   1738.2,
+   6.8,
+   940
+  ],
+  "iter02910": [
+   1734.8,
+   6.8,
+   958
+  ],
+  "iter02920": [
+   1746.0,
+   6.9,
+   923
+  ],
+  "iter02930": [
+   1739.4,
+   7.0,
+   890
+  ],
+  "iter02940": [
+   1744.6,
+   6.9,
+   934
+  ],
+  "iter02950": [
+   1739.8,
+   6.9,
+   916
+  ],
+  "iter02960": [
+   1751.5,
+   7.0,
+   907
+  ],
+  "iter02970": [
+   1746.9,
+   7.0,
+   916
+  ],
+  "iter02980": [
+   1743.2,
+   7.1,
+   866
+  ],
+  "iter02990": [
+   1727.1,
+   7.0,
+   901
+  ],
+  "iter03000": [
+   1733.3,
+   7.0,
+   889
+  ],
+  "iter03010": [
+   1728.4,
+   6.9,
+   909
+  ],
+  "iter03020": [
+   1733.7,
+   7.1,
+   880
+  ],
+  "iter03030": [
+   1736.4,
+   7.0,
+   904
+  ],
+  "iter03040": [
+   1733.2,
+   7.1,
+   875
+  ],
+  "iter03050": [
+   1731.0,
+   7.0,
+   892
+  ],
+  "iter03060": [
+   1740.0,
+   7.3,
+   827
+  ],
+  "iter03070": [
+   1728.6,
+   7.2,
+   858
+  ],
+  "iter03080": [
+   1727.6,
+   7.2,
+   852
+  ],
+  "iter03090": [
+   1719.4,
+   7.1,
+   863
+  ],
+  "iter03100": [
+   1740.9,
+   7.3,
+   833
+  ],
+  "iter03110": [
+   1746.3,
+   7.3,
+   843
+  ],
+  "iter03120": [
+   1735.9,
+   7.2,
+   838
+  ],
+  "iter03130": [
+   1756.6,
+   7.5,
+   785
+  ],
+  "iter03140": [
+   1732.4,
+   7.5,
+   789
+  ],
+  "iter03150": [
+   1751.3,
+   7.6,
+   765
+  ],
+  "iter03160": [
+   1759.2,
+   7.6,
+   782
+  ],
+  "iter03170": [
+   1737.4,
+   7.4,
+   815
+  ],
+  "iter03180": [
+   1754.5,
+   7.7,
+   763
+  ],
+  "iter03190": [
+   1726.8,
+   7.5,
+   782
+  ],
+  "iter03200": [
+   1744.6,
+   7.6,
+   763
+  ],
+  "iter03210": [
+   1738.4,
+   7.6,
+   765
+  ],
+  "iter03220": [
+   1750.4,
+   7.5,
+   786
+  ],
+  "iter03230": [
+   1743.3,
+   7.6,
+   759
+  ],
+  "iter03240": [
+   1744.5,
+   7.7,
+   755
+  ],
+  "iter03250": [
+   1741.4,
+   7.7,
+   753
+  ],
+  "iter03260": [
+   1728.9,
+   7.7,
+   747
+  ],
+  "iter03270": [
+   1725.4,
+   7.7,
+   744
+  ],
+  "iter03280": [
+   1734.6,
+   7.7,
+   744
+  ],
+  "iter03290": [
+   1749.5,
+   8.0,
+   702
+  ],
+  "iter03300": [
+   1745.7,
+   8.0,
+   699
+  ],
+  "iter03310": [
+   1745.4,
+   7.9,
+   716
+  ],
+  "iter03320": [
+   1742.2,
+   7.8,
+   729
+  ],
+  "iter03330": [
+   1734.3,
+   7.7,
+   745
+  ],
+  "iter03340": [
+   1753.3,
+   7.8,
+   738
+  ],
+  "iter03350": [
+   1740.0,
+   7.9,
+   703
+  ],
+  "iter03360": [
+   1746.3,
+   7.9,
+   710
+  ],
+  "iter03370": [
+   1729.5,
+   7.8,
+   714
+  ],
+  "iter03380": [
+   1748.3,
+   8.0,
+   697
+  ],
+  "iter03390": [
+   1761.3,
+   8.3,
+   653
+  ],
+  "iter03400": [
+   1740.6,
+   8.1,
+   671
+  ],
+  "iter03410": [
+   1730.1,
+   8.0,
+   692
+  ],
+  "iter03420": [
+   1739.4,
+   8.1,
+   673
+  ],
+  "iter03430": [
+   1736.4,
+   8.0,
+   690
+  ],
+  "iter03440": [
+   1725.2,
+   8.2,
+   655
+  ],
+  "iter03450": [
+   1729.9,
+   8.4,
+   630
+  ],
+  "iter03460": [
+   1727.7,
+   8.2,
+   653
+  ],
+  "iter03470": [
+   1744.4,
+   8.3,
+   639
+  ],
+  "iter03480": [
+   1735.1,
+   8.3,
+   632
+  ],
+  "iter03490": [
+   1753.4,
+   8.5,
+   621
+  ],
+  "iter03500": [
+   1742.8,
+   8.3,
+   643
+  ],
+  "iter03510": [
+   1736.9,
+   8.3,
+   638
+  ],
+  "iter03520": [
+   1744.3,
+   8.4,
+   625
+  ],
+  "iter03530": [
+   1737.2,
+   8.3,
+   634
+  ],
+  "iter03540": [
+   1740.2,
+   8.5,
+   604
+  ],
+  "iter03550": [
+   1725.9,
+   8.6,
+   595
+  ],
+  "iter03560": [
+   1754.3,
+   8.5,
+   610
+  ],
+  "iter03570": [
+   1711.6,
+   8.6,
+   581
+  ],
+  "iter03580": [
+   1728.4,
+   8.6,
+   595
+  ],
+  "iter03590": [
+   1751.9,
+   8.9,
+   571
+  ],
+  "iter03600": [
+   1748.7,
+   8.7,
+   592
+  ],
+  "iter03610": [
+   1762.6,
+   8.9,
+   565
+  ],
+  "iter03620": [
+   1740.8,
+   8.9,
+   563
+  ],
+  "iter03630": [
+   1752.8,
+   8.9,
+   567
+  ],
+  "iter03640": [
+   1737.6,
+   8.7,
+   581
+  ],
+  "iter03650": [
+   1749.5,
+   8.9,
+   561
+  ],
+  "iter03660": [
+   1748.8,
+   8.8,
+   573
+  ],
+  "iter03670": [
+   1745.9,
+   9.0,
+   549
+  ],
+  "iter03680": [
+   1747.0,
+   9.0,
+   547
+  ],
+  "iter03690": [
+   1753.7,
+   9.2,
+   528
+  ],
+  "iter03700": [
+   1744.5,
+   9.1,
+   539
+  ],
+  "iter03710": [
+   1738.7,
+   9.0,
+   541
+  ],
+  "iter03720": [
+   1759.8,
+   9.3,
+   522
+  ],
+  "iter03730": [
+   1724.4,
+   8.9,
+   552
+  ],
+  "iter03740": [
+   1748.8,
+   9.2,
+   519
+  ],
+  "iter03750": [
+   1745.0,
+   9.1,
+   536
+  ],
+  "iter03760": [
+   1720.0,
+   9.1,
+   534
+  ],
+  "iter03770": [
+   1747.1,
+   9.3,
+   516
+  ],
+  "iter03780": [
+   1746.3,
+   9.5,
+   498
+  ],
+  "iter03790": [
+   1729.8,
+   9.4,
+   502
+  ],
+  "iter03800": [
+   1741.7,
+   9.6,
+   485
+  ],
+  "iter03810": [
+   1736.8,
+   9.4,
+   501
+  ],
+  "iter03820": [
+   1744.2,
+   9.5,
+   492
+  ],
+  "iter03830": [
+   1755.6,
+   9.6,
+   491
+  ],
+  "iter03840": [
+   1731.3,
+   9.4,
+   501
+  ],
+  "iter03850": [
+   1745.6,
+   9.6,
+   480
+  ],
+  "iter03860": [
+   1740.9,
+   9.4,
+   499
+  ],
+  "iter03870": [
+   1775.9,
+   9.8,
+   478
+  ],
+  "iter03880": [
+   1743.1,
+   9.7,
+   472
+  ],
+  "iter03890": [
+   1741.4,
+   9.8,
+   460
+  ],
+  "iter03900": [
+   1757.1,
+   9.8,
+   467
+  ],
+  "iter03910": [
+   1735.8,
+   9.7,
+   472
+  ],
+  "iter03920": [
+   1759.5,
+   9.9,
+   454
+  ],
+  "iter03930": [
+   1745.5,
+   9.9,
+   456
+  ],
+  "iter03940": [
+   1766.5,
+   10.1,
+   451
+  ],
+  "iter03950": [
+   1755.2,
+   10.1,
+   442
+  ],
+  "iter03960": [
+   1745.4,
+   9.9,
+   454
+  ],
+  "iter03970": [
+   1742.7,
+   10.2,
+   433
+  ],
+  "iter03980": [
+   1744.7,
+   10.0,
+   449
+  ],
+  "iter03990": [
+   1735.0,
+   10.1,
+   432
+  ],
+  "iter04000": [
+   1759.7,
+   10.1,
+   445
+  ],
+  "iter04010": [
+   1751.7,
+   10.3,
+   425
+  ],
+  "iter04020": [
+   1736.0,
+   10.2,
+   424
+  ],
+  "iter04030": [
+   1703.4,
+   10.3,
+   411
+  ],
+  "iter04040": [
+   1763.2,
+   10.4,
+   414
+  ],
+  "iter04050": [
+   1724.2,
+   10.4,
+   410
+  ],
+  "iter04060": [
+   1746.0,
+   10.5,
+   406
+  ],
+  "iter04070": [
+   1757.0,
+   10.5,
+   407
+  ],
+  "iter04080": [
+   1764.5,
+   10.7,
+   400
+  ],
+  "pool_iter1340": [
+   1697.2,
+   3.4,
+   3945
+  ],
+  "pool_iter1490": [
+   1696.3,
+   3.4,
+   3944
+  ],
+  "pool_iter1555": [
+   1709.0,
+   3.4,
+   3810
+  ],
+  "pool_iter470": [
+   1659.8,
+   3.4,
+   3879
+  ]
+ },
+ "next_game": 101600
+}
