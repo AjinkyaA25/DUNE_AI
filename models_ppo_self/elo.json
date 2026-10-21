@@ -33,179 +33,269 @@
   "iter01810": "ppo:net=models_ppo_self/snap_01810.npz:tuned=config/ppo/base.json:greedy",
   "iter01820": "ppo:net=models_ppo_self/snap_01820.npz:tuned=config/ppo/base.json:greedy",
   "iter01830": "ppo:net=models_ppo_self/snap_01830.npz:tuned=config/ppo/base.json:greedy",
-  "iter01840": "ppo:net=models_ppo_self/snap_01840.npz:tuned=config/ppo/base.json:greedy"
+  "iter01840": "ppo:net=models_ppo_self/snap_01840.npz:tuned=config/ppo/base.json:greedy",
+  "iter01850": "ppo:net=models_ppo_self/snap_01850.npz:tuned=config/ppo/base.json:greedy",
+  "iter01860": "ppo:net=models_ppo_self/snap_01860.npz:tuned=config/ppo/base.json:greedy",
+  "iter01870": "ppo:net=models_ppo_self/snap_01870.npz:tuned=config/ppo/base.json:greedy",
+  "iter01880": "ppo:net=models_ppo_self/snap_01880.npz:tuned=config/ppo/base.json:greedy",
+  "iter01890": "ppo:net=models_ppo_self/snap_01890.npz:tuned=config/ppo/base.json:greedy",
+  "iter01900": "ppo:net=models_ppo_self/snap_01900.npz:tuned=config/ppo/base.json:greedy",
+  "iter01910": "ppo:net=models_ppo_self/snap_01910.npz:tuned=config/ppo/base.json:greedy",
+  "iter01920": "ppo:net=models_ppo_self/snap_01920.npz:tuned=config/ppo/base.json:greedy",
+  "iter01930": "ppo:net=models_ppo_self/snap_01930.npz:tuned=config/ppo/base.json:greedy",
+  "iter01940": "ppo:net=models_ppo_self/snap_01940.npz:tuned=config/ppo/base.json:greedy",
+  "iter01950": "ppo:net=models_ppo_self/snap_01950.npz:tuned=config/ppo/base.json:greedy",
+  "iter01960": "ppo:net=models_ppo_self/snap_01960.npz:tuned=config/ppo/base.json:greedy",
+  "iter01970": "ppo:net=models_ppo_self/snap_01970.npz:tuned=config/ppo/base.json:greedy",
+  "iter01980": "ppo:net=models_ppo_self/snap_01980.npz:tuned=config/ppo/base.json:greedy",
+  "iter01990": "ppo:net=models_ppo_self/snap_01990.npz:tuned=config/ppo/base.json:greedy"
  },
  "ratings": {
   "best_ai": [
    1500.0,
    0.0,
-   6962
+   10425
   ],
   "iter01560": [
-   1713.5,
-   5.1,
-   2065
+   1714.5,
+   4.6,
+   2407
   ],
   "iter01570": [
-   1709.6,
-   5.3,
-   1917
+   1711.3,
+   4.8,
+   2250
   ],
   "iter01580": [
-   1704.3,
-   5.4,
-   1747
+   1707.8,
+   4.9,
+   2096
   ],
   "iter01590": [
-   1710.0,
-   5.6,
-   1665
+   1706.9,
+   5.0,
+   1985
   ],
   "iter01600": [
-   1698.6,
-   5.7,
-   1553
+   1698.1,
+   5.1,
+   1874
   ],
   "iter01610": [
-   1714.0,
-   5.8,
-   1524
+   1715.0,
+   5.2,
+   1862
   ],
   "iter01620": [
-   1715.8,
-   6.0,
-   1382
+   1719.4,
+   5.3,
+   1711
   ],
   "iter01630": [
-   1706.8,
-   6.2,
-   1290
+   1709.0,
+   5.4,
+   1637
   ],
   "iter01640": [
-   1714.9,
-   6.3,
-   1251
+   1713.6,
+   5.5,
+   1590
   ],
   "iter01650": [
-   1715.9,
-   6.5,
-   1176
+   1719.5,
+   5.6,
+   1516
   ],
   "iter01660": [
-   1714.5,
-   6.7,
-   1088
+   1714.3,
+   5.8,
+   1436
   ],
   "iter01670": [
-   1702.3,
-   6.8,
-   1033
+   1706.6,
+   5.9,
+   1364
   ],
   "iter01680": [
-   1703.3,
-   7.0,
-   985
+   1705.4,
+   6.0,
+   1309
   ],
   "iter01690": [
-   1714.4,
-   7.1,
-   949
+   1715.0,
+   6.1,
+   1264
   ],
   "iter01700": [
-   1708.1,
-   7.3,
-   890
+   1710.6,
+   6.2,
+   1225
   ],
   "iter01710": [
-   1703.1,
-   7.6,
-   815
+   1708.1,
+   6.4,
+   1133
   ],
   "iter01720": [
-   1715.8,
-   7.6,
-   822
+   1715.3,
+   6.3,
+   1196
   ],
   "iter01730": [
-   1721.2,
-   8.0,
-   728
+   1721.5,
+   6.7,
+   1055
   ],
   "iter01740": [
-   1699.7,
-   8.0,
-   732
+   1709.1,
+   6.5,
+   1108
   ],
   "iter01750": [
-   1727.2,
-   8.4,
-   667
+   1728.4,
+   6.8,
+   1017
   ],
   "iter01760": [
-   1701.0,
-   8.4,
-   655
+   1702.2,
+   6.8,
+   1010
   ],
   "iter01770": [
-   1727.6,
-   8.7,
-   611
+   1724.4,
+   7.0,
+   955
   ],
   "iter01780": [
-   1731.5,
-   9.1,
-   562
+   1724.0,
+   7.1,
+   915
   ],
   "iter01790": [
-   1742.0,
-   9.3,
-   550
+   1739.1,
+   7.4,
+   849
   ],
   "iter01800": [
-   1732.6,
-   9.5,
-   516
+   1723.4,
+   7.5,
+   830
   ],
   "iter01810": [
-   1712.2,
-   9.7,
-   486
+   1717.7,
+   7.4,
+   832
   ],
   "iter01820": [
-   1717.7,
-   10.0,
-   459
+   1717.4,
+   7.6,
+   789
   ],
   "iter01830": [
-   1752.2,
-   10.5,
-   429
+   1721.7,
+   7.9,
+   737
   ],
   "iter01840": [
+   1720.6,
+   8.0,
+   721
+  ],
+  "iter01850": [
+   1725.3,
+   8.0,
+   719
+  ],
+  "iter01860": [
+   1726.6,
+   8.2,
+   681
+  ],
+  "iter01870": [
+   1718.1,
+   8.3,
+   663
+  ],
+  "iter01880": [
+   1728.2,
+   8.5,
+   631
+  ],
+  "iter01890": [
+   1716.1,
+   8.5,
+   632
+  ],
+  "iter01900": [
+   1714.3,
+   8.8,
+   590
+  ],
+  "iter01910": [
+   1728.4,
+   9.2,
+   537
+  ],
+  "iter01920": [
+   1721.8,
+   9.3,
+   529
+  ],
+  "iter01930": [
+   1711.7,
+   9.4,
+   511
+  ],
+  "iter01940": [
+   1703.2,
+   9.5,
+   495
+  ],
+  "iter01950": [
    1733.5,
-   10.8,
+   9.6,
+   492
+  ],
+  "iter01960": [
+   1749.6,
+   10.0,
+   464
+  ],
+  "iter01970": [
+   1749.5,
+   10.2,
+   445
+  ],
+  "iter01980": [
+   1726.2,
+   10.4,
+   423
+  ],
+  "iter01990": [
+   1718.4,
+   10.6,
    400
   ],
   "pool_iter1340": [
-   1694.5,
-   5.1,
-   2027
+   1697.5,
+   4.6,
+   2400
   ],
   "pool_iter1490": [
    1693.8,
-   5.0,
-   2117
+   4.6,
+   2457
   ],
   "pool_iter1555": [
-   1709.9,
-   5.1,
-   2044
+   1712.4,
+   4.6,
+   2360
   ],
   "pool_iter470": [
-   1664.6,
-   5.0,
-   2087
+   1664.0,
+   4.6,
+   2396
   ]
  },
- "next_game": 12000
+ "next_game": 18000
 }
