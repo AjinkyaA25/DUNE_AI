@@ -152,23 +152,39 @@ class Bloodlines:
     def has_pending(self, pid: int) -> bool:
         return any(c.player_id == pid for c in self.pending)
 
+    # Purchases stay open while the player can still raise the price: a Plot
+    # Intrigue played mid-turn may bring the spice / solari (user, 2026-10-21:
+    # High Council with 3 spice, then a spice Intrigue -> Panopticon for 4).
+    PURCHASES = ("tech_buy", "tech_offer", "commander")
+
+    def purchase_pending(self, pid: int) -> bool:
+        c = next((c for c in self.pending if c.player_id == pid), None)
+        return c is not None and c.kind in self.PURCHASES
+
+    def can_raise_funds(self, pid: int) -> bool:
+        """The player may play a Plot Intrigue right now (it may pay for a purchase)."""
+        gs = self.gs
+        return gs.phase.value == "player_turns" and gs.get_current_player_id() == pid \
+            and not gs.is_in_atomic_block() and gs._has_playable_plot(pid)
+
     def pending_options(self, pid: int) -> List[str]:
         """Legal choices right now: purchases are re-checked against current
-        resources (another pending choice may have spent them meanwhile)."""
+        resources both ways - another choice may have spent them, or a Plot
+        Intrigue may just have paid for one that was out of reach."""
         c = next((c for c in self.pending if c.player_id == pid), None)
         if c is None:
             return []
-        if c.kind == "tech_buy":
-            live = {f"stack:{i}" for i in self.buyable_stacks(pid)}
-            c.options = [o for o in c.options if o in live or o == "decline"]
-        elif c.kind == "commander":
-            live = set(self.recruit_options(pid, c.space))
-            c.options = [o for o in c.options if o in live or o == "decline"]
+        if c.kind in self.PURCHASES:
+            if c.kind == "commander":
+                live = self.recruit_options(pid, c.space)
+            else:
+                live = [f"stack:{i}" for i in self.buyable_stacks(pid, c.discount)]
+            if not live and not self.can_raise_funds(pid):
+                self.pending.remove(c)             # nothing affordable, no way to pay: skipped
+                return []
+            c.options = live + ["decline"]
         elif c.kind == "plasteel":
             live = {f"skill:{k}" for k in self.row_skills(pid)}
-            c.options = [o for o in c.options if o in live or o == "decline"]
-        elif c.kind == "tech_offer":
-            live = {f"stack:{i}" for i in self.buyable_stacks(pid, c.discount)}
             c.options = [o for o in c.options if o in live or o == "decline"]
         elif c.kind == "ada_spy":
             p = self._p(pid)
@@ -265,20 +281,22 @@ class Bloodlines:
         stack = self.tech_stacks[i] if i < len(self.tech_stacks) else []
         return (stack[0] if stack else None), 0
 
-    def buyable_stacks(self, pid: int, discount: int = 0) -> List[int]:
+    def buyable_stacks(self, pid: int, discount: int = 0, free: bool = False) -> List[int]:
+        """Tech stacks the player can buy now (free=True: ignoring the price)."""
         p = self._p(pid)
         out = []
         for i, stack in enumerate(self.tech_stacks):
             if not stack:
                 continue
             d = stack[0]
-            if self.has(pid, d.name) or p.spice < self.tech_price(pid, d, discount):
+            if self.has(pid, d.name) or (not free and p.spice < self.tech_price(pid, d, discount)):
                 continue
             if d.name == "Advanced Data Analysis" and not any(p.spies_on_board.values()):
                 continue
             out.append(i)
         k = self.kota_tile(pid)                    # Kota: the secret tile costs 1 spice less
-        if k is not None and not self.has(pid, k.name) and p.spice >= self.tech_price(pid, k, discount + 1) \
+        if k is not None and not self.has(pid, k.name) \
+                and (free or p.spice >= self.tech_price(pid, k, discount + 1)) \
                 and not (k.name == "Advanced Data Analysis" and not any(p.spies_on_board.values())):
             out.append(-1)
         return out
@@ -325,13 +343,13 @@ class Bloodlines:
         p.bl_space_this_turn = space
         if space in GREEN_SPACES:
             stacks = self.buyable_stacks(pid)
-            if stacks:
+            if stacks or (self.buyable_stacks(pid, free=True) and self.can_raise_funds(pid)):
                 self.pending.append(PendingBLChoice(
                     pid, "tech_buy", [f"stack:{i}" for i in stacks] + ["decline"]))
         # The board commander is recruited on its own space; a commander from
         # your supply can be re-recruited on ANY Agent turn (user, 2026-10-14)
         opts = self.recruit_options(pid, space)
-        if opts:
+        if opts or (self.recruit_options(pid, space, free=True) and self.can_raise_funds(pid)):
             self.pending.append(PendingBLChoice(
                 pid, "commander", opts + ["decline"], space=space))
 
@@ -340,12 +358,12 @@ class Bloodlines:
                    - (1 if self.has(pid, "Sardaukar High Command") else 0)
                    - self._p(pid).bl_commander_discount)
 
-    def recruit_options(self, pid: int, space: str) -> List[str]:
+    def recruit_options(self, pid: int, space: str, free: bool = False) -> List[str]:
         """On a commander space you may recruit the board commander; on any
         Agent turn you may re-recruit one from your supply (2 solari each);
         never more than one supply re-recruit per turn."""
         p = self._p(pid)
-        if p.solari < self.commander_cost(pid):
+        if not free and p.solari < self.commander_cost(pid):
             return []
         opts = []
         if self.commander_on_space.get(space) and not p.bl_recruited_this_turn:
@@ -941,7 +959,7 @@ class Bloodlines:
                 p.bl_commander_discount += int(v)
             elif k == "bl_tech_offer":
                 stacks = self.buyable_stacks(p.id, int(v))
-                if stacks:
+                if stacks or (self.buyable_stacks(p.id, free=True) and self.can_raise_funds(p.id)):
                     self.pending.append(PendingBLChoice(
                         p.id, "tech_offer", [f"stack:{i}" for i in stacks] + ["decline"],
                         discount=int(v)))

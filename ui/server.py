@@ -636,6 +636,29 @@ def name_counts(cards) -> List[List]:
     return [[n, k, card_img(n)] for n, k in sorted(c.items(), key=lambda t: (-t[1], t[0]))]
 
 
+def purchase_prompt(gs, pid: int) -> Optional[str]:
+    """A tech / commander purchase is open and a Plot Intrigue could pay for
+    more of it: say so (the Intrigue buttons are offered alongside)."""
+    bl = getattr(gs, "bl", None)
+    if bl is None or not bl.purchase_pending(pid) or not bl.can_raise_funds(pid):
+        return None
+    c = next(c for c in bl.pending if c.player_id == pid)
+    if c.kind == "commander":
+        return (f"Recruit a commander ({bl.commander_cost(pid)} solari): you may play a Plot Intrigue "
+                "first if it brings the solari.")
+    p = gs.players[pid]
+    out = []
+    for i in bl.buyable_stacks(pid, c.discount, free=True):
+        d, extra = bl.tech_at(pid, i)
+        price = bl.tech_price(pid, d, c.discount + extra)
+        if price > p.spice:
+            out.append(f"{d.name} {price}")
+    if not out:
+        return None
+    return (f"Buy a tech (you have {p.spice} spice). Out of reach right now: {', '.join(out)}. "
+            "Play a Plot Intrigue first if it brings the spice, then buy.")
+
+
 def vp_sources(p) -> List[Dict]:
     """Where a player's VP came from (Player.vp_log), grouped by source in the
     order first earned; anything the log misses (a game started before it
@@ -1421,7 +1444,8 @@ class Session:
                               for c in d.get("contracts_on_board", [])],
                 "actions": actions, "log": self.log[-400:], "saved": self.saved,
                 "choicePrompt": (gs.pending_choice_for(self.seat).prompt
-                                 if act == self.seat and gs.pending_choice_for(self.seat) else None),
+                                 if act == self.seat and gs.pending_choice_for(self.seat)
+                                 else purchase_prompt(gs, self.seat) if act == self.seat else None),
             }
 
 

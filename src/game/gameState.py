@@ -654,12 +654,7 @@ class GameState:
             # Agent already placed: only Plot Intrigues, or end the turn.
             if self._post_agent_window == player_id:
                 if not self.is_in_atomic_block():
-                    for ic in p.intrigue_cards:
-                        ts = ic.timing if isinstance(ic.timing, (set, frozenset, tuple, list))                             else (ic.timing,)
-                        if any(t.value == "plot" for t in ts) and                                 ic.can_play(p, self, is_agent_turn=True)[0]:
-                            if self.intrigue_cost_payable(player_id, ic):
-                                actions.append(GameAction(ActionType.PLAY_INTRIGUE, player_id,
-                                                          intrigue_card_name=ic.name))
+                    actions += self._plot_intrigue_actions(player_id)
                 actions += self._claim_actions(player_id)
                 actions += self._open_deploy_actions(player_id)
                 actions += self._late_flip_actions(player_id)
@@ -1059,6 +1054,17 @@ class GameState:
     def _claim_actions(self, pid: int) -> List["GameAction"]:
         return [GameAction(ActionType.RESOLVE_CHOICE, pid, choice=f"claim:{i}")
                 for i, _ in self.deferred(pid)]
+
+    def _plot_intrigue_actions(self, pid: int) -> List["GameAction"]:
+        """Plot Intrigues the player may play now, during their Agent turn."""
+        p = self.players[pid]
+        out = []
+        for ic in p.intrigue_cards:
+            ts = ic.timing if isinstance(ic.timing, (set, frozenset, tuple, list)) else (ic.timing,)
+            if any(t.value == "plot" for t in ts) and ic.can_play(p, self, is_agent_turn=True)[0] \
+                    and self.intrigue_cost_payable(pid, ic):
+                out.append(GameAction(ActionType.PLAY_INTRIGUE, pid, intrigue_card_name=ic.name))
+        return out
 
     def _has_playable_plot(self, pid: int) -> bool:
         from src.game.intrigue.intrigue import IntrigueTiming
@@ -1769,6 +1775,10 @@ class GameState:
             actions += self._open_deploy_actions(player_id)
             actions += self._late_flip_actions(player_id)
             actions += self._late_bl_actions(player_id)
+            # a tech / commander purchase is open: a Plot Intrigue may pay for it
+            if self.bl is not None and self.bl.purchase_pending(player_id) \
+                    and self.bl.can_raise_funds(player_id):
+                actions += self._plot_intrigue_actions(player_id)
 
         for psp in self.pending_spy_placements:
             if psp.player_id != player_id:
