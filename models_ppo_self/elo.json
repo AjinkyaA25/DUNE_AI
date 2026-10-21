@@ -18,104 +18,194 @@
   "iter01660": "ppo:net=models_ppo_self/snap_01660.npz:tuned=config/ppo/base.json:greedy",
   "iter01670": "ppo:net=models_ppo_self/snap_01670.npz:tuned=config/ppo/base.json:greedy",
   "iter01680": "ppo:net=models_ppo_self/snap_01680.npz:tuned=config/ppo/base.json:greedy",
-  "iter01690": "ppo:net=models_ppo_self/snap_01690.npz:tuned=config/ppo/base.json:greedy"
+  "iter01690": "ppo:net=models_ppo_self/snap_01690.npz:tuned=config/ppo/base.json:greedy",
+  "iter01700": "ppo:net=models_ppo_self/snap_01700.npz:tuned=config/ppo/base.json:greedy",
+  "iter01710": "ppo:net=models_ppo_self/snap_01710.npz:tuned=config/ppo/base.json:greedy",
+  "iter01720": "ppo:net=models_ppo_self/snap_01720.npz:tuned=config/ppo/base.json:greedy",
+  "iter01730": "ppo:net=models_ppo_self/snap_01730.npz:tuned=config/ppo/base.json:greedy",
+  "iter01740": "ppo:net=models_ppo_self/snap_01740.npz:tuned=config/ppo/base.json:greedy",
+  "iter01750": "ppo:net=models_ppo_self/snap_01750.npz:tuned=config/ppo/base.json:greedy",
+  "iter01760": "ppo:net=models_ppo_self/snap_01760.npz:tuned=config/ppo/base.json:greedy",
+  "iter01770": "ppo:net=models_ppo_self/snap_01770.npz:tuned=config/ppo/base.json:greedy",
+  "iter01780": "ppo:net=models_ppo_self/snap_01780.npz:tuned=config/ppo/base.json:greedy",
+  "iter01790": "ppo:net=models_ppo_self/snap_01790.npz:tuned=config/ppo/base.json:greedy",
+  "iter01800": "ppo:net=models_ppo_self/snap_01800.npz:tuned=config/ppo/base.json:greedy",
+  "iter01810": "ppo:net=models_ppo_self/snap_01810.npz:tuned=config/ppo/base.json:greedy",
+  "iter01820": "ppo:net=models_ppo_self/snap_01820.npz:tuned=config/ppo/base.json:greedy",
+  "iter01830": "ppo:net=models_ppo_self/snap_01830.npz:tuned=config/ppo/base.json:greedy",
+  "iter01840": "ppo:net=models_ppo_self/snap_01840.npz:tuned=config/ppo/base.json:greedy"
  },
  "ratings": {
   "best_ai": [
    1500.0,
    0.0,
-   3561
+   6962
   ],
   "iter01560": [
-   1704.6,
-   6.1,
-   1536
+   1713.5,
+   5.1,
+   2065
   ],
   "iter01570": [
-   1702.7,
-   6.4,
-   1342
+   1709.6,
+   5.3,
+   1917
   ],
   "iter01580": [
-   1706.5,
-   6.8,
-   1190
+   1704.3,
+   5.4,
+   1747
   ],
   "iter01590": [
-   1702.5,
-   6.9,
-   1122
+   1710.0,
+   5.6,
+   1665
   ],
   "iter01600": [
-   1686.9,
-   7.2,
-   999
+   1698.6,
+   5.7,
+   1553
   ],
   "iter01610": [
-   1702.2,
-   7.4,
-   937
+   1714.0,
+   5.8,
+   1524
   ],
   "iter01620": [
-   1713.0,
-   7.8,
-   846
+   1715.8,
+   6.0,
+   1382
   ],
   "iter01630": [
-   1701.2,
-   8.1,
-   769
+   1706.8,
+   6.2,
+   1290
   ],
   "iter01640": [
-   1711.5,
-   8.5,
-   686
+   1714.9,
+   6.3,
+   1251
   ],
   "iter01650": [
-   1714.7,
-   8.9,
-   630
+   1715.9,
+   6.5,
+   1176
   ],
   "iter01660": [
-   1716.7,
-   9.4,
-   555
+   1714.5,
+   6.7,
+   1088
   ],
   "iter01670": [
-   1704.4,
-   9.6,
-   520
+   1702.3,
+   6.8,
+   1033
   ],
   "iter01680": [
-   1697.6,
-   10.3,
-   444
+   1703.3,
+   7.0,
+   985
   ],
   "iter01690": [
-   1717.1,
-   10.9,
+   1714.4,
+   7.1,
+   949
+  ],
+  "iter01700": [
+   1708.1,
+   7.3,
+   890
+  ],
+  "iter01710": [
+   1703.1,
+   7.6,
+   815
+  ],
+  "iter01720": [
+   1715.8,
+   7.6,
+   822
+  ],
+  "iter01730": [
+   1721.2,
+   8.0,
+   728
+  ],
+  "iter01740": [
+   1699.7,
+   8.0,
+   732
+  ],
+  "iter01750": [
+   1727.2,
+   8.4,
+   667
+  ],
+  "iter01760": [
+   1701.0,
+   8.4,
+   655
+  ],
+  "iter01770": [
+   1727.6,
+   8.7,
+   611
+  ],
+  "iter01780": [
+   1731.5,
+   9.1,
+   562
+  ],
+  "iter01790": [
+   1742.0,
+   9.3,
+   550
+  ],
+  "iter01800": [
+   1732.6,
+   9.5,
+   516
+  ],
+  "iter01810": [
+   1712.2,
+   9.7,
+   486
+  ],
+  "iter01820": [
+   1717.7,
+   10.0,
+   459
+  ],
+  "iter01830": [
+   1752.2,
+   10.5,
+   429
+  ],
+  "iter01840": [
+   1733.5,
+   10.8,
    400
   ],
   "pool_iter1340": [
-   1689.5,
-   6.1,
-   1497
+   1694.5,
+   5.1,
+   2027
   ],
   "pool_iter1490": [
-   1690.2,
-   6.0,
-   1562
+   1693.8,
+   5.0,
+   2117
   ],
   "pool_iter1555": [
-   1711.7,
-   6.2,
-   1483
+   1709.9,
+   5.1,
+   2044
   ],
   "pool_iter470": [
-   1659.9,
-   6.1,
-   1526
+   1664.6,
+   5.0,
+   2087
   ]
  },
- "next_game": 6000
+ "next_game": 12000
 }
