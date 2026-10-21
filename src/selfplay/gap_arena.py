@@ -56,14 +56,14 @@ def game(args):
     log = []
     orig = Player.gain_vp
 
-    def gv(self, amount):
+    def gv(self, amount, source=None):
         if id(self) not in real:               # a search playout's copy
-            return orig(self, amount)
+            return orig(self, amount, source)
         f = sys._getframe(1); names = []
         while f and len(names) < 3:
             names.append(f.f_code.co_name); f = f.f_back
         log.append((self.id, amount, cat(names)))
-        return orig(self, amount)
+        return orig(self, amount, source)
     Player.gain_vp = gv
     perm = PERMS[g % 24]
     agents = [make_agent(specs[perm[s]], seed=g * 4 + s) for s in range(4)]

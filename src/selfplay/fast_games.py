@@ -74,13 +74,13 @@ def play_one(args):
     src = [collections.Counter() for _ in range(4)]
     orig = Player.gain_vp
 
-    def gv(self, amount):
+    def gv(self, amount, source=None):
         if id(self) in real:
             f = sys._getframe(1); names = []
             while f and len(names) < 3:
                 names.append(f.f_code.co_name); f = f.f_back
             src[self.id][f"r{gs.round}:" + cat(names)] += amount
-        return orig(self, amount)
+        return orig(self, amount, source)
     Player.gain_vp = gv
     moves, rounds, last_round, n = [], [], gs.round, 0
     try:

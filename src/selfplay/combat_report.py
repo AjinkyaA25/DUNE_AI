@@ -41,13 +41,13 @@ def game(args):
     vp_log = []
     orig = Player.gain_vp
 
-    def gv(self, amount):
+    def gv(self, amount, source=None):
         if id(self) in real:
             f, names = sys._getframe(1), []
             while f and len(names) < 3:
                 names.append(f.f_code.co_name); f = f.f_back
             vp_log.append((self.id, amount, cat(names)))
-        return orig(self, amount)
+        return orig(self, amount, source)
 
     Player.gain_vp = gv
     agents = [make_agent(spec, seed=g * 4 + s) for s in range(4)]

@@ -32,13 +32,13 @@ def game(args):
           for i, s in enumerate(order)]
     log, orig = [], Player.gain_vp
 
-    def gv(self, amount):
+    def gv(self, amount, source=None):
         if id(self) in real:
             f, names = sys._getframe(1), []
             while f and len(names) < 3:
                 names.append(f.f_code.co_name); f = f.f_back
             log.append((self.id, amount, cat(names), gs.round))
-        return orig(self, amount)
+        return orig(self, amount, source)
 
     Player.gain_vp = gv
     gs = setup_game(4, seed=12_000_000 + g, neutral_leaders=True, use_bloodlines=True)
