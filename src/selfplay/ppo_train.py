@@ -15,6 +15,17 @@ Each iteration:
      on a FIXED set of --eval-games seeds (paired across evaluations and with
      plain Best AI in that seat), win share + avg rounds -> log.
 
+Dense reward (--dense w, 2026-10-20): besides the end-of-game reward, every
+decision is credited with the change in w x (my VP - the opponents' average
+VP) since the previous one. It is potential-based shaping with the potential
+dropped to 0 at the end, so the rewards still sum to the game result (the goal
+stays "win"), but a VP swing is credited to the decisions right before it
+instead of only reaching them through the value head.
+
+All moves (--k 0, 2026-10-20): the policy chooses among every legal move, not
+only the heuristic's top 16 (10% of decisions, mostly Agent turns, have more).
+Batches are stored ragged (one row per legal move) and padded per minibatch.
+
 Self-play (2026-10-20, once the policy plateaued vs Best AI): --cur-frac of the
 opponent seats play the CURRENT policy (sampling, and trained on too), --pool
 adds frozen older PPO nets to the snapshot opponents, and --eval-opp /
@@ -36,7 +47,7 @@ from multiprocessing import Pool
 
 import numpy as np
 
-from src.ai.ppo import K_MAX, EMB, ID_FIELDS, id_sizes
+from src.ai.ppo import EMB, ID_FIELDS, id_sizes
 from src.selfplay import elo
 
 BASE = os.path.join("config", "ppo", "base.json")        # heuristic the policy sits on (pinned)
@@ -66,6 +77,7 @@ def make_torch_net(S, A, sizes, T, w=(256, 128, 128, EMB)):
             nn.init.zeros_(self.a2.weight)            # correction starts at exactly 0
             nn.init.zeros_(self.a2.bias)
             self.T = T
+            self.K = 16                              # shortlist size played with (0 = all moves)
 
         def forward(self, s, D, I, H, M):
             hs = torch.relu(self.s2(torch.relu(self.s1(s))))
@@ -86,6 +98,7 @@ def make_torch_net(S, A, sizes, T, w=(256, 128, 128, EMB)):
                 p[f"e{j}"] = e.weight
             out = {k: v.detach().cpu().numpy().astype(np.float32) for k, v in p.items()}
             out["T"] = np.array(self.T, dtype=np.float32)
+            out["K"] = np.array(self.K, dtype=np.int32)
             tmp = path + ".tmp.npz"
             np.savez(tmp, **out)
             os.replace(tmp, path)
@@ -206,40 +219,62 @@ def eval_game(args):
 # PPO update
 # ---------------------------------------------------------------------------
 def to_batch(trajs, device):
+    """Ragged batch: the moves of every decision back to back (D, I, H), with
+    each decision's offset and move count; rows() pads a minibatch."""
     import torch
-    rows = [d for t, _, _ in trajs for d in t]
+    recs = [d for t, _, _ in trajs for d in t]
     aux = np.array([vp for t, _, vp in trajs for _ in t], np.float32)
-    N = len(rows)
-    S = np.stack([d["s"] for d in rows]).astype(np.float32)
-    A = rows[0]["D"].shape[1]
-    D = np.zeros((N, K_MAX, A), np.float32)
-    I = np.zeros((N, K_MAX, len(ID_FIELDS)), np.int64)
-    H = np.zeros((N, K_MAX), np.float32)
-    M = np.zeros((N, K_MAX), bool)
-    for i, d in enumerate(rows):
-        k = len(d["h"])
-        D[i, :k] = d["D"]
-        I[i, :k] = d["I"]
-        H[i, :k] = d["h"]
-        M[i, :k] = True
-    act = np.array([d["k"] for d in rows], np.int64)
-    oldlp = np.array([d["logp"] for d in rows], np.float32)
+    N = len(recs)
+    S = np.stack([d["s"] for d in recs]).astype(np.float32)
+    cnt = np.array([len(d["h"]) for d in recs], np.int64)
+    off = np.concatenate([[0], np.cumsum(cnt)[:-1]]).astype(np.int64)
+    D = np.concatenate([d["D"] for d in recs]).astype(np.float32)
+    I = np.concatenate([d["I"] for d in recs]).astype(np.int64)
+    H = np.concatenate([d["h"] for d in recs]).astype(np.float32)
+    act = np.array([d["k"] for d in recs], np.int64)
+    oldlp = np.array([d["logp"] for d in recs], np.float32)
     t = lambda x: torch.from_numpy(x).to(device)
-    return dict(S=t(S), D=t(D), I=t(I), H=t(H), M=t(M), act=t(act), oldlp=t(oldlp), aux=t(aux)), N
+    return dict(S=t(S), D=t(D), I=t(I), H=t(H), cnt=t(cnt), off=t(off), act=t(act), oldlp=t(oldlp),
+                aux=t(aux)), N
 
 
-def advantages(trajs, values, lam):
-    """GAE with gamma 1 over each seat's decisions; reward at the end only."""
+def rows(B, idx):
+    """Decisions idx of a ragged batch -> padded (S, D, I, H, M), padded to the
+    largest move count among them."""
+    import torch
+    cnt, off = B["cnt"][idx], B["off"][idx]
+    k = int(cnt.max())
+    ar = torch.arange(k, device=cnt.device)
+    M = ar[None, :] < cnt[:, None]
+    pos = torch.where(M, off[:, None] + ar[None, :], torch.zeros_like(off)[:, None])
+    return B["S"][idx], B["D"][pos], B["I"][pos], B["H"][pos], M
+
+
+def potentials(t, dense):
+    """dense x (my VP - opponents' average VP) at each decision of a trajectory."""
+    if not dense:
+        return np.zeros(len(t), np.float32)
+    return np.array([dense * (d["vp"][0] - sum(d["vp"][1:]) / max(1, len(d["vp"]) - 1)) for d in t],
+                    np.float32)
+
+
+def advantages(trajs, values, lam, dense=0.0):
+    """GAE with gamma 1 over each seat's decisions. Reward: the game result at
+    the end, plus (dense > 0) the potential change after every decision, the
+    potential being 0 at the end (so the total is still the game result)."""
     adv, ret, i = [], [], 0
     for t, R, _ in trajs:
         n = len(t)
         v = values[i:i + n]
         i += n
+        phi = potentials(t, dense)
+        r = np.append(phi[1:], 0.0) - phi           # shaping: phi(next) - phi(now), phi(end) = 0
+        r[-1] += R
         a = np.zeros(n, np.float32)
         last = 0.0
         for j in range(n - 1, -1, -1):
-            nxt = v[j + 1] if j + 1 < n else R
-            delta = nxt - v[j]
+            nxt = v[j + 1] if j + 1 < n else 0.0
+            delta = r[j] + nxt - v[j]
             last = delta + lam * last
             a[j] = last
         adv.append(a)
@@ -259,7 +294,8 @@ def ppo_update(net, opt, B, adv, ret, A):
         perm = torch.randperm(N, device=dev)
         for s in range(0, N, A.batch):
             idx = perm[s:s + A.batch]
-            logits, v, _ = net(B["S"][idx], B["D"][idx], B["I"][idx], B["H"][idx], B["M"][idx])
+            bs = rows(B, idx)
+            logits, v, _ = net(*bs)
             lp_all = torch.log_softmax(logits, dim=-1)
             lp = lp_all.gather(1, B["act"][idx][:, None]).squeeze(1)
             ratio = torch.exp(lp - B["oldlp"][idx])
@@ -268,7 +304,7 @@ def ppo_update(net, opt, B, adv, ret, A):
             v_loss = ((v - ret_t[idx]) ** 2).mean()
             aux_loss = ((net.last_aux - B["aux"][idx]) ** 2).mean()
             p_all = torch.exp(lp_all)
-            ent = -(p_all * lp_all.masked_fill(~B["M"][idx], 0.0)).sum(-1).mean()
+            ent = -(p_all * lp_all.masked_fill(~bs[4], 0.0)).sum(-1).mean()
             loss = pi_loss + A.vf * v_loss + A.aux * aux_loss - A.ent * ent
             opt.zero_grad()
             loss.backward()
@@ -313,6 +349,10 @@ def main():
                     help="state layer 1, state layer 2, move layer, embedding size; a checkpoint of a smaller "
                          "net is widened (same play, new units start silent); --init <checkpoint.pt> starts from one")
     ap.add_argument("--init", default="", help="checkpoint.pt to start from when --out has none")
+    ap.add_argument("--k", type=int, default=16,
+                    help="moves the policy chooses among: the heuristic's top k (0 = every legal move)")
+    ap.add_argument("--dense", type=float, default=0.0,
+                    help="dense reward: credit per VP of (my VP - opponents' average) as it happens")
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=2000)
     ap.add_argument("--eval-secs", type=float, default=0,
@@ -337,6 +377,7 @@ def main():
     from src.ai.action_features import ACTION_FEATURE_DIM
     widths = tuple(int(x) for x in A.widths.split(","))
     net = make_torch_net(FEATURE_DIM, ACTION_FEATURE_DIM, id_sizes(), A.T, widths).to(dev)
+    net.K = A.k
     opt = torch.optim.Adam(net.parameters(), lr=A.lr)
     ck = os.path.join(A.out, "checkpoint.pt")
     state = {"iter": 0, "games": 0}
@@ -397,17 +438,17 @@ def main():
             with torch.no_grad():
                 vals = []
                 for s in range(0, N, 16384):
-                    _, v, _ = net(B["S"][s:s + 16384], B["D"][s:s + 16384], B["I"][s:s + 16384],
-                                  B["H"][s:s + 16384], B["M"][s:s + 16384])
+                    _, v, _ = net(*rows(B, torch.arange(s, min(N, s + 16384), device=dev)))
                     vals.append(v.cpu().numpy())
-            adv, ret = advantages(trajs, np.concatenate(vals), A.lam)
+            adv, ret = advantages(trajs, np.concatenate(vals), A.lam, A.dense)
             st = ppo_update(net, opt, B, adv, ret, A)
             net.export(cur)
             # how often the trained policy now overrules the heuristic's top move
             with torch.no_grad():
                 idx = torch.randperm(N, device=dev)[:8192]
-                lg, _, _ = net(B["S"][idx], B["D"][idx], B["I"][idx], B["H"][idx], B["M"][idx])
-                h_top = B["H"][idx].masked_fill(~B["M"][idx], -1e9).argmax(-1)
+                bs = rows(B, idx)
+                lg, _, _ = net(*bs)
+                h_top = bs[3].masked_fill(~bs[4], -1e9).argmax(-1)
                 overrule = float((lg.argmax(-1) != h_top).float().mean())
             rec = {"iter": it, "games": state["games"], "decisions": N,
                    "reward": round(float(np.mean([R for _, R, _ in trajs])), 4),

@@ -3303,7 +3303,7 @@ def make_agent(spec: str, seed: Optional[int] = None,
                     kw["tuning"] = _json.load(_f)
         return RoundSearchAgent(seed=seed, opening_book=opening_book, **kw)
     if kind == "ppo":
-        # ppo[:net=<npz>][:tuned=<json>][:greedy][:T<temp>] (src/ai/ppo.py)
+        # ppo[:net=<npz>][:tuned=<json>][:greedy][:T<temp>][:K<n>] (src/ai/ppo.py)
         from src.ai.ppo import PPOAgent
         kw = {}
         for p in parts[1:]:
@@ -3313,6 +3313,8 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 kw["greedy"] = True
             elif p.startswith("T") and p[1:].replace(".", "", 1).isdigit():
                 kw["temperature"] = float(p[1:])
+            elif p.startswith("K") and p[1:].isdigit():
+                kw["k"] = int(p[1:])
             elif p.startswith("tuned="):
                 import json as _json
                 with open(p[6:], encoding="utf-8") as _f:

@@ -22,7 +22,11 @@ contract) through learned embeddings - so it can learn "CHOAM Transports with
 Training: src/selfplay/ppo_train.py (rollouts on CPU workers, numpy forward;
 updates in PyTorch on the GPU).
 
-spec: ppo:net=<npz>[:tuned=<json>][:greedy][:T<temp>]
+spec: ppo:net=<npz>[:tuned=<json>][:greedy][:T<temp>][:K<n>]
+
+Shortlist (2026-10-20): a net trained with --k 0 chooses among EVERY legal
+move (stored as K=0 in the npz); older nets keep the heuristic's top 16.
+K<n> in the spec overrides it (K0 = all).
 """
 from __future__ import annotations
 
@@ -33,7 +37,7 @@ import numpy as np
 
 from src.game.gameState import ActionType
 
-K_MAX = 16                 # moves kept per decision: the heuristic's top 16 (+ the one played)
+K_MAX = 16                 # default moves kept per decision: the heuristic's top 16 (0 = all)
 EMB = 16                   # embedding size per identity field
 ID_FIELDS = ("space", "card", "played", "intrigue", "choice")
 _IDS: Dict[str, Dict[str, int]] = {}
@@ -121,9 +125,12 @@ def action_ids(gs, pid: int, a) -> List[int]:
             _id("intrigue", intrigue), _id("choice", choice)]
 
 
-def shortlist(h: List[float], chosen: Optional[int] = None) -> List[int]:
-    """Indices of the moves the policy chooses among: the heuristic's top K."""
-    order = sorted(range(len(h)), key=lambda i: -h[i])[:K_MAX]
+def shortlist(h: List[float], chosen: Optional[int] = None, k: int = K_MAX) -> List[int]:
+    """Indices of the moves the policy chooses among: the heuristic's top k
+    (k = 0: every legal move, best-first)."""
+    order = sorted(range(len(h)), key=lambda i: -h[i])
+    if k:
+        order = order[:k]
     if chosen is not None and chosen not in order:
         order[-1] = chosen
     return order
@@ -136,6 +143,7 @@ class PPONet:
         p = params if params is not None else dict(np.load(path))
         self.p = {k: np.asarray(v, dtype=np.float32) for k, v in p.items()}
         self.T = float(self.p.get("T", np.array(1.0)))
+        self.K = int(self.p.get("K", np.array(K_MAX)))       # shortlist it was trained with (0 = all)
 
     def state(self, s: np.ndarray):
         p = self.p
@@ -173,12 +181,14 @@ class PPOAgent:
     name = "ppo"
 
     def __init__(self, net: Optional[str] = None, tuning: Optional[dict] = None, seed: Optional[int] = None,
-                 greedy: bool = False, temperature: Optional[float] = None, opening_book=None):
+                 greedy: bool = False, temperature: Optional[float] = None, opening_book=None,
+                 k: Optional[int] = None):
         from src.ai.agents import HeuristicAgent
         self.h = HeuristicAgent(seed=seed, opening_book=opening_book, tuning=tuning)
         self.net_path = net
         self.greedy = greedy
         self.temperature = temperature
+        self.k = k                               # shortlist size (None = what the net was trained with)
         self.rng = np.random.default_rng(seed)
         self.record: Optional[list] = None       # set by the trainer: decisions are appended
         self.last: Optional[dict] = None         # the last decision's top moves (UI explanation)
@@ -192,7 +202,7 @@ class PPOAgent:
         from src.ai.action_features import encode_action
         h_all = [self.h.score(gs, pid, a) for a in valid]
         net = load_net(self.net_path)
-        idx = shortlist(h_all)
+        idx = shortlist(h_all, k=net.K if self.k is None else self.k)
         h = np.array([h_all[i] for i in idx], dtype=np.float32)
         lo, hi = float(h.min()), float(h.max())
         span = (hi - lo) or 1.0
@@ -233,5 +243,8 @@ class PPOAgent:
         if self.record is not None:
             self.record.append({"pid": pid, "s": s.astype(np.float16), "D": D.astype(np.float16),
                                 "I": I.astype(np.int16), "h": h, "k": k, "logp": logp, "v": v,
-                                "round": gs.round})
+                                "round": gs.round,
+                                # VP of me, next, next+1, next+2 now (dense reward)
+                                "vp": [gs.players[(pid + j) % len(gs.players)].victory_points
+                                       for j in range(len(gs.players))]})
         return valid[idx[k]]
