@@ -539,6 +539,11 @@ def main():
             state["iter"] += 1
             it = state["iter"]
             t0 = time.time()
+            if A.pool:      # re-read: another run drops its newest nets in here (src/selfplay/ppo_cross_pool.py)
+                new = sorted(glob.glob(A.pool))
+                if new != pool_nets:
+                    print("pool: " + ", ".join(os.path.basename(p) for p in new), flush=True)
+                pool_nets = new
             snaps = sorted(glob.glob(os.path.join(A.out, "snap_*.npz")))[-A.snap_pool:] + pool_nets
             jobs = [(100_000_000 + state["games"] + g, cur, A.ppo_seats, league, A.league_frac, snaps, A.self_frac,
                      A.cur_frac, critic is not None)
