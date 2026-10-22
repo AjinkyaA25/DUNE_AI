@@ -20,6 +20,7 @@ from __future__ import annotations
 from typing import Dict
 
 from src.game.gameState import MAX_ROUNDS
+from src.ai.agents import _decision_cached     # per-decision cache (speed)
 
 SWORD = 0.5          # one sword on a reveal, averaged over rounds you fight
 P_COMMAND = 0.45     # chance a reveal reaches 6 persuasion (Command)
@@ -433,6 +434,7 @@ def learned_tech_gain(gs, pid: int, d):
     return t["a"] + sum(a * b for a, b in zip(t["w"], x))
 
 
+@_decision_cached
 def best_tech_buy(gs, pid: int, discount: int = 0) -> float:
     bl = gs.bl
     best = 0.0
@@ -516,7 +518,7 @@ def skills_active_now(gs, pid: int, extra_skill: str = "") -> float:
     if extra_skill:
         p.skills.add(extra_skill)
     try:
-        bl.commanders_in_conflict[pid] = 1
+        bl.commanders_in_conflict[pid] = 1     # (nothing cached runs in here)
         bonus = float(bl.strength_bonus(pid))
     finally:
         bl.commanders_in_conflict[pid] = 0
@@ -612,6 +614,7 @@ def best_commander(gs, pid: int, space: str) -> float:
 # ---------------------------------------------------------------------------
 # action scoring
 # ---------------------------------------------------------------------------
+@_decision_cached
 def agent_space_bonus(gs, pid: int, space: str) -> float:
     """Expected extra from the Bloodlines choices a space opens up."""
     bl = gs.bl
