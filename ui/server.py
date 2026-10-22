@@ -127,7 +127,7 @@ def _az_gen() -> str:
 # Refresh after more training: cp models_ppo/best.npz models_ui/ppo.npz
 # 53.2% vs 3x the E6 endgame solver, 67.3% vs 3x the evolved heuristic; instant moves.
 BEST_AI = {"spec": "ppo:net=models_ui/ppo.npz:tuned=config/ppo_ui.json:greedy",
-           "name": "Best AI", "note": "PPO network on top of the evolved heuristic (self-play iteration 3170)"}
+           "name": "Best AI", "note": "PPO network on top of the evolved heuristic (self-play iteration 6240)"}
 # :E6:EK3:EM4 = endgame solver from round 6 (play-outs to the end; 38.4% vs 31.9% plain, 2026-10-19)
 E6_AI = {"spec": "look:D2:K3:M1:ev=models_eval_leaders/evaluator.npz:tuned=config/best_ai.json:E6:EK3:EM4",
          "name": "Endgame solver (E6)", "note": "evolved heuristic + lookahead, solves the game from round 6 (slow)"}
