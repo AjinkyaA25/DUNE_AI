@@ -30,7 +30,7 @@ def test_ragged_rows_pad_each_decision():
     t = _traj([[1, 1, 1, 1]] * 2, k=2) + _traj([[1, 1, 1, 1]], k=5)
     B, N = to_batch([(t, 1.0, [0, 0, 0, 0])], "cpu")
     S, D, I, H, M = rows(B, torch.arange(N))
-    assert D.shape[:2] == (3, 5) and M.sum(1).tolist() == [2, 2, 5]
+    assert D.shape[:2] == (3, 16) and M.sum(1).tolist() == [2, 2, 5]      # widths padded to 16s
     for i, d in enumerate(t):
         k = len(d["h"])
         assert torch.allclose(D[i, :k], torch.from_numpy(d["D"].astype(np.float32)))

@@ -124,6 +124,33 @@ def make_critic(S, Hd, w=(512, 256)):
                          nn.Linear(w[1], 1))
 
 
+def mem_gb():
+    """This process's committed memory in GB (logged per iteration: leak watch)."""
+    try:
+        if os.name == "nt":
+            import ctypes
+            from ctypes import wintypes as w
+
+            class PMC(ctypes.Structure):
+                _fields_ = [("cb", w.DWORD), ("PageFaultCount", w.DWORD)] + \
+                    [(n, ctypes.c_size_t) for n in ("PeakWorkingSetSize", "WorkingSetSize",
+                                                   "QuotaPeakPagedPoolUsage", "QuotaPagedPoolUsage",
+                                                   "QuotaPeakNonPagedPoolUsage", "QuotaNonPagedPoolUsage",
+                                                   "PagefileUsage", "PeakPagefileUsage", "PrivateUsage")]
+            c = PMC()
+            c.cb = ctypes.sizeof(c)
+            k32, psapi = ctypes.windll.kernel32, ctypes.windll.psapi
+            k32.GetCurrentProcess.restype = w.HANDLE
+            psapi.GetProcessMemoryInfo.argtypes = [w.HANDLE, ctypes.c_void_p, w.DWORD]
+            psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
+            return round(c.PrivateUsage / 2 ** 30, 2)
+        with open("/proc/self/status") as fh:
+            kb = next(int(l.split()[1]) for l in fh if l.startswith("VmRSS"))
+        return round(kb / 2 ** 20, 2)
+    except Exception:
+        return None
+
+
 def critic_values(critic, B, dev):
     import torch
     out = []
@@ -290,7 +317,8 @@ def rows(B, idx):
     largest move count among them."""
     import torch
     cnt, off = B["cnt"][idx], B["off"][idx]
-    k = int(cnt.max())
+    k = -(-int(cnt.max()) // 16) * 16     # widths in steps of 16: few tensor shapes, so the GPU allocator
+    #                                        doesn't fragment (on Windows the overflow spills into RAM)
     ar = torch.arange(k, device=cnt.device)
     M = ar[None, :] < cnt[:, None]
     pos = torch.where(M, off[:, None] + ar[None, :], torch.zeros_like(off)[:, None])
@@ -544,11 +572,14 @@ def main():
                 lg, _, _ = net(*bs)
                 h_top = bs[3].masked_fill(~bs[4], -1e9).argmax(-1)
                 overrule = float((lg.argmax(-1) != h_top).float().mean())
+            del B, bs, lg, h_top
+            if dev == "cuda":
+                torch.cuda.empty_cache()             # give the batch's GPU memory back (Windows: RAM)
             rec = {"iter": it, "games": state["games"], "decisions": N,
                    "reward": round(float(np.mean([R for _, R, _ in trajs])), 4),
                    "win": round(float(np.mean([R > 0.5 for _, R, _ in trajs])), 4),
                    "rounds": round(float(np.mean(rounds)), 3), "overrule": round(overrule, 4),
-                   "rollout_s": round(t1 - t0, 1), "update_s": round(time.time() - t1, 1), **st}
+                   "rollout_s": round(t1 - t0, 1), "update_s": round(time.time() - t1, 1), "mem_gb": mem_gb(), **st}
             snap = os.path.join(A.out, f"snap_{it:05d}.npz")
             if A.eval_every and it % A.eval_every == 0:
                 shutil.copy(cur, snap)                # self-play opponent
