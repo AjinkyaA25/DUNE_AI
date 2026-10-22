@@ -26,6 +26,15 @@ All moves (--k 0, 2026-10-20): the policy chooses among every legal move, not
 only the heuristic's top 16 (10% of decisions, mostly Agent turns, have more).
 Batches are stored ragged (one row per legal move) and padded per minibatch.
 
+Privileged critic (--critic, 2026-10-21): advantages come from a separate
+value network that also sees what only an all-seeing observer knows
+(src/ai/hidden_features.py: opponents' hands and Intrigues, deck orders, the
+next Conflict ...) besides the policy's own inputs. It grades each move with
+far less luck in the estimate; it is used only in training, the policy
+never sees hidden information. --critic-warmup N: the first N iterations
+train only the critic (and value heads) so a fresh critic doesn't steer the
+policy.
+
 Self-play (2026-10-20, once the policy plateaued vs Best AI): --cur-frac of the
 opponent seats play the CURRENT policy (sampling, and trained on too), --pool
 adds frozen older PPO nets to the snapshot opponents, and --eval-opp /
@@ -78,16 +87,18 @@ def make_torch_net(S, A, sizes, T, w=(256, 128, 128, EMB)):
             nn.init.zeros_(self.a2.bias)
             self.T = T
             self.K = 16                              # shortlist size played with (0 = all moves)
+            self.heads_only = False
 
         def forward(self, s, D, I, H, M):
             hs = torch.relu(self.s2(torch.relu(self.s1(s))))
-            v = self.v(hs).squeeze(-1)
+            hv = hs.detach() if self.heads_only else hs   # warm-up: value heads learn, the policy's layers don't
+            v = self.v(hv).squeeze(-1)
             e = torch.cat([emb(I[..., j]) for j, emb in enumerate(self.emb)], dim=-1)
             x = torch.cat([hs[:, None, :].expand(-1, D.shape[1], -1), D, e], dim=-1)
             c = self.a2(torch.relu(self.a1(x))).squeeze(-1)
             logits = H / self.T + c
             logits = logits.masked_fill(~M, -1e9)
-            self.last_aux = self.aux(hs)
+            self.last_aux = self.aux(hv)
             return logits, v, c
 
         def export(self, path):
@@ -104,6 +115,23 @@ def make_torch_net(S, A, sizes, T, w=(256, 128, 128, EMB)):
             os.replace(tmp, path)
 
     return Net()
+
+
+def make_critic(S, Hd, w=(512, 256)):
+    """Value of the position from the policy's inputs + the hidden ones."""
+    import torch.nn as nn
+    return nn.Sequential(nn.Linear(S + Hd, w[0]), nn.ReLU(), nn.Linear(w[0], w[1]), nn.ReLU(),
+                         nn.Linear(w[1], 1))
+
+
+def critic_values(critic, B, dev):
+    import torch
+    out = []
+    with torch.no_grad():
+        for s in range(0, B["S"].shape[0], 16384):
+            x = torch.cat([B["S"][s:s + 16384], B["X"][s:s + 16384]], dim=1)
+            out.append(critic(x).squeeze(-1).cpu().numpy())
+    return np.concatenate(out)
 
 
 def load_npz(net, p: dict) -> None:
@@ -165,7 +193,7 @@ def _reward(gs, pid) -> float:
 
 def rollout(args):
     """One training game -> list of (trajectory, reward) for the PPO seats."""
-    g, net, ppo_seats, league, league_frac, snaps, self_frac, cur_frac = args
+    g, net, ppo_seats, league, league_frac, snaps, self_frac, cur_frac, hidden = (tuple(args) + (False,))[:9]
     from src.ai.agents import make_agent
     from src.ai.ppo import PPOAgent
     from src.data.card_definitions import setup_game
@@ -183,6 +211,7 @@ def rollout(args):
         if s in seats:
             a = PPOAgent(net=net, tuning=base, seed=g * 4 + s)
             a.record = []
+            a.hidden = hidden
         else:
             x = r.random()
             if snaps and x < self_frac:
@@ -250,8 +279,10 @@ def to_batch(trajs, device):
     act = np.array([d["k"] for d in recs], np.int64)
     oldlp = np.array([d["logp"] for d in recs], np.float32)
     t = lambda x: torch.from_numpy(x).to(device)
-    return dict(S=t(S), D=t(D), I=t(I), H=t(H), cnt=t(cnt), off=t(off), act=t(act), oldlp=t(oldlp),
-                aux=t(aux)), N
+    B = dict(S=t(S), D=t(D), I=t(I), H=t(H), cnt=t(cnt), off=t(off), act=t(act), oldlp=t(oldlp), aux=t(aux))
+    if recs and "hid" in recs[0]:
+        B["X"] = t(np.stack([d["hid"] for d in recs]).astype(np.float32))
+    return B, N
 
 
 def rows(B, idx):
@@ -298,7 +329,8 @@ def advantages(trajs, values, lam, dense=0.0):
     return np.concatenate(adv), np.concatenate(ret)
 
 
-def ppo_update(net, opt, B, adv, ret, A):
+def ppo_update(net, opt, B, adv, ret, A, critic=None, copt=None, train_policy=True):
+    """train_policy False (critic warm-up): only the value heads / critic learn."""
     import torch
     dev = B["S"].device
     adv_t = torch.from_numpy(adv).to(dev)
@@ -306,6 +338,9 @@ def ppo_update(net, opt, B, adv, ret, A):
     ret_t = torch.from_numpy(ret).to(dev)
     N = adv_t.shape[0]
     stats = {"pi": 0.0, "v": 0.0, "aux": 0.0, "ent": 0.0, "kl": 0.0, "clip": 0.0, "n": 0}
+    if critic is not None:
+        stats["cv"] = 0.0
+    net.heads_only = not train_policy
     for _ in range(A.epochs):
         perm = torch.randperm(N, device=dev)
         for s in range(0, N, A.batch):
@@ -321,17 +356,28 @@ def ppo_update(net, opt, B, adv, ret, A):
             aux_loss = ((net.last_aux - B["aux"][idx]) ** 2).mean()
             p_all = torch.exp(lp_all)
             ent = -(p_all * lp_all.masked_fill(~bs[4], 0.0)).sum(-1).mean()
-            loss = pi_loss + A.vf * v_loss + A.aux * aux_loss - A.ent * ent
+            loss = A.vf * v_loss + A.aux * aux_loss
+            if train_policy:
+                loss = loss + pi_loss - A.ent * ent
             opt.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
             opt.step()
+            if critic is not None:
+                cv = critic(torch.cat([B["S"][idx], B["X"][idx]], dim=1)).squeeze(-1)
+                c_loss = ((cv - ret_t[idx]) ** 2).mean()
+                copt.zero_grad()
+                c_loss.backward()
+                torch.nn.utils.clip_grad_norm_(critic.parameters(), 1.0)
+                copt.step()
+                stats["cv"] += float(c_loss)
             with torch.no_grad():
                 stats["pi"] += float(pi_loss); stats["v"] += float(v_loss); stats["ent"] += float(ent)
                 stats["aux"] += float(aux_loss)
                 stats["kl"] += float((B["oldlp"][idx] - lp).mean())
                 stats["clip"] += float(((ratio - 1).abs() > A.clip).float().mean())
                 stats["n"] += 1
+    net.heads_only = False
     return {k: round(v / max(1, stats["n"]), 5) for k, v in stats.items() if k != "n"}
 
 
@@ -369,6 +415,11 @@ def main():
                     help="moves the policy chooses among: the heuristic's top k (0 = every legal move)")
     ap.add_argument("--dense", type=float, default=0.0,
                     help="dense reward: credit per VP of (my VP - opponents' average) as it happens")
+    ap.add_argument("--critic", action="store_true",
+                    help="privileged critic: advantages from a value net that also sees hidden information")
+    ap.add_argument("--critic-warmup", type=int, default=5,
+                    help="iterations that train only the critic / value heads before the policy moves")
+    ap.add_argument("--critic-lr", type=float, default=1e-3)
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=2000)
     ap.add_argument("--eval-secs", type=float, default=0,
@@ -421,6 +472,18 @@ def main():
         if missing:
             print(f"new layers (not in the checkpoint): {missing}", flush=True)
         print(f"resumed at iteration {state['iter']} ({state['games']} games)", flush=True)
+    critic = copt = None
+    if A.critic:
+        from src.ai.hidden_features import hidden_dim
+        critic = make_critic(FEATURE_DIM, hidden_dim()).to(dev)
+        copt = torch.optim.Adam(critic.parameters(), lr=A.critic_lr)
+        if c is not None and "critic" in c:
+            critic.load_state_dict(c["critic"])
+            copt.load_state_dict(c["copt"])
+            print("critic resumed", flush=True)
+        else:
+            print(f"new privileged critic ({hidden_dim()} hidden inputs); "
+                  f"{A.critic_warmup} warm-up iterations", flush=True)
     cur = os.path.join(A.out, "net.npz")
     net.export(cur)
     league = sorted(glob.glob(A.league)) if A.league else []
@@ -450,7 +513,7 @@ def main():
             t0 = time.time()
             snaps = sorted(glob.glob(os.path.join(A.out, "snap_*.npz")))[-A.snap_pool:] + pool_nets
             jobs = [(100_000_000 + state["games"] + g, cur, A.ppo_seats, league, A.league_frac, snaps, A.self_frac,
-                     A.cur_frac)
+                     A.cur_frac, critic is not None)
                     for g in range(A.games)]
             trajs, rounds = [], []
             for out, rnd in pool.imap_unordered(rollout, jobs, chunksize=2):
@@ -464,8 +527,15 @@ def main():
                 for s in range(0, N, 16384):
                     _, v, _ = net(*rows(B, torch.arange(s, min(N, s + 16384), device=dev)))
                     vals.append(v.cpu().numpy())
-            adv, ret = advantages(trajs, np.concatenate(vals), A.lam, A.dense)
-            st = ppo_update(net, opt, B, adv, ret, A)
+            vals = np.concatenate(vals)
+            if critic is not None:               # grade moves with the all-seeing critic
+                vals = critic_values(critic, B, dev)
+            adv, ret = advantages(trajs, vals, A.lam, A.dense)
+            warm = critic is not None and state.get("critic_iters", 0) < A.critic_warmup
+            st = ppo_update(net, opt, B, adv, ret, A, critic, copt, train_policy=not warm)
+            if critic is not None:
+                state["critic_iters"] = state.get("critic_iters", 0) + 1
+                st["warmup"] = warm
             net.export(cur)
             # how often the trained policy now overrules the heuristic's top move
             with torch.no_grad():
@@ -521,7 +591,9 @@ def main():
                     json.dump({"iter": it, **rec["eval"]}, open(best, "w"))
             log.write(json.dumps(rec) + "\n"); log.flush()
             print(json.dumps(rec), flush=True)
-            torch.save({"net": net.state_dict(), "opt": opt.state_dict(), "state": state}, ck + ".tmp")
+            torch.save({"net": net.state_dict(), "opt": opt.state_dict(), "state": state,
+                        **({"critic": critic.state_dict(), "copt": copt.state_dict()} if critic is not None else {})},
+                       ck + ".tmp")
             os.replace(ck + ".tmp", ck)   # atomic: a kill mid-save never leaves a broken checkpoint
 
 

@@ -191,6 +191,7 @@ class PPOAgent:
         self.k = k                               # shortlist size (None = what the net was trained with)
         self.rng = np.random.default_rng(seed)
         self.record: Optional[list] = None       # set by the trainer: decisions are appended
+        self.hidden = False                      # trainer: also record what only an observer sees (critic)
         self.last: Optional[dict] = None         # the last decision's top moves (UI explanation)
 
     def reset(self) -> None:
@@ -249,4 +250,7 @@ class PPOAgent:
                                 # VP of me, next, next+1, next+2 now (dense reward)
                                 "vp": [gs.players[(pid + j) % len(gs.players)].victory_points
                                        for j in range(len(gs.players))]})
+            if self.hidden:                      # privileged critic input (never seen by the policy)
+                from src.ai.hidden_features import encode_hidden
+                self.record[-1]["hid"] = encode_hidden(gs, pid).astype(np.float16)
         return valid[idx[k]]
