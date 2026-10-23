@@ -48,6 +48,11 @@ TUNE_DEFAULTS = {
     # overall scale, worth of each extra space a post covers, and the weight
     # of a bordering combat space while a Conflict is live
     "spy_post": 0.5, "spy_multi": 0.35, "spy_combat": 0.6,
+    # spy_freq (user, 2026-10-23: "some spies are better placed ... due to the
+    # frequency of visiting, importance of draw"): + this x the post's expected
+    # payoff from measured use rates (models_spy/spy_stats.json, per Leader):
+    # P(Gather Intelligence soon) x a card draw now + P(Infiltrate) x the way in
+    "spy_freq": 0.0,
     # troops kept for the next Conflict; how much Intrigue cards are worth
     "deploy_hold": 0.4, "intrigue_love": 1.0,
     # tech_love: multiplies what owning a tech tile is worth (tech persona)
@@ -2382,7 +2387,51 @@ def _spy_post_value(gs: GameState, pid: int, post: Optional[str]) -> float:
     # Infiltrate / Gather Intelligence): a floor, plus the best space it
     # reaches, plus part of every other space it also covers (flexibility).
     score = vals[0] + _TUNE.get("spy_multi", 0.35) * sum(vals[1:])
-    return 1.0 + _TUNE.get("spy_post", 0.5) * score
+    out = 1.0 + _TUNE.get("spy_post", 0.5) * score
+    k = _TUNE.get("spy_freq", 0.0)
+    if k:
+        out += k * _spy_use_value(gs, pid, post, vals[0])
+    return out
+
+
+_SPY_STATS: dict = {}
+
+
+def _spy_stats() -> Optional[dict]:
+    if "m" not in _SPY_STATS:
+        import json
+        import os
+        try:
+            with open(os.path.join(os.path.dirname(__file__), "..", "..", "models_spy", "spy_stats.json")) as fh:
+                _SPY_STATS["m"] = json.load(fh)
+        except (OSError, ValueError):
+            _SPY_STATS["m"] = None
+    return _SPY_STATS["m"]
+
+
+def _spy_use_value(gs: GameState, pid: int, post: str, best_space: float) -> float:
+    """Expected payoff of a Spy on `post` from how often Spies there are
+    actually used (per round, for this Leader): a post next to spaces this
+    player visits every round pays its Gather Intelligence draw soon and the
+    Spy comes back to be placed again; a post by a space nobody goes to just
+    sits. Uses are discounted 15% per round of waiting and stop at game end."""
+    m = _spy_stats()
+    if not m:
+        return 0.0
+    leader = getattr(gs.players[pid].leader, "name", None)
+    st = (m["by_leader"].get(leader) or m["posts"]).get(post) or m["posts"].get(post)
+    if not st:
+        return 0.0
+    hg, hi = st["gather_h"], st["infiltrate_h"]
+    h = min(0.95, hg + hi)
+    if h <= 0:
+        return 0.0
+    R = max(1, _rounds_left(gs) + 1)
+    q = 0.85 * (1.0 - h)
+    p_use = h * (1.0 - q ** R) / (1.0 - q)        # sum_t (0.85 (1-h))^t h, t < R
+    draw = _effect_value(gs, pid, {"draw": 1})
+    infil = 1.0 + 0.5 * max(0.0, best_space)
+    return p_use * (hg * draw + hi * infil) / h
 
 
 def _combat_build_strength(gs: GameState, pid: int) -> float:

@@ -56,7 +56,7 @@ from multiprocessing import Pool
 
 import numpy as np
 
-from src.ai.ppo import EMB, ID_FIELDS, id_sizes
+from src.ai.ppo import EMB, ID_FIELDS, LEADER_STATE_DIM, id_sizes
 from src.selfplay import elo
 
 BASE = os.path.join("config", "ppo", "base.json")        # heuristic the policy sits on (pinned)
@@ -163,16 +163,24 @@ def critic_values(critic, B, dev):
 
 def load_npz(net, p: dict) -> None:
     """Weights of an exported net (net.npz / the UI's ppo.npz) back into the
-    PyTorch net (the final-VP head is not exported: it starts fresh)."""
+    PyTorch net (the final-VP head is not exported: it starts fresh).
+    A net from before the Leader inputs (shorter state, 5 identity fields)
+    loads with zero weights on the new inputs, so it plays exactly as before
+    and learns to use the Leaders from there."""
     import torch
     sd = net.state_dict()
     t = lambda x: torch.as_tensor(np.asarray(x, np.float32))
-    new = {"s1.weight": t(p["s1.w"]), "s1.bias": t(p["s1.b"]), "s2.weight": t(p["s2.w"]), "s2.bias": t(p["s2.b"]),
+    s1 = sd["s1.weight"].clone().cpu().zero_()
+    s1[:, :p["s1.w"].shape[1]] = t(p["s1.w"])
+    a1 = sd["a1.weight"].clone().cpu().zero_()
+    a1[:, :p["a1.w"].shape[1]] = t(p["a1.w"])        # identity fields come last: a new field's columns stay 0
+    new = {"s1.weight": s1, "s1.bias": t(p["s1.b"]), "s2.weight": t(p["s2.w"]), "s2.bias": t(p["s2.b"]),
            "v.weight": t(p["v.w"])[None, :], "v.bias": t(p["v.b"]).reshape(1),
-           "a1.weight": t(p["a1.w"]), "a1.bias": t(p["a1.b"]),
+           "a1.weight": a1, "a1.bias": t(p["a1.b"]),
            "a2.weight": t(p["a2.w"])[None, :], "a2.bias": t(p["a2.b"]).reshape(1)}
     for j in range(len(net.emb)):
-        new[f"emb.{j}.weight"] = t(p[f"e{j}"])
+        if f"e{j}" in p:
+            new[f"emb.{j}.weight"] = t(p[f"e{j}"])
     sd.update({k: v.to(sd[k].device) for k, v in new.items()})
     net.load_state_dict(sd)
 
@@ -220,15 +228,22 @@ def _reward(gs, pid) -> float:
 
 def rollout(args):
     """One training game -> list of (trajectory, reward) for the PPO seats."""
-    g, net, ppo_seats, league, league_frac, snaps, self_frac, cur_frac, hidden = (tuple(args) + (False,))[:9]
+    g, net, ppo_seats, league, league_frac, snaps, self_frac, cur_frac, hidden, focus, focus_frac =         (tuple(args) + (False, (), 0.0))[:11]
     from src.ai.agents import make_agent
     from src.ai.ppo import PPOAgent
     from src.data.card_definitions import setup_game
     from src.game.leader.leader_definitions import LEADER_NAMES
     r = random.Random(g)
     lineup = r.sample(list(LEADER_NAMES), 4)
-    gs = setup_game(num_players=4, seed=g, leaders=lineup, use_bloodlines=True)
     seats = r.sample(range(4), ppo_seats)
+    if focus and r.random() < focus_frac:    # --focus: the first trained seat plays one of these Leaders
+        f = r.choice(list(focus))
+        if f in lineup:
+            lineup.remove(f)
+        else:
+            lineup.pop(r.randrange(4))
+        lineup.insert(seats[0], f)
+    gs = setup_game(num_players=4, seed=g, leaders=lineup, use_bloodlines=True)
     for s in range(4):                       # self-play: opponent seats on the current policy
         if cur_frac and s not in seats and r.random() < cur_frac:
             seats.append(s)
@@ -284,7 +299,7 @@ def eval_game(args):
         n += 1
     vp = [q.victory_points for q in gs.players]
     win = gs.winner if gs.winner is not None else max(range(4), key=lambda s: vp[s])
-    return float(win == seat), gs.round
+    return float(win == seat), gs.round, lineup[seat]
 
 
 # ---------------------------------------------------------------------------
@@ -460,6 +475,9 @@ def main():
     ap.add_argument("--elo-games", type=int, default=0,
                     help="> 0: each eval's snapshot also plays this many 4-player games vs the rated field (Best AI, "
                          "--pool nets, earlier snapshots) and all rated games are refit into Elo (src.selfplay.elo)")
+    ap.add_argument("--focus", default="", help="comma list of Leaders: --focus-frac of the games give the "
+                                                "first PPO seat one of them (per-Leader fine-tuning)")
+    ap.add_argument("--focus-frac", type=float, default=0.5)
     ap.add_argument("--base", default=os.path.join("config", "best_ai.json"),
                     help="heuristic weights the policy starts from (copied to config/ppo/base.json once)")
     A = ap.parse_args()
@@ -477,7 +495,8 @@ def main():
     if npz is not None:                          # a played net (e.g. the UI's): its own widths and T
         widths = (npz["s1.w"].shape[0], npz["s2.w"].shape[0], npz["a1.w"].shape[0], npz["e0"].shape[1])
         A.T = float(npz["T"])
-    net = make_torch_net(FEATURE_DIM, ACTION_FEATURE_DIM, id_sizes(), A.T, widths).to(dev)
+    S = FEATURE_DIM + LEADER_STATE_DIM
+    net = make_torch_net(S, ACTION_FEATURE_DIM, id_sizes(), A.T, widths).to(dev)
     net.K = A.k
     opt = torch.optim.Adam(net.parameters(), lr=A.lr)
     state = {"iter": 0, "games": 0}
@@ -503,7 +522,7 @@ def main():
     critic = copt = None
     if A.critic:
         from src.ai.hidden_features import hidden_dim
-        critic = make_critic(FEATURE_DIM, hidden_dim()).to(dev)
+        critic = make_critic(S, hidden_dim()).to(dev)
         copt = torch.optim.Adam(critic.parameters(), lr=A.critic_lr)
         if c is not None and "critic" in c:
             critic.load_state_dict(c["critic"])
@@ -525,8 +544,8 @@ def main():
         if (A.eval_every or A.eval_secs) and base_eval is None:
             res = pool.map(eval_game, [(g, A.eval_base or f"heuristic:tuned={BASE}", A.eval_opp)
                                        for g in range(A.eval_games)], chunksize=8)
-            base_eval = {"share": float(np.mean([w for w, _ in res])), "wins": [w for w, _ in res],
-                         "rounds": float(np.mean([r for _, r in res]))}
+            base_eval = {"share": float(np.mean([x[0] for x in res])), "wins": [x[0] for x in res],
+                         "rounds": float(np.mean([x[1] for x in res]))}
             json.dump(base_eval, open(bpath, "w"))
             print(f"baseline: Best AI in the eval seat {base_eval['share']:.1%} | rounds {base_eval['rounds']:.2f}",
                   flush=True)
@@ -539,9 +558,15 @@ def main():
             state["iter"] += 1
             it = state["iter"]
             t0 = time.time()
+            if A.pool:      # re-read: another run drops its newest nets in here (src/selfplay/ppo_cross_pool.py)
+                new = sorted(glob.glob(A.pool))
+                if new != pool_nets:
+                    print("pool: " + ", ".join(os.path.basename(p) for p in new), flush=True)
+                pool_nets = new
             snaps = sorted(glob.glob(os.path.join(A.out, "snap_*.npz")))[-A.snap_pool:] + pool_nets
+            focus = tuple(x.strip() for x in A.focus.split(",") if x.strip())
             jobs = [(100_000_000 + state["games"] + g, cur, A.ppo_seats, league, A.league_frac, snaps, A.self_frac,
-                     A.cur_frac, critic is not None)
+                     A.cur_frac, critic is not None, focus, A.focus_frac)
                     for g in range(A.games)]
             trajs, rounds = [], []
             for out, rnd in pool.imap_unordered(rollout, jobs, chunksize=2):
@@ -595,18 +620,24 @@ def main():
                     t_eval, g_eval = time.time(), state["games"]
                 res = pool.map(eval_game, [(g, f"ppo:net={snap}:tuned={BASE}:greedy", A.eval_opp)
                                            for g in range(A.eval_games)], chunksize=8)
-                w = np.array([x for x, _ in res])
+                w = np.array([x[0] for x in res])
                 d = w - np.array(base_eval["wins"])
                 rec["eval"] = {"share": round(float(w.mean()), 4), "baseline": round(base_eval["share"], 4),
                                "diff": round(float(d.mean()), 4),
                                "se": round(float(d.std() / math.sqrt(len(d))), 4),
-                               "rounds": round(float(np.mean([r for _, r in res])), 3)}
+                               "rounds": round(float(np.mean([x[1] for x in res])), 3)}
+                by = {}                               # per Leader in the eval seat: [share, baseline share, games]
+                for (x, _, ld), b in zip(res, base_eval["wins"]):
+                    e = by.setdefault(ld, [0.0, 0.0, 0])
+                    e[0] += x; e[1] += b; e[2] += 1
+                rec["eval"]["by_leader"] = {k: [round(a / n, 3), round(b / n, 3), n]
+                                            for k, (a, b, n) in sorted(by.items())}
                 prev = state.get("eval_snap")
                 if A.self_eval_games and prev and os.path.exists(prev):
                     opp = f"ppo:net={prev}:tuned={BASE}:greedy"
                     res = pool.map(eval_game, [(g, f"ppo:net={snap}:tuned={BASE}:greedy", opp)
                                                for g in range(A.self_eval_games)], chunksize=8)
-                    w = np.array([x for x, _ in res])
+                    w = np.array([x[0] for x in res])
                     rec["eval_vs_prev"] = {"prev": os.path.basename(prev), "share": round(float(w.mean()), 4),
                                            "se": round(float(w.std() / math.sqrt(len(w))), 4)}
                 state["eval_snap"] = snap

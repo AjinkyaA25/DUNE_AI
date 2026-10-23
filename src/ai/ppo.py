@@ -27,6 +27,15 @@ spec: ppo:net=<npz>[:tuned=<json>][:greedy][:T<temp>][:K<n>]
 Shortlist (2026-10-20): a net trained with --k 0 chooses among EVERY legal
 move (stored as K=0 in the npz); older nets keep the heuristic's top 16.
 K<n> in the spec overrides it (K0 = all).
+
+Leaders (user, 2026-10-23: "fine tune to each specific leader and understand
+strategy for all of them"): a net with 6 embedding fields also gets the
+Leader of the deciding player as an identity on every move (so each move's
+correction can depend on WHO plays it), the observation post of a Spy
+placement (its own field: hashing it into "choice" lands on buckets trained
+for other choices) and a one-hot of every seat's Leader appended to the
+state (leader_state). Older nets (5 fields, shorter state) are read exactly
+as before.
 """
 from __future__ import annotations
 
@@ -39,7 +48,8 @@ from src.game.gameState import ActionType
 
 K_MAX = 16                 # default moves kept per decision: the heuristic's top 16 (0 = all)
 EMB = 16                   # embedding size per identity field
-ID_FIELDS = ("space", "card", "played", "intrigue", "choice")
+ID_FIELDS = ("space", "card", "played", "intrigue", "choice", "leader", "post")
+N_OLD_FIELDS = 5           # nets before the Leader field
 _IDS: Dict[str, Dict[str, int]] = {}
 
 
@@ -64,8 +74,11 @@ def _build_ids() -> None:
     intr = {c.name for c in gs.intrigue_deck}
     from src.game.board.board import LEADER_SPACES
     spaces = sorted(set(UPRISING_BOARD) | set(LEADER_SPACES))
+    from src.game.leader.leader_definitions import LEADER_NAMES
+    from src.game.board.board import OBSERVATION_POST_CONNECTIONS
     for field, names in (("space", spaces), ("card", sorted(cards)), ("played", sorted(cards)),
-                         ("intrigue", sorted(intr))):
+                         ("intrigue", sorted(intr)), ("leader", list(LEADER_NAMES)),
+                         ("post", sorted(OBSERVATION_POST_CONNECTIONS))):
         _IDS[field] = {n: i + 1 for i, n in enumerate(names)}
 
 
@@ -74,7 +87,27 @@ CHOICE_BUCKETS = 512      # any choice string (tech, skill, contract, spy post, 
 
 def id_sizes() -> List[int]:
     _build_ids()
-    return [len(_IDS[f]) + 2 for f in ID_FIELDS[:-1]] + [CHOICE_BUCKETS + 1]   # +1 none, +1 unknown
+    return [len(_IDS[f]) + 2 if f != "choice" else CHOICE_BUCKETS + 1 for f in ID_FIELDS]   # +1 none, +1 unknown
+
+
+def _leader_names() -> List[str]:
+    from src.game.leader.leader_definitions import LEADER_NAMES
+    return list(LEADER_NAMES)
+
+
+LEADER_STATE_DIM = 4 * (len(_leader_names()) + 1)
+
+
+def leader_state(gs, pid: int) -> np.ndarray:
+    """One-hot Leader of me, next, next+1, next+2 (slot 0 = no / neutral Leader)."""
+    names = _leader_names()
+    n = len(names) + 1
+    v = np.zeros(LEADER_STATE_DIM, np.float32)
+    k = len(gs.players)
+    for j in range(min(4, k)):
+        name = getattr(gs.players[(pid + j) % k].leader, "name", None)
+        v[j * n + (names.index(name) + 1 if name in names else 0)] = 1.0
+    return v
 
 
 def _id(field: str, name) -> int:
@@ -87,8 +120,9 @@ def _id(field: str, name) -> int:
     return d.get(name, len(d) + 1)
 
 
-def action_ids(gs, pid: int, a) -> List[int]:
-    """Identity of what the move touches, one id per ID_FIELDS entry."""
+def action_ids(gs, pid: int, a, leader: bool = True) -> List[int]:
+    """Identity of what the move touches, one id per ID_FIELDS entry
+    (leader False: the first 5, as older nets were trained)."""
     _build_ids()
     at = a.action_type
     space = a.space_name if at == ActionType.AGENT_TURN else None
@@ -121,8 +155,13 @@ def action_ids(gs, pid: int, a) -> List[int]:
         choice = f"contract:{name}"
     elif at == ActionType.ACTIVATE_TECH:
         choice = f"activate:{ch}"
-    return [_id("space", space), _id("card", card), _id("played", played),
-            _id("intrigue", intrigue), _id("choice", choice)]
+    ids = [_id("space", space), _id("card", card), _id("played", played),
+           _id("intrigue", intrigue), _id("choice", choice)]
+    if leader:
+        ids.append(_id("leader", getattr(gs.players[pid].leader, "name", None)))
+        post = a.spy_post_name if at == ActionType.RESOLVE_SPY else None   # WHICH post (recalled Spy: heuristic)
+        ids.append(_id("post", post))
+    return ids
 
 
 def shortlist(h: List[float], chosen: Optional[int] = None, k: int = K_MAX) -> List[int]:
@@ -144,6 +183,9 @@ class PPONet:
         self.p = {k: np.asarray(v, dtype=np.float32) for k, v in p.items()}
         self.T = float(self.p.get("T", np.array(1.0)))
         self.K = int(self.p.get("K", np.array(K_MAX)))       # shortlist it was trained with (0 = all)
+        self.nf = sum(1 for k in self.p if k[0] == "e" and k[1:].isdigit())   # identity fields
+        self.S = self.p["s1.w"].shape[1]                     # state inputs (+ leader_state on Leader nets)
+        self.leaders = self.nf > N_OLD_FIELDS
 
     def state(self, s: np.ndarray):
         p = self.p
@@ -154,7 +196,7 @@ class PPONet:
 
     def correction(self, hs: np.ndarray, D: np.ndarray, I: np.ndarray) -> np.ndarray:
         p = self.p
-        e = np.concatenate([p[f"e{j}"][I[:, j]] for j in range(I.shape[1])], axis=1)
+        e = np.concatenate([p[f"e{j}"][I[:, j]] for j in range(self.nf)], axis=1)
         x = np.concatenate([np.repeat(hs[None, :], D.shape[0], 0), D, e], axis=1)
         z = np.maximum(0, x @ p["a1.w"].T + p["a1.b"])
         return z @ p["a2.w"] + p["a2.b"]
@@ -210,8 +252,10 @@ class PPOAgent:
         lo, hi = float(h.min()), float(h.max())
         span = (hi - lo) or 1.0
         s = encode_state(gs, pid).astype(np.float32)
+        if net.S > len(s):
+            s = np.concatenate([s, leader_state(gs, pid)])
         D = np.stack([encode_action(gs, pid, valid[i], (h_all[i] - lo) / span) for i in idx]).astype(np.float32)
-        I = np.array([action_ids(gs, pid, valid[i]) for i in idx], dtype=np.int64)
+        I = np.array([action_ids(gs, pid, valid[i], net.leaders) for i in idx], dtype=np.int64)
         T = self.temperature if self.temperature is not None else net.T
         lg, v = net.logits(s, D, I, h * (net.T / T))
         return h_all, idx, lg, v, (s, D, I, h)
