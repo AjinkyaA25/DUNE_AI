@@ -85,5 +85,6 @@
  "combat_ev": 2.5,
  "deck_model": 1,
  "tech_learned": 1.0,
- "tech_deny": 0.5
+ "tech_deny": 0.5,
+ "spy_freq": 3
 }
