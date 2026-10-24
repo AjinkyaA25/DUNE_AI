@@ -158,3 +158,60 @@ _BL_ACTION_DIM = _bl_action_dim()
 #  (len(_TYPES)+1) type one-hot  +  10 agent-turn  +  7 acquire  +  4 misc
 #  + Bloodlines purchase block (recruit / skill / tech)
 ACTION_FEATURE_DIM = (len(_TYPES) + 1) + 10 + 7 + 4 + _BL_ACTION_DIM
+
+
+# ---------------------------------------------------------------------------
+# Spy plan (user, 2026-10-23: "spies should go to posts where the AI is
+# planning on going / where it should go later"). Appended only by PPO nets
+# that have the Leader inputs (src/ai/ppo.py), so ACTION_FEATURE_DIM and the
+# older models that use it are unchanged. Zero for every move but a Spy
+# placement.
+# ---------------------------------------------------------------------------
+SPY_PLAN_DIM = 7
+
+
+def _icons(gs, pid: int, card) -> set:
+    ic = {s.value for s in card.access_symbols}
+    if gs.bl and card.access_symbols:
+        ic |= gs.bl.extra_icons(pid, card)
+    return ic
+
+
+def spy_plan_features(gs: GameState, pid: int, a: GameAction) -> np.ndarray:
+    """Where this player can still go (cards left in hand: later this round)
+    and could go (whole deck: later rounds) among the spaces the post borders,
+    whether a rival sits on one now (Infiltrate), and how often a Spy on this
+    post pays off for this Leader (models_spy/spy_stats.json)."""
+    v = np.zeros(SPY_PLAN_DIM, np.float32)
+    if a.action_type != ActionType.RESOLVE_SPY or not a.spy_post_name:
+        return v
+    from src.game.board.board import OBSERVATION_POST_CONNECTIONS, SPACE_ICONS, INFLUENCE_GATED_SPACES
+    spaces = [s for s in OBSERVATION_POST_CONNECTIONS.get(a.spy_post_name, ()) if s in SPACE_ICONS]
+    if not spaces:
+        return v
+    p = gs.players[pid]
+
+    def open_to_me(s):
+        g = INFLUENCE_GATED_SPACES.get(s)
+        return g is None or p.influence.get(g[0], 0) >= g[1]
+
+    need = {s: SPACE_ICONS[s] for s in spaces if open_to_me(s)}
+    hand = [c for c in p.hand if c.access_symbols]
+    reach = [c for c in hand if any(i in _icons(gs, pid, c) for i in need.values())]
+    free = [s for s in need if gs.agent_on_space.get(s) is None]
+    taken = [s for s in need if gs.agent_on_space.get(s) not in (None, pid)]
+    deck = [c for z in (p.deck, p.discard, p.hand, p.in_play) for c in z if c.access_symbols]
+    dreach = sum(1 for c in deck if any(i in _icons(gs, pid, c) for i in need.values()))
+    v[0] = min(1.0, len(reach) / 2.0)                                  # can still go there this round
+    v[1] = 1.0 if any(any(SPACE_ICONS[s] in _icons(gs, pid, c) for s in free) for c in hand) else 0.0
+    v[2] = 1.0 if any(any(SPACE_ICONS[s] in _icons(gs, pid, c) for s in taken) for c in hand) else 0.0
+    v[3] = dreach / max(1, len(deck))                                  # later rounds
+    v[4] = len(need) / max(1, len(spaces))                             # spaces not gated off for me
+    v[5] = min(1.0, p.agents_available / 3.0)
+    from src.ai.agents import _spy_stats
+    m = _spy_stats()
+    if m:
+        leader = getattr(p.leader, "name", None)
+        st = (m["by_leader"].get(leader) or m["posts"]).get(a.spy_post_name) or {}
+        v[6] = min(1.0, 2.0 * (st.get("gather_h", 0.0) + st.get("infiltrate_h", 0.0)))
+    return v

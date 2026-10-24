@@ -34,7 +34,10 @@ Leader of the deciding player as an identity on every move (so each move's
 correction can depend on WHO plays it), the observation post of a Spy
 placement (its own field: hashing it into "choice" lands on buckets trained
 for other choices) and a one-hot of every seat's Leader appended to the
-state (leader_state). Older nets (5 fields, shorter state) are read exactly
+state (leader_state). A Spy placement also carries plan features
+(action_features.spy_plan_features: can I still go to the post's spaces this
+round, could my deck later, is a rival there) when the net's move layer is
+wide enough for them. Older nets (5 fields, shorter state) are read exactly
 as before.
 """
 from __future__ import annotations
@@ -186,6 +189,8 @@ class PPONet:
         self.nf = sum(1 for k in self.p if k[0] == "e" and k[1:].isdigit())   # identity fields
         self.S = self.p["s1.w"].shape[1]                     # state inputs (+ leader_state on Leader nets)
         self.leaders = self.nf > N_OLD_FIELDS
+        E = self.p["e0"].shape[1] if "e0" in self.p else 0
+        self.A = self.p["a1.w"].shape[1] - self.p["s2.w"].shape[0] - self.nf * E   # move features it reads
 
     def state(self, s: np.ndarray):
         p = self.p
@@ -255,6 +260,9 @@ class PPOAgent:
         if net.S > len(s):
             s = np.concatenate([s, leader_state(gs, pid)])
         D = np.stack([encode_action(gs, pid, valid[i], (h_all[i] - lo) / span) for i in idx]).astype(np.float32)
+        if net.A > D.shape[1]:                   # Spy plan features
+            from src.ai.action_features import spy_plan_features
+            D = np.concatenate([D, np.stack([spy_plan_features(gs, pid, valid[i]) for i in idx])], axis=1)
         I = np.array([action_ids(gs, pid, valid[i], net.leaders) for i in idx], dtype=np.int64)
         T = self.temperature if self.temperature is not None else net.T
         lg, v = net.logits(s, D, I, h * (net.T / T))

@@ -57,6 +57,7 @@ from multiprocessing import Pool
 import numpy as np
 
 from src.ai.ppo import EMB, ID_FIELDS, LEADER_STATE_DIM, id_sizes
+from src.ai.action_features import SPY_PLAN_DIM
 from src.selfplay import elo
 
 BASE = os.path.join("config", "ppo", "base.json")        # heuristic the policy sits on (pinned)
@@ -172,8 +173,15 @@ def load_npz(net, p: dict) -> None:
     t = lambda x: torch.as_tensor(np.asarray(x, np.float32))
     s1 = sd["s1.weight"].clone().cpu().zero_()
     s1[:, :p["s1.w"].shape[1]] = t(p["s1.w"])
+    # move layer input = [state hidden | move features | identity embeddings]: new move features
+    # and new identity fields get zero columns, the old blocks keep their weights
     a1 = sd["a1.weight"].clone().cpu().zero_()
-    a1[:, :p["a1.w"].shape[1]] = t(p["a1.w"])        # identity fields come last: a new field's columns stay 0
+    W2, A_new = p["s2.w"].shape[0], net.A
+    nf_old = sum(1 for k in p if k[0] == "e" and k[1:].isdigit())
+    A_old = p["a1.w"].shape[1] - W2 - nf_old * p["e0"].shape[1]
+    o = t(p["a1.w"])
+    a1[:, :W2 + A_old] = o[:, :W2 + A_old]
+    a1[:, W2 + A_new:W2 + A_new + o.shape[1] - W2 - A_old] = o[:, W2 + A_old:]
     new = {"s1.weight": s1, "s1.bias": t(p["s1.b"]), "s2.weight": t(p["s2.w"]), "s2.bias": t(p["s2.b"]),
            "v.weight": t(p["v.w"])[None, :], "v.bias": t(p["v.b"]).reshape(1),
            "a1.weight": a1, "a1.bias": t(p["a1.b"]),
@@ -496,7 +504,7 @@ def main():
         widths = (npz["s1.w"].shape[0], npz["s2.w"].shape[0], npz["a1.w"].shape[0], npz["e0"].shape[1])
         A.T = float(npz["T"])
     S = FEATURE_DIM + LEADER_STATE_DIM
-    net = make_torch_net(S, ACTION_FEATURE_DIM, id_sizes(), A.T, widths).to(dev)
+    net = make_torch_net(S, ACTION_FEATURE_DIM + SPY_PLAN_DIM, id_sizes(), A.T, widths).to(dev)
     net.K = A.k
     opt = torch.optim.Adam(net.parameters(), lr=A.lr)
     state = {"iter": 0, "games": 0}
