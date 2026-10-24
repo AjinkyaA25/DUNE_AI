@@ -53,6 +53,12 @@ TUNE_DEFAULTS = {
     # payoff from measured use rates (models_spy/spy_stats.json, per Leader):
     # P(Gather Intelligence soon) x a card draw now + P(Infiltrate) x the way in
     "spy_freq": 0.0,
+    # spy_plan (user, 2026-10-23: "spies should go to posts where the AI is
+    # planning on going"): + this x a draw for each of: a card left in hand
+    # reaches an open space by the post (Gather Intelligence this round), one
+    # reaches a rival-held space there (Infiltrate), share of the deck that
+    # reaches the post's spaces (later rounds)
+    "spy_plan": 0.0,
     # troops kept for the next Conflict; how much Intrigue cards are worth
     "deploy_hold": 0.4, "intrigue_love": 1.0,
     # tech_love: multiplies what owning a tech tile is worth (tech persona)
@@ -2391,6 +2397,11 @@ def _spy_post_value(gs: GameState, pid: int, post: Optional[str]) -> float:
     k = _TUNE.get("spy_freq", 0.0)
     if k:
         out += k * _spy_use_value(gs, pid, post, vals[0])
+    k = _TUNE.get("spy_plan", 0.0)
+    if k:
+        from src.ai.action_features import spy_post_plan
+        f = spy_post_plan(gs, pid, post)
+        out += k * _effect_value(gs, pid, {"draw": 1}) * (f[1] + f[2] + f[3])
     return out
 
 

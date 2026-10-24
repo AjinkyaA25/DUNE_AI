@@ -471,6 +471,10 @@ def main():
     ap.add_argument("--critic-warmup", type=int, default=5,
                     help="iterations that train only the critic / value heads before the policy moves")
     ap.add_argument("--critic-lr", type=float, default=1e-3)
+    ap.add_argument("--head-warmup", type=int, default=0,
+                    help="first N iterations train only the value / final-VP heads (on detached features): "
+                         "starting from an exported net, the fresh final-VP head's early error would otherwise "
+                         "push the shared state layers and knock the policy off its peak (KL 0.07 on iter 1)")
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=2000)
     ap.add_argument("--eval-secs", type=float, default=0,
@@ -593,10 +597,13 @@ def main():
                 vals = critic_values(critic, B, dev)
             adv, ret = advantages(trajs, vals, A.lam, A.dense)
             warm = critic is not None and state.get("critic_iters", 0) < A.critic_warmup
+            if state.get("head_iters", 0) < A.head_warmup:   # fresh final-VP head: learn it before the policy moves
+                warm = True
+                state["head_iters"] = state.get("head_iters", 0) + 1
             st = ppo_update(net, opt, B, adv, ret, A, critic, copt, train_policy=not warm)
             if critic is not None:
                 state["critic_iters"] = state.get("critic_iters", 0) + 1
-                st["warmup"] = warm
+            st["warmup"] = warm
             net.export(cur)
             # how often the trained policy now overrules the heuristic's top move
             with torch.no_grad():

@@ -15,6 +15,13 @@ measures, from what actually happens:
 
     python -m src.selfplay.spy_stats --games 600 --workers 28
         -> models_spy/spy_stats.json (read by agents._spy_post_value, knob spy_freq)
+
+Plan check (2026-10-23, "spies should go where the AI is planning on going"):
+every Spy placement also records whether a post the player's remaining hand
+can reach this round was on offer and whether the chosen one was such a post
+(action_features.spy_plan_features), and the report shows how soon those
+Spies were used. --report-only prints that for a spec without writing the
+stats file.
 """
 from __future__ import annotations
 
@@ -40,7 +47,8 @@ def play(args):
     lineup = r.sample(list(LEADER_NAMES), 4)
     gs = setup_game(num_players=4, seed=7_000_000 + g, leaders=lineup, use_bloodlines=True)
     agents = [make_agent(spec, seed=g * 4 + s) for s in range(4)]
-    live = {}                      # (pid, post, k) -> round placed
+    from src.ai.action_features import spy_plan_features
+    live = {}                      # (pid, post, k) -> (round placed, plan)
     spies = []                     # (leader, post, round placed, round left, how)
     visits = []                    # (leader, space, round)
     blocked = defaultdict(int)     # space -> agent placements that found it taken by an opponent
@@ -56,6 +64,11 @@ def play(args):
             pid = gs.get_current_player_id()
         a = agents[pid].select_action(gs, pid, gs.get_valid_actions(pid))
         before = [board(q) for q in range(4)]
+        plan = None
+        if a.action_type == ActionType.RESOLVE_SPY and a.spy_post_name:
+            opts = [b for b in gs.get_valid_actions(pid) if b.action_type == ActionType.RESOLVE_SPY]
+            f = spy_plan_features(gs, pid, a)
+            plan = (bool(f[0] > 0), any(spy_plan_features(gs, pid, b)[0] > 0 for b in opts), bool(f[2] > 0))
         how = "recall"
         if a.action_type == ActionType.AGENT_TURN:
             placements += 1
@@ -72,13 +85,13 @@ def play(args):
             for post in set(before[q]) | set(after):
                 b, c = before[q].get(post, 0), after.get(post, 0)
                 for k in range(c, b):                   # left the post
-                    r0 = live.pop((q, post, k), rnd)
-                    spies.append((lineup[q], post, r0, rnd, how if q == pid else "recall"))
+                    r0, pl = live.pop((q, post, k), (rnd, None))
+                    spies.append((lineup[q], post, r0, rnd, how if q == pid else "recall", pl))
                 for k in range(b, c):                   # placed
-                    live[(q, post, k)] = rnd
+                    live[(q, post, k)] = (rnd, plan if q == pid else None)
     end = gs.round
-    for (q, post, k), r0 in live.items():
-        spies.append((lineup[q], post, r0, end, "never"))
+    for (q, post, k), (r0, pl) in live.items():
+        spies.append((lineup[q], post, r0, end, "never", pl))
     return {"lineup": lineup, "rounds": end, "spies": spies, "visits": visits,
             "blocked": dict(blocked), "placements": placements}
 
@@ -89,7 +102,7 @@ def fit(games: list) -> dict:
     tot = defaultdict(lambda: defaultdict(float))
     led = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     for G in games:
-        for leader, post, r0, r1, how in G["spies"]:
+        for leader, post, r0, r1, how, _ in G["spies"]:
             for d in (tot[post], led[leader][post]):
                 d["placed"] += 1
                 d[how] += 1
@@ -135,15 +148,42 @@ def fit(games: list) -> dict:
     return out
 
 
+def plan_report(games: list) -> dict:
+    """Spy placements made when a hand-reachable post was on offer: how often
+    the AI took one, and how soon each kind of Spy paid off."""
+    rows = [(pl, r1 - r0, how) for G in games for _, _, r0, r1, how, pl in G["spies"] if pl is not None]
+    offer = [r for r in rows if r[0][1]]
+    out = {"placements": len(rows), "with_reachable_offer": len(offer),
+           "took_reachable": round(sum(r[0][0] for r in offer) / max(1, len(offer)), 4),
+           "took_rival_space": round(sum(r[0][2] for r in rows) / max(1, len(rows)), 4)}
+    for name, sel in (("all", rows), ("reachable", [r for r in rows if r[0][0]]),
+                      ("not_reachable", [r for r in rows if not r[0][0]])):
+        n = max(1, len(sel))
+        out[name] = {"n": len(sel),
+                     "used_same_round": round(sum(1 for _, d, h in sel if h in ("gather", "infiltrate") and d == 0) / n, 4),
+                     "used_ever": round(sum(1 for _, _, h in sel if h in ("gather", "infiltrate")) / n, 4),
+                     "never_used": round(sum(1 for _, _, h in sel if h == "never") / n, 4)}
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--games", type=int, default=600)
     ap.add_argument("--workers", type=int, default=28)
     ap.add_argument("--spec", default=SPEC)
     ap.add_argument("--out", default=OUT)
+    ap.add_argument("--report-only", default="", help="write only the plan check here (json)")
     A = ap.parse_args()
     with Pool(A.workers, maxtasksperchild=20) as pool:
         games = pool.map(play, [(g, A.spec) for g in range(A.games)], chunksize=2)
+    pr = plan_report(games)
+    print(f"avg rounds {sum(G['rounds'] for G in games) / len(games):.2f}")
+    print(json.dumps(pr, indent=1))
+    if A.report_only:
+        pr["spec"], pr["games"] = A.spec, len(games)
+        pr["rounds"] = sum(G["rounds"] for G in games) / len(games)
+        json.dump(pr, open(A.report_only, "w"), indent=1)
+        return
     res = fit(games)
     os.makedirs(os.path.dirname(A.out), exist_ok=True)
     json.dump(res, open(A.out, "w"), indent=1)

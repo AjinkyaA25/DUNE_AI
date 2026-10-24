@@ -182,11 +182,16 @@ def spy_plan_features(gs: GameState, pid: int, a: GameAction) -> np.ndarray:
     and could go (whole deck: later rounds) among the spaces the post borders,
     whether a rival sits on one now (Infiltrate), and how often a Spy on this
     post pays off for this Leader (models_spy/spy_stats.json)."""
-    v = np.zeros(SPY_PLAN_DIM, np.float32)
     if a.action_type != ActionType.RESOLVE_SPY or not a.spy_post_name:
-        return v
+        return np.zeros(SPY_PLAN_DIM, np.float32)
+    return spy_post_plan(gs, pid, a.spy_post_name)
+
+
+def spy_post_plan(gs: GameState, pid: int, post: str) -> np.ndarray:
+    """spy_plan_features for a post by name (also read by agents._spy_post_value, knob spy_plan)."""
+    v = np.zeros(SPY_PLAN_DIM, np.float32)
     from src.game.board.board import OBSERVATION_POST_CONNECTIONS, SPACE_ICONS, INFLUENCE_GATED_SPACES
-    spaces = [s for s in OBSERVATION_POST_CONNECTIONS.get(a.spy_post_name, ()) if s in SPACE_ICONS]
+    spaces = [s for s in OBSERVATION_POST_CONNECTIONS.get(post, ()) if s in SPACE_ICONS]
     if not spaces:
         return v
     p = gs.players[pid]
@@ -212,6 +217,6 @@ def spy_plan_features(gs: GameState, pid: int, a: GameAction) -> np.ndarray:
     m = _spy_stats()
     if m:
         leader = getattr(p.leader, "name", None)
-        st = (m["by_leader"].get(leader) or m["posts"]).get(a.spy_post_name) or {}
+        st = (m["by_leader"].get(leader) or m["posts"]).get(post) or {}
         v[6] = min(1.0, 2.0 * (st.get("gather_h", 0.0) + st.get("infiltrate_h", 0.0)))
     return v
