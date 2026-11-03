@@ -356,9 +356,10 @@ def create_imperium_cards() -> List[Card]:
           access=["emperor", "spacing_guild", "bene_gesserit", "fremen"], tags=["emperor"],
           agent={"trash_pair_emperor_influence": 1},
           persuasion=1, reveal={"influence_emperor": 1},
-          notes="Agent: if you have another Emperor card in play, trash BOTH it "
-                "and Treacherous Maneuver, then gain 1 influence with the Faction "
-                "whose space you visited. Reveal: 1 persuasion + 1 Emperor influence."),
+          notes="Agent: you MAY trash Treacherous Maneuver and an Emperor card from "
+                "your hand (your choice of which) to gain two influence instead of one "
+                "with the Faction whose space you visited. Reveal: 1 persuasion + 1 "
+                "Emperor influence."),
         m("Tread in Darkness", 4, I, access=["landsraad", "city", "desert"],
           tags=["bene_gesserit"],
           agent={"if_tag_other_bene": {"trash": 1, "draw": 1}}, persuasion=2, swords=1),

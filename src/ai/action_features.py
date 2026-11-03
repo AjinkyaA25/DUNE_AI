@@ -220,3 +220,32 @@ def spy_post_plan(gs: GameState, pid: int, post: str) -> np.ndarray:
         st = (m["by_leader"].get(leader) or m["posts"]).get(post) or {}
         v[6] = min(1.0, 2.0 * (st.get("gather_h", 0.0) + st.get("infiltrate_h", 0.0)))
     return v
+
+
+# ---------------------------------------------------------------------------
+# Leader setup decisions (user, 2026-10-25: "steersman is not learning which
+# navigation cards belong in which slots"). The choice key "nav:3" is the same
+# whichever slot is being filled, so the net could not tell card 3 in slot 1
+# from card 3 in slot 4; these say which card and which slot.
+# ---------------------------------------------------------------------------
+LEADER_ACT_DIM = 10 + 5 + 2      # card one-hot | slot one-hot (0 = returned to the box) | card 4 -> slot 1, card 3 -> slot 4
+
+
+def leader_act_features(gs: GameState, pid: int, a: GameAction) -> np.ndarray:
+    v = np.zeros(LEADER_ACT_DIM, np.float32)
+    ch = getattr(a, "choice", None)
+    if a.action_type != ActionType.RESOLVE_CHOICE or not isinstance(ch, str) or not ch.startswith(("nav:", "drop:")):
+        return v
+    try:
+        card = int(ch.split(":")[1])
+    except ValueError:
+        return v
+    if not 1 <= card <= 10:
+        return v
+    st = getattr(gs.players[pid].leader, "state", None) or {}
+    slot = 0 if ch.startswith("drop:") else min(4, len(st.get("nav", [])) + 1)
+    v[card - 1] = 1.0
+    v[10 + slot] = 1.0
+    v[15] = float(card == 4 and slot == 1)
+    v[16] = float(card == 3 and slot == 4)
+    return v

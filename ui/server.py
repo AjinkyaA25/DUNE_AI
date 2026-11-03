@@ -128,12 +128,21 @@ def _az_gen() -> str:
 # 53.2% vs 3x the E6 endgame solver, 67.3% vs 3x the evolved heuristic; instant moves.
 BEST_AI = {"spec": "ppo:net=models_ui/ppo.npz:tuned=config/ppo_ui.json:greedy",
            "name": "Best AI", "note": "PPO network on top of the evolved heuristic (self-play iteration 6240)"}
+# Best AI + rollout lookahead (2026-10-26): where the network's top move is < 80% likely, its top 4 moves
+# are each played out to the end of the round in 4 reshuffled worlds and scored by the frozen critic
+# (models_ui/critic.npz = models_ppo_look/critic.npz). 37.8% vs 28.2% for plain Best AI on the same
+# 1,200 seeds (+9.7 pts, se 1.7); ~50 s of thinking per game.
+LOOK_AI = {"spec": BEST_AI["spec"] + ":critic=models_ui/critic.npz:M4:RN4:PM0.8",
+           "name": "Best AI + lookahead",
+           "note": "Best AI that plays out its close calls to the end of the round before choosing "
+                   "(+10 pts vs Best AI; a few seconds on hard decisions)"}
 # :E6:EK3:EM4 = endgame solver from round 6 (play-outs to the end; 38.4% vs 31.9% plain, 2026-10-19)
 E6_AI = {"spec": "look:D2:K3:M1:ev=models_eval_leaders/evaluator.npz:tuned=config/best_ai.json:E6:EK3:EM4",
          "name": "Endgame solver (E6)", "note": "evolved heuristic + lookahead, solves the game from round 6 (slow)"}
 
 OPPONENTS = [
     BEST_AI,
+    LOOK_AI,
     E6_AI,
     {"spec": "look:D3:K4:M4:tuned=config/evolve_look/champion.json",
      "name": "Lookahead heuristic (3 turns ahead + evaluator)",
@@ -558,8 +567,19 @@ def label(gs: GameState, a: GameAction) -> str:
             if it["kind"] == "effect" and "bl_complete_contract" in (it.get("effect") or {}):
                 what = "complete one of your contracts"
             elif it["kind"] == "effect":
-                what = ", ".join(f"{v} {k.replace('_', ' ')}" if isinstance(v, (int, float)) else k.replace("_", " ")
-                                 for k, v in (it.get("effect") or {}).items())
+                def _w(k, v):                        # Conflict rewards read like the card
+                    if k == "spy":
+                        return "place a Spy" if v == 1 else f"place {v} Spies"
+                    if k == "spy_special":
+                        return "place a Spy (an occupied post is allowed)"
+                    if k == "contract":
+                        return "take a contract" if v == 1 else f"take {v} contracts"
+                    if k == "influence_any":
+                        return f"+{v} influence with a Faction of your choice"
+                    if k.startswith("influence_"):
+                        return f"+{v} {k[10:].replace('_', ' ').title()} influence"
+                    return f"{v} {k.replace('_', ' ')}" if isinstance(v, (int, float)) else k.replace("_", " ")
+                what = ", ".join(_w(k, v) for k, v in (it.get("effect") or {}).items())
             else:
                 what = f"draw {n} card{'s' if n != 1 else ''}" if it["kind"] == "draw"                     else f"take {n} Intrigue card{'s' if n != 1 else ''}"
             return f"Take reward now: {what}" + (f" (from {it['src']})" if it.get("src") else "")

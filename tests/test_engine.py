@@ -966,16 +966,20 @@ def test_card_corrections_batch7():
         {"if_tag_other_bene": {"return_self_to_hand": 1}}, ww2, p, gs)
     assert ww2 in p.in_play
 
-    # Treacherous Maneuver: trashes itself + another Emperor card, gains influence.
+    # Treacherous Maneuver: MAY trash itself + an Emperor card from HAND (the
+    # player's choice, 2026-10-25) -> one more influence.
     gs2 = setup_game(2, seed=5)
     q = gs2.players[0]
     tm = Card("Treacherous Maneuver", CardType.IMPERIUM); tm.add_tag(CardTag.EMPEROR)
     emp = Card("EmpCard", CardType.IMPERIUM); emp.add_tag(CardTag.EMPEROR)
-    q.in_play = [tm, emp]
+    q.in_play = [tm]
+    q.hand = [emp]
     gs2._current_agent_space = "Sardaukar"       # an Emperor faction space
     inf0 = q.influence["emperor"]
     EffectResolver.resolve_single_effect({"trash_pair_emperor_influence": 1}, q, gs2)
-    assert tm in q.trash and emp in q.trash and not q.in_play
+    assert tm in q.in_play and emp in q.hand        # nothing happens until the player chooses
+    gs2.step(next(a for a in gs2.get_valid_actions(0) if a.choice == "tm:EmpCard"))
+    assert tm in q.trash and emp in q.trash and not q.in_play and not q.hand
     assert q.influence["emperor"] == inf0 + 1
 
 
@@ -1399,3 +1403,56 @@ def test_questionable_methods_swords_count_in_combat():
                   and a.choice == "fremen")
     gs.step(choose)
     assert gs.combat_strength[pid] == before + 5
+
+
+def test_conflict_spy_contract_influence_are_claimed_in_any_order():
+    """User, 2026-10-25: a Conflict's Spy / contract / influence rewards are
+    choices the winner takes in the order they like, not placed for them."""
+    gs = setup_game(num_players=4, seed=3, use_bloodlines=True)
+    while gs.phase != Phase.PLAYER_TURNS:
+        pid = gs.get_current_player_id()
+        gs.step(gs.get_valid_actions(pid)[0])
+    pid = gs.get_current_player_id()
+    conflict = gs.current_conflict
+    gs.phase, gs.current_conflict = Phase.COMBAT, None
+    spies = sum(gs.players[pid].spies_on_board.values())
+    gs._apply_combat_reward(pid, {"spy": 1, "influence_fremen": 1, "solari": 1}, conflict)
+    assert sum(gs.players[pid].spies_on_board.values()) == spies       # nothing placed yet
+    acts = gs.get_valid_actions(pid)
+    claims = [a for a in acts if a.choice and a.choice.startswith("claim:")]
+    assert len(claims) == 2 and len(acts) == 2
+    fremen = gs.players[pid].influence["fremen"]
+    i = next(i for i, it in gs.deferred(pid) if "influence_fremen" in it["effect"])
+    gs.step(next(a for a in claims if a.choice == f"claim:{i}"))      # influence first
+    assert gs.players[pid].influence["fremen"] == fremen + 1
+    acts = gs.get_valid_actions(pid)
+    gs.step(next(a for a in acts if a.choice and a.choice.startswith("claim:")))
+    acts = gs.get_valid_actions(pid)                                   # now the Spy's post
+    assert acts and all(a.action_type == ActionType.RESOLVE_SPY for a in acts)
+    gs.step(acts[0])
+    assert sum(gs.players[pid].spies_on_board.values()) == spies + 1
+    assert not gs._has_mandatory_pending_for(pid)
+
+
+def test_treacherous_maneuver_trash_is_a_choice_from_hand():
+    """User, 2026-10-25: with an Emperor card in hand, Treacherous Maneuver
+    offers to trash both (which Emperor card is the player's pick) or not."""
+    from src.data.card_definitions import create_imperium_cards
+    from src.game.effects import EffectResolver
+    gs = setup_game(num_players=4, seed=4, use_bloodlines=True)
+    p = gs.players[0]
+    deck = create_imperium_cards()
+    tm = next(c for c in deck if c.name == "Treacherous Maneuver")
+    emp = next(c for c in deck if c.name == "Imperial Spymaster")
+    p.in_play.append(tm)
+    p.hand.append(emp)
+    gs._current_agent_space = next(s for s, f in __import__("src.game.gameState", fromlist=["x"])
+                                   .SPACE_FACTION_INFLUENCE.items() if f == "emperor")
+    EffectResolver.resolve_single_effect({"trash_pair_emperor_influence": 1}, p, gs)
+    acts = gs.get_valid_actions(0)
+    keys = sorted(a.choice for a in acts)
+    assert keys == ["decline", "tm:Imperial Spymaster"]
+    before = p.influence["emperor"]
+    gs.step(next(a for a in acts if a.choice == "tm:Imperial Spymaster"))
+    assert tm not in p.in_play and emp not in p.hand
+    assert p.influence["emperor"] == before + 1

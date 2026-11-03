@@ -121,6 +121,8 @@ class ActionType(Enum):
 
 
 # Bonus printed on the 4th space of each influence track
+# Conflict rewards queued for the player to take in any order (plus every influence_<faction>)
+COMBAT_CLAIM_KEYS = ("spy", "spy_special", "contract", "influence_any")
 INFLUENCE_4_BONUS = {"fremen": {"water": 1}, "bene_gesserit": {"intrigue": 1},
                      "spacing_guild": {"solari": 3}, "emperor": {"spy": 1}}
 
@@ -949,6 +951,9 @@ class GameState:
         if not self.reward_qualifies(pid, it):
             return
         items.pop(idx)
+        claims = getattr(self, "_combat_claims", None)
+        if claims and pid in claims and not self.deferred(pid):
+            claims.discard(pid)                      # the last Conflict reward taken
         if it["kind"] == "draw":
             self.draw_cards_for_player(pid, it["n"])
         elif it["kind"] == "intrigue":
@@ -1688,6 +1693,7 @@ class GameState:
 
     def _has_mandatory_pending_for(self, player_id: int) -> bool:
         return (
+            (player_id in getattr(self, "_combat_claims", ()) and bool(self.deferred(player_id))) or
             any(p.player_id == player_id for p in self.pending_spy_placements) or
             any(p.player_id == player_id for p in self.pending_uplifts) or
             any(p.player_id == player_id for p in self.pending_intrigue_trashes) or
@@ -1772,6 +1778,8 @@ class GameState:
     def _valid_pending_actions(self, player_id: int) -> List[GameAction]:
         actions: List[GameAction] = []
         p = self.players[player_id]
+        if player_id in getattr(self, "_combat_claims", ()):
+            actions += self._claim_actions(player_id)     # Conflict rewards in any order
         if self.phase == Phase.PLAYER_TURNS and player_id in (self._agent_turn_open,
                                                              self._post_agent_window):
             actions += self._claim_actions(player_id)     # rewards in any order
@@ -3030,8 +3038,21 @@ class GameState:
                 for _ in range(int(value.get("times", 1))):
                     self.add_pending_optional_payment(
                         player_id, {"recall_spy": count}, {"vp": vp}, label="conflict_vp")
+            elif key in COMBAT_CLAIM_KEYS or key.startswith("influence_"):
+                # Spies / contracts / influence (user, 2026-10-25): rewards the
+                # player takes in the order they like, like an Agent turn's
+                self._defer_combat_reward(player_id, key, value, conflict)
             else:
                 EffectResolver.resolve_single_effect({key: value}, player, self)
+
+    def _defer_combat_reward(self, pid: int, key: str, value, conflict: Conflict) -> None:
+        old = (getattr(self, "_defer_source", None), getattr(self, "_defer_conds", []))
+        self._defer_source, self._defer_conds = f"Conflict {conflict.name}", []
+        try:
+            self.defer_reward(pid, "effect", 1, effect={key: value})
+        finally:
+            self._defer_source, self._defer_conds = old
+        self.__dict__.setdefault("_combat_claims", set()).add(pid)
 
     def _award_battle_icon(self, player_id: int, icon) -> bool:
         """

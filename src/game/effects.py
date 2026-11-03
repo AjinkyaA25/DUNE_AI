@@ -734,24 +734,23 @@ class EffectResolver:
                                            ("troop", "1 troop (Ornithopter)", {"troops": 1}),
                                            ("trash", "Trash a card (Crysknife)", {"trash": 1})])
 
-        # -- Treacherous Maneuver agent: trash this card + another Emperor card
-        #    in play -> gain 1 influence with the Faction you visited ---------
+        # -- Treacherous Maneuver agent: "Trash this card and an Emperor card
+        #    from your hand: gain two Influence instead of one" - the player's
+        #    choice (user, 2026-10-25), and which Emperor card -------------------
         if "trash_pair_emperor_influence" in effect:
             tm = next((c for c in player.in_play
                        if c.name == "Treacherous Maneuver"), None)
-            others = [c for c in player.in_play
-                      if c.has_tag(CardTag.EMPEROR) and c is not tm]
-            if tm is not None and others:
-                others.sort(key=lambda c: c.persuasion + c.swords
-                            + len(getattr(c, "agent_effects", [])))
-                for c in (tm, others[0]):
-                    player.in_play.remove(c)
-                    gs._to_trash(player, c)
-                    for eff in getattr(c, "trash_effects", []):
-                        EffectResolver.resolve_single_effect(eff, player, gs)
-                fac = gs._faction_for_space(getattr(gs, "_current_agent_space", None))
-                if fac:
-                    gs.gain_influence_with_check(player.id, fac, 1)
+            fac = gs._faction_for_space(getattr(gs, "_current_agent_space", None))
+            names = []
+            for c in player.hand:
+                if c.has_tag(CardTag.EMPEROR) and c.name not in names:
+                    names.append(c.name)
+            if tm is not None and fac and names:
+                fname = fac.replace("_", " ").title()
+                opts = [(f"tm:{n}", f"Trash Treacherous Maneuver and {n} from your hand: +1 more {fname} influence",
+                         {"_leader_fx": ["tm_pair", n], "_gain_influences": [fac]}) for n in names]
+                opts.append(("decline", "Keep both cards", {}))
+                gs.add_pending_choice(player.id, "treacherous", "Treacherous Maneuver", opts)
 
         # -- Undercover Asset reveal: choose 1 Spy OR N swords --------------
         if "spy_or_swords" in effect:

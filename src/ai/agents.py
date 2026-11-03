@@ -1666,6 +1666,8 @@ def _choice_option_value(gs: GameState, pid: int, eff: dict) -> float:
         v -= 0.8 * _spy_post_value(gs, pid, q)          # keep the better-placed Spies
     if lf and lf[0] in ("trash_in_play", "trash_hand", "trash_zone"):
         v += _trash_value(gs, pid, lf[2] if lf[0] == "trash_zone" else lf[1])
+    if lf and lf[0] == "tm_pair":                  # Treacherous Maneuver + an Emperor card from hand
+        v += _trash_value(gs, pid, "Treacherous Maneuver") + _trash_value(gs, pid, lf[1])
     if lf and lf[0] == "jessica_flip":
         v += _TUNE.get("leader_play", 1.0) * _jessica_flip_worth(gs, pid)
     if lf and lf[0] == "rm_repeat":                # the space's effects once more
@@ -3485,7 +3487,20 @@ def make_agent(spec: str, seed: Optional[int] = None,
                 import json as _json
                 with open(p[6:], encoding="utf-8") as _f:
                     kw["tuning"] = _json.load(_f)
-        return PPOAgent(seed=seed, opening_book=opening_book, **kw)
+            elif p.startswith("critic="):        # play the critic lookahead's best move (teacher check)
+                kw["_critic"] = p[7:]
+            elif p.startswith("M") and p[1:].isdigit():
+                kw["_m"] = int(p[1:])
+            elif p.startswith("RN") and p[2:].isdigit():   # rollout teacher: worlds per move
+                kw["_n"] = int(p[2:])
+            elif p.startswith("PM") and p[2:].replace(".", "", 1).isdigit():   # ... only below this top prob
+                kw["_pmax"] = float(p[2:])
+        crit, m = kw.pop("_critic", None), kw.pop("_m", 6)
+        n, pmax = kw.pop("_n", 0), kw.pop("_pmax", 1.0)
+        agent = PPOAgent(seed=seed, opening_book=opening_book, **kw)
+        if crit:
+            agent.teacher = {"critic": crit, "frac": 1.0, "m": m, "act": True, "n": n, "pmax": pmax}
+        return agent
     if kind == "look":
         # look[:D<depth>][:K<k>][:M<m>][:LW<look_w>][:ev=<npz>][:tuned=<json>] (src/ai/lookahead.py)
         from src.ai.lookahead import LookaheadAgent

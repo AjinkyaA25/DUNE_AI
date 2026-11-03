@@ -155,6 +155,21 @@ def _fx_trash_in_play(gs, p, card_name: str) -> None:
         gs._to_trash(p, card)
 
 
+@fx("tm_pair")
+def _fx_tm_pair(gs, p, card_name: str) -> None:
+    """Treacherous Maneuver: trash it (in play) and the named Emperor card from hand."""
+    from src.game.effects import EffectResolver
+    tm = next((c for c in p.in_play if c.name == "Treacherous Maneuver"), None)
+    other = next((c for c in p.hand if c.name == card_name), None)
+    for c, pile in ((tm, p.in_play), (other, p.hand)):
+        if c is None:
+            continue
+        pile.remove(c)
+        gs._to_trash(p, c)
+        for eff in getattr(c, "trash_effects", []):
+            EffectResolver.resolve_single_effect(eff, p, gs)
+
+
 @fx("spy_posts")
 def _fx_spy_posts(gs, p, posts, allow_occupied=False) -> None:
     _spy(p, gs, list(posts) if posts else None, allow_occupied)
