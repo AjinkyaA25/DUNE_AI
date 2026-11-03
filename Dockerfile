@@ -8,10 +8,9 @@ RUN pip install --no-cache-dir "numpy>=1.24"
 COPY src/ src/
 COPY ui/ ui/
 COPY play_game.py ./
-COPY ["Tech tiles/", "Tech tiles/"]
-COPY sard_skills/ sard_skills/
-COPY hub_images/ hub_images/
-COPY video_scrape/cards/ video_scrape/cards/
+# Card, tile and board art (Tech tiles/, sard_skills/, hub_images/, video_scrape/cards/)
+# is official game art kept off GitHub and out of the public image; the page shows
+# card names as text instead. The server already handles the folders being absent.
 COPY config/best_ai.json config/best_ai.json
 COPY config/ppo_ui.json config/ppo_ui.json
 COPY models_ui/ppo.npz models_ui/ppo.npz
