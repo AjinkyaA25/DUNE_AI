@@ -1,0 +1,3060 @@
+{
+ "games": 600,
+ "rounds": 8.418333333333333,
+ "posts": {
+  "Arrakeen Post": {
+   "placed": 737.0,
+   "gather": 348.0,
+   "infiltrate": 51.0,
+   "recall": 81.0,
+   "never": 257.0,
+   "spy_rounds": 944.5,
+   "gather_h": 0.3684,
+   "infiltrate_h": 0.054
+  },
+  "Bene Gesserit Post": {
+   "placed": 755.0,
+   "gather": 518.0,
+   "infiltrate": 30.0,
+   "recall": 122.0,
+   "never": 85.0,
+   "spy_rounds": 1328.5,
+   "gather_h": 0.3899,
+   "infiltrate_h": 0.0226
+  },
+  "Deep Desert Post": {
+   "placed": 219.0,
+   "gather": 11.0,
+   "infiltrate": 0.0,
+   "recall": 100.0,
+   "never": 108.0,
+   "spy_rounds": 276.5,
+   "gather_h": 0.0398,
+   "infiltrate_h": 0.0
+  },
+  "Emperor Post": {
+   "placed": 716.0,
+   "gather": 411.0,
+   "infiltrate": 5.0,
+   "recall": 173.0,
+   "never": 127.0,
+   "spy_rounds": 1662.0,
+   "gather_h": 0.2473,
+   "infiltrate_h": 0.003
+  },
+  "Fremen Post": {
+   "placed": 1896.0,
+   "gather": 928.0,
+   "infiltrate": 87.0,
+   "recall": 467.0,
+   "never": 414.0,
+   "spy_rounds": 3203.0,
+   "gather_h": 0.2897,
+   "infiltrate_h": 0.0272
+  },
+  "Green Post": {
+   "placed": 426.0,
+   "gather": 254.0,
+   "infiltrate": 4.0,
+   "recall": 132.0,
+   "never": 36.0,
+   "spy_rounds": 691.0,
+   "gather_h": 0.3676,
+   "infiltrate_h": 0.0058
+  },
+  "Hagga Basin Post": {
+   "placed": 93.0,
+   "gather": 13.0,
+   "infiltrate": 5.0,
+   "recall": 37.0,
+   "never": 38.0,
+   "spy_rounds": 105.5,
+   "gather_h": 0.1232,
+   "infiltrate_h": 0.0474
+  },
+  "Imperial Basin Post": {
+   "placed": 47.0,
+   "gather": 17.0,
+   "infiltrate": 0.0,
+   "recall": 12.0,
+   "never": 18.0,
+   "spy_rounds": 73.5,
+   "gather_h": 0.2313,
+   "infiltrate_h": 0.0
+  },
+  "Landsraad Post": {
+   "placed": 688.0,
+   "gather": 317.0,
+   "infiltrate": 81.0,
+   "recall": 168.0,
+   "never": 122.0,
+   "spy_rounds": 1453.0,
+   "gather_h": 0.2182,
+   "infiltrate_h": 0.0557
+  },
+  "Research Station Left Post": {
+   "placed": 1912.0,
+   "gather": 813.0,
+   "infiltrate": 66.0,
+   "recall": 537.0,
+   "never": 496.0,
+   "spy_rounds": 2840.0,
+   "gather_h": 0.2863,
+   "infiltrate_h": 0.0232
+  },
+  "Research Station Right Post": {
+   "placed": 1315.0,
+   "gather": 536.0,
+   "infiltrate": 33.0,
+   "recall": 357.0,
+   "never": 389.0,
+   "spy_rounds": 1791.5,
+   "gather_h": 0.2992,
+   "infiltrate_h": 0.0184
+  },
+  "Shipping Post": {
+   "placed": 1549.0,
+   "gather": 476.0,
+   "infiltrate": 1.0,
+   "recall": 764.0,
+   "never": 308.0,
+   "spy_rounds": 4190.5,
+   "gather_h": 0.1136,
+   "infiltrate_h": 0.0002
+  },
+  "Spacing Guild Post": {
+   "placed": 1291.0,
+   "gather": 708.0,
+   "infiltrate": 49.0,
+   "recall": 212.0,
+   "never": 322.0,
+   "spy_rounds": 2333.5,
+   "gather_h": 0.3034,
+   "infiltrate_h": 0.021
+  }
+ },
+ "by_leader": {
+  "Chani": {
+   "Arrakeen Post": {
+    "placed": 41.0,
+    "gather": 15.0,
+    "infiltrate": 2.0,
+    "recall": 4.0,
+    "never": 20.0,
+    "spy_rounds": 55.5,
+    "gather_h": 0.3047,
+    "infiltrate_h": 0.0423
+   },
+   "Bene Gesserit Post": {
+    "placed": 31.0,
+    "gather": 22.0,
+    "infiltrate": 0.0,
+    "recall": 6.0,
+    "never": 3.0,
+    "spy_rounds": 54.5,
+    "gather_h": 0.3988,
+    "infiltrate_h": 0.008
+   },
+   "Deep Desert Post": {
+    "placed": 13.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 9.0,
+    "never": 4.0,
+    "spy_rounds": 13.5,
+    "gather_h": 0.0274,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 39.0,
+    "gather": 23.0,
+    "infiltrate": 0.0,
+    "recall": 9.0,
+    "never": 7.0,
+    "spy_rounds": 96.5,
+    "gather_h": 0.2405,
+    "infiltrate_h": 0.0007
+   },
+   "Fremen Post": {
+    "placed": 92.0,
+    "gather": 46.0,
+    "infiltrate": 4.0,
+    "recall": 17.0,
+    "never": 25.0,
+    "spy_rounds": 184.0,
+    "gather_h": 0.2556,
+    "infiltrate_h": 0.0225
+   },
+   "Green Post": {
+    "placed": 4.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 0.0,
+    "spy_rounds": 5.0,
+    "gather_h": 0.3722,
+    "infiltrate_h": 0.005
+   },
+   "Hagga Basin Post": {
+    "placed": 10.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 5.0,
+    "never": 4.0,
+    "spy_rounds": 8.0,
+    "gather_h": 0.1236,
+    "infiltrate_h": 0.0374
+   },
+   "Imperial Basin Post": {
+    "placed": 4.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 3.0,
+    "spy_rounds": 8.0,
+    "gather_h": 0.2089,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 1.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 1.5,
+    "gather_h": 0.2396,
+    "infiltrate_h": 0.053
+   },
+   "Research Station Left Post": {
+    "placed": 70.0,
+    "gather": 33.0,
+    "infiltrate": 1.0,
+    "recall": 15.0,
+    "never": 21.0,
+    "spy_rounds": 95.0,
+    "gather_h": 0.3327,
+    "infiltrate_h": 0.0136
+   },
+   "Research Station Right Post": {
+    "placed": 69.0,
+    "gather": 37.0,
+    "infiltrate": 1.0,
+    "recall": 13.0,
+    "never": 18.0,
+    "spy_rounds": 85.5,
+    "gather_h": 0.3981,
+    "infiltrate_h": 0.0134
+   },
+   "Shipping Post": {
+    "placed": 83.0,
+    "gather": 28.0,
+    "infiltrate": 0.0,
+    "recall": 34.0,
+    "never": 21.0,
+    "spy_rounds": 256.5,
+    "gather_h": 0.1096,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 79.0,
+    "gather": 42.0,
+    "infiltrate": 2.0,
+    "recall": 15.0,
+    "never": 20.0,
+    "spy_rounds": 145.5,
+    "gather_h": 0.2912,
+    "infiltrate_h": 0.015
+   }
+  },
+  "Count Hasimir Fenring": {
+   "Arrakeen Post": {
+    "placed": 42.0,
+    "gather": 19.0,
+    "infiltrate": 2.0,
+    "recall": 3.0,
+    "never": 18.0,
+    "spy_rounds": 55.0,
+    "gather_h": 0.3536,
+    "infiltrate_h": 0.0426
+   },
+   "Bene Gesserit Post": {
+    "placed": 43.0,
+    "gather": 34.0,
+    "infiltrate": 1.0,
+    "recall": 2.0,
+    "never": 6.0,
+    "spy_rounds": 78.5,
+    "gather_h": 0.4212,
+    "infiltrate_h": 0.0155
+   },
+   "Deep Desert Post": {
+    "placed": 8.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 5.0,
+    "spy_rounds": 11.0,
+    "gather_h": 0.0291,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 45.0,
+    "gather": 24.0,
+    "infiltrate": 0.0,
+    "recall": 9.0,
+    "never": 12.0,
+    "spy_rounds": 109.5,
+    "gather_h": 0.2252,
+    "infiltrate_h": 0.0006
+   },
+   "Fremen Post": {
+    "placed": 104.0,
+    "gather": 55.0,
+    "infiltrate": 7.0,
+    "recall": 22.0,
+    "never": 20.0,
+    "spy_rounds": 176.0,
+    "gather_h": 0.3092,
+    "infiltrate_h": 0.0379
+   },
+   "Green Post": {
+    "placed": 4.0,
+    "gather": 4.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 11.0,
+    "gather_h": 0.3665,
+    "infiltrate_h": 0.0042
+   },
+   "Hagga Basin Post": {
+    "placed": 2.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 1.0,
+    "spy_rounds": 2.0,
+    "gather_h": 0.1155,
+    "infiltrate_h": 0.0444
+   },
+   "Imperial Basin Post": {
+    "placed": 2.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 0.0,
+    "spy_rounds": 3.0,
+    "gather_h": 0.2406,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 6.0,
+    "gather": 4.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 1.0,
+    "spy_rounds": 9.0,
+    "gather_h": 0.2704,
+    "infiltrate_h": 0.0428
+   },
+   "Research Station Left Post": {
+    "placed": 84.0,
+    "gather": 31.0,
+    "infiltrate": 2.0,
+    "recall": 22.0,
+    "never": 29.0,
+    "spy_rounds": 90.0,
+    "gather_h": 0.3299,
+    "infiltrate_h": 0.0225
+   },
+   "Research Station Right Post": {
+    "placed": 67.0,
+    "gather": 29.0,
+    "infiltrate": 2.0,
+    "recall": 17.0,
+    "never": 19.0,
+    "spy_rounds": 82.5,
+    "gather_h": 0.3376,
+    "infiltrate_h": 0.0227
+   },
+   "Shipping Post": {
+    "placed": 100.0,
+    "gather": 39.0,
+    "infiltrate": 0.0,
+    "recall": 38.0,
+    "never": 23.0,
+    "spy_rounds": 300.0,
+    "gather_h": 0.1285,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 71.0,
+    "gather": 42.0,
+    "infiltrate": 5.0,
+    "recall": 9.0,
+    "never": 15.0,
+    "spy_rounds": 130.5,
+    "gather_h": 0.3184,
+    "infiltrate_h": 0.0351
+   }
+  },
+  "Duncan Idaho": {
+   "Arrakeen Post": {
+    "placed": 32.0,
+    "gather": 19.0,
+    "infiltrate": 2.0,
+    "recall": 3.0,
+    "never": 8.0,
+    "spy_rounds": 39.0,
+    "gather_h": 0.4355,
+    "infiltrate_h": 0.0525
+   },
+   "Bene Gesserit Post": {
+    "placed": 45.0,
+    "gather": 37.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 5.0,
+    "spy_rounds": 86.5,
+    "gather_h": 0.418,
+    "infiltrate_h": 0.0058
+   },
+   "Deep Desert Post": {
+    "placed": 10.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 8.0,
+    "spy_rounds": 15.0,
+    "gather_h": 0.0265,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 42.0,
+    "gather": 29.0,
+    "infiltrate": 0.0,
+    "recall": 8.0,
+    "never": 5.0,
+    "spy_rounds": 97.0,
+    "gather_h": 0.2868,
+    "infiltrate_h": 0.0007
+   },
+   "Fremen Post": {
+    "placed": 98.0,
+    "gather": 42.0,
+    "infiltrate": 2.0,
+    "recall": 22.0,
+    "never": 32.0,
+    "spy_rounds": 178.0,
+    "gather_h": 0.2437,
+    "infiltrate_h": 0.0135
+   },
+   "Green Post": {
+    "placed": 2.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 1.0,
+    "spy_rounds": 6.0,
+    "gather_h": 0.3063,
+    "infiltrate_h": 0.0048
+   },
+   "Hagga Basin Post": {
+    "placed": 7.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 2.0,
+    "spy_rounds": 7.5,
+    "gather_h": 0.1519,
+    "infiltrate_h": 0.0379
+   },
+   "Imperial Basin Post": {
+    "placed": 9.0,
+    "gather": 4.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 2.0,
+    "spy_rounds": 15.5,
+    "gather_h": 0.2404,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 4.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 1.0,
+    "spy_rounds": 6.0,
+    "gather_h": 0.2096,
+    "infiltrate_h": 0.0464
+   },
+   "Research Station Left Post": {
+    "placed": 77.0,
+    "gather": 31.0,
+    "infiltrate": 4.0,
+    "recall": 17.0,
+    "never": 25.0,
+    "spy_rounds": 97.5,
+    "gather_h": 0.3105,
+    "infiltrate_h": 0.0368
+   },
+   "Research Station Right Post": {
+    "placed": 59.0,
+    "gather": 27.0,
+    "infiltrate": 0.0,
+    "recall": 9.0,
+    "never": 23.0,
+    "spy_rounds": 67.5,
+    "gather_h": 0.369,
+    "infiltrate_h": 0.0057
+   },
+   "Shipping Post": {
+    "placed": 98.0,
+    "gather": 44.0,
+    "infiltrate": 0.0,
+    "recall": 34.0,
+    "never": 20.0,
+    "spy_rounds": 293.0,
+    "gather_h": 0.1468,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 66.0,
+    "gather": 36.0,
+    "infiltrate": 3.0,
+    "recall": 9.0,
+    "never": 18.0,
+    "spy_rounds": 115.0,
+    "gather_h": 0.311,
+    "infiltrate_h": 0.025
+   }
+  },
+  "Esmar Tuek": {
+   "Arrakeen Post": {
+    "placed": 35.0,
+    "gather": 15.0,
+    "infiltrate": 0.0,
+    "recall": 5.0,
+    "never": 15.0,
+    "spy_rounds": 37.5,
+    "gather_h": 0.386,
+    "infiltrate_h": 0.024
+   },
+   "Bene Gesserit Post": {
+    "placed": 51.0,
+    "gather": 36.0,
+    "infiltrate": 3.0,
+    "recall": 6.0,
+    "never": 6.0,
+    "spy_rounds": 97.5,
+    "gather_h": 0.3741,
+    "infiltrate_h": 0.0288
+   },
+   "Deep Desert Post": {
+    "placed": 18.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 10.0,
+    "never": 7.0,
+    "spy_rounds": 23.0,
+    "gather_h": 0.0414,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 47.0,
+    "gather": 20.0,
+    "infiltrate": 0.0,
+    "recall": 18.0,
+    "never": 9.0,
+    "spy_rounds": 118.5,
+    "gather_h": 0.1846,
+    "infiltrate_h": 0.0006
+   },
+   "Fremen Post": {
+    "placed": 88.0,
+    "gather": 43.0,
+    "infiltrate": 2.0,
+    "recall": 24.0,
+    "never": 19.0,
+    "spy_rounds": 157.0,
+    "gather_h": 0.2764,
+    "infiltrate_h": 0.0151
+   },
+   "Green Post": {
+    "placed": 6.0,
+    "gather": 3.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 0.0,
+    "spy_rounds": 10.0,
+    "gather_h": 0.3507,
+    "infiltrate_h": 0.0043
+   },
+   "Hagga Basin Post": {
+    "placed": 8.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 4.0,
+    "spy_rounds": 12.0,
+    "gather_h": 0.1118,
+    "infiltrate_h": 0.0339
+   },
+   "Imperial Basin Post": {
+    "placed": 4.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 3.0,
+    "spy_rounds": 6.0,
+    "gather_h": 0.1928,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 3.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 1.0,
+    "spy_rounds": 3.5,
+    "gather_h": 0.1954,
+    "infiltrate_h": 0.0499
+   },
+   "Research Station Left Post": {
+    "placed": 87.0,
+    "gather": 35.0,
+    "infiltrate": 3.0,
+    "recall": 16.0,
+    "never": 33.0,
+    "spy_rounds": 103.5,
+    "gather_h": 0.3265,
+    "infiltrate_h": 0.0277
+   },
+   "Research Station Right Post": {
+    "placed": 74.0,
+    "gather": 30.0,
+    "infiltrate": 4.0,
+    "recall": 27.0,
+    "never": 13.0,
+    "spy_rounds": 106.0,
+    "gather_h": 0.2866,
+    "infiltrate_h": 0.0335
+   },
+   "Shipping Post": {
+    "placed": 80.0,
+    "gather": 26.0,
+    "infiltrate": 0.0,
+    "recall": 39.0,
+    "never": 15.0,
+    "spy_rounds": 243.0,
+    "gather_h": 0.1077,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 88.0,
+    "gather": 42.0,
+    "infiltrate": 4.0,
+    "recall": 21.0,
+    "never": 21.0,
+    "spy_rounds": 159.0,
+    "gather_h": 0.2704,
+    "infiltrate_h": 0.0245
+   }
+  },
+  "Feyd-Rautha Harkonnen": {
+   "Arrakeen Post": {
+    "placed": 23.0,
+    "gather": 8.0,
+    "infiltrate": 2.0,
+    "recall": 5.0,
+    "never": 8.0,
+    "spy_rounds": 20.5,
+    "gather_h": 0.3773,
+    "infiltrate_h": 0.0717
+   },
+   "Bene Gesserit Post": {
+    "placed": 41.0,
+    "gather": 13.0,
+    "infiltrate": 1.0,
+    "recall": 25.0,
+    "never": 2.0,
+    "spy_rounds": 54.5,
+    "gather_h": 0.2923,
+    "infiltrate_h": 0.0199
+   },
+   "Deep Desert Post": {
+    "placed": 5.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 4.0,
+    "never": 1.0,
+    "spy_rounds": 3.5,
+    "gather_h": 0.0356,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 36.0,
+    "gather": 11.0,
+    "infiltrate": 1.0,
+    "recall": 22.0,
+    "never": 2.0,
+    "spy_rounds": 59.0,
+    "gather_h": 0.207,
+    "infiltrate_h": 0.0122
+   },
+   "Fremen Post": {
+    "placed": 164.0,
+    "gather": 41.0,
+    "infiltrate": 2.0,
+    "recall": 103.0,
+    "never": 18.0,
+    "spy_rounds": 154.0,
+    "gather_h": 0.2701,
+    "infiltrate_h": 0.0153
+   },
+   "Green Post": {
+    "placed": 3.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 0.0,
+    "spy_rounds": 2.5,
+    "gather_h": 0.3701,
+    "infiltrate_h": 0.0054
+   },
+   "Hagga Basin Post": {
+    "placed": 3.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 1.0,
+    "spy_rounds": 1.5,
+    "gather_h": 0.1173,
+    "infiltrate_h": 0.0451
+   },
+   "Imperial Basin Post": {
+    "placed": 3.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 0.0,
+    "spy_rounds": 1.5,
+    "gather_h": 0.2838,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 0.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 0.0,
+    "gather_h": 0.2182,
+    "infiltrate_h": 0.0557
+   },
+   "Research Station Left Post": {
+    "placed": 108.0,
+    "gather": 16.0,
+    "infiltrate": 0.0,
+    "recall": 73.0,
+    "never": 19.0,
+    "spy_rounds": 79.0,
+    "gather_h": 0.2256,
+    "infiltrate_h": 0.0064
+   },
+   "Research Station Right Post": {
+    "placed": 75.0,
+    "gather": 16.0,
+    "infiltrate": 2.0,
+    "recall": 41.0,
+    "never": 16.0,
+    "spy_rounds": 62.5,
+    "gather_h": 0.27,
+    "infiltrate_h": 0.0276
+   },
+   "Shipping Post": {
+    "placed": 183.0,
+    "gather": 11.0,
+    "infiltrate": 0.0,
+    "recall": 164.0,
+    "never": 8.0,
+    "spy_rounds": 163.5,
+    "gather_h": 0.0745,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 68.0,
+    "gather": 18.0,
+    "infiltrate": 1.0,
+    "recall": 35.0,
+    "never": 14.0,
+    "spy_rounds": 89.0,
+    "gather_h": 0.2277,
+    "infiltrate_h": 0.0137
+   }
+  },
+  "Gaius Helen Mohiam": {
+   "Arrakeen Post": {
+    "placed": 46.0,
+    "gather": 20.0,
+    "infiltrate": 4.0,
+    "recall": 2.0,
+    "never": 20.0,
+    "spy_rounds": 65.0,
+    "gather_h": 0.3269,
+    "infiltrate_h": 0.0592
+   },
+   "Bene Gesserit Post": {
+    "placed": 41.0,
+    "gather": 31.0,
+    "infiltrate": 3.0,
+    "recall": 6.0,
+    "never": 1.0,
+    "spy_rounds": 61.5,
+    "gather_h": 0.4666,
+    "infiltrate_h": 0.0402
+   },
+   "Deep Desert Post": {
+    "placed": 13.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 10.0,
+    "spy_rounds": 16.5,
+    "gather_h": 0.0472,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 48.0,
+    "gather": 41.0,
+    "infiltrate": 2.0,
+    "recall": 2.0,
+    "never": 3.0,
+    "spy_rounds": 83.0,
+    "gather_h": 0.4285,
+    "infiltrate_h": 0.0185
+   },
+   "Fremen Post": {
+    "placed": 118.0,
+    "gather": 89.0,
+    "infiltrate": 7.0,
+    "recall": 11.0,
+    "never": 11.0,
+    "spy_rounds": 157.0,
+    "gather_h": 0.5224,
+    "infiltrate_h": 0.0418
+   },
+   "Green Post": {
+    "placed": 216.0,
+    "gather": 145.0,
+    "infiltrate": 1.0,
+    "recall": 54.0,
+    "never": 16.0,
+    "spy_rounds": 359.0,
+    "gather_h": 0.4011,
+    "infiltrate_h": 0.003
+   },
+   "Hagga Basin Post": {
+    "placed": 5.0,
+    "gather": 1.0,
+    "infiltrate": 1.0,
+    "recall": 2.0,
+    "never": 1.0,
+    "spy_rounds": 4.5,
+    "gather_h": 0.1361,
+    "infiltrate_h": 0.0702
+   },
+   "Imperial Basin Post": {
+    "placed": 1.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 1.0,
+    "spy_rounds": 0.5,
+    "gather_h": 0.2275,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 315.0,
+    "gather": 130.0,
+    "infiltrate": 36.0,
+    "recall": 78.0,
+    "never": 71.0,
+    "spy_rounds": 760.5,
+    "gather_h": 0.1727,
+    "infiltrate_h": 0.0477
+   },
+   "Research Station Left Post": {
+    "placed": 98.0,
+    "gather": 51.0,
+    "infiltrate": 4.0,
+    "recall": 13.0,
+    "never": 30.0,
+    "spy_rounds": 116.0,
+    "gather_h": 0.4081,
+    "infiltrate_h": 0.0322
+   },
+   "Research Station Right Post": {
+    "placed": 76.0,
+    "gather": 27.0,
+    "infiltrate": 4.0,
+    "recall": 18.0,
+    "never": 27.0,
+    "spy_rounds": 96.0,
+    "gather_h": 0.2855,
+    "infiltrate_h": 0.0361
+   },
+   "Shipping Post": {
+    "placed": 77.0,
+    "gather": 34.0,
+    "infiltrate": 0.0,
+    "recall": 36.0,
+    "never": 7.0,
+    "spy_rounds": 238.5,
+    "gather_h": 0.1393,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 80.0,
+    "gather": 61.0,
+    "infiltrate": 4.0,
+    "recall": 6.0,
+    "never": 9.0,
+    "spy_rounds": 112.0,
+    "gather_h": 0.4937,
+    "infiltrate_h": 0.0326
+   }
+  },
+  "Gurney Halleck": {
+   "Arrakeen Post": {
+    "placed": 32.0,
+    "gather": 12.0,
+    "infiltrate": 5.0,
+    "recall": 4.0,
+    "never": 11.0,
+    "spy_rounds": 36.0,
+    "gather_h": 0.3493,
+    "infiltrate_h": 0.1003
+   },
+   "Bene Gesserit Post": {
+    "placed": 33.0,
+    "gather": 19.0,
+    "infiltrate": 3.0,
+    "recall": 5.0,
+    "never": 6.0,
+    "spy_rounds": 57.5,
+    "gather_h": 0.3508,
+    "infiltrate_h": 0.042
+   },
+   "Deep Desert Post": {
+    "placed": 17.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 9.0,
+    "never": 8.0,
+    "spy_rounds": 17.5,
+    "gather_h": 0.0251,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 37.0,
+    "gather": 23.0,
+    "infiltrate": 1.0,
+    "recall": 7.0,
+    "never": 6.0,
+    "spy_rounds": 91.5,
+    "gather_h": 0.2504,
+    "infiltrate_h": 0.009
+   },
+   "Fremen Post": {
+    "placed": 100.0,
+    "gather": 61.0,
+    "infiltrate": 2.0,
+    "recall": 16.0,
+    "never": 21.0,
+    "spy_rounds": 180.0,
+    "gather_h": 0.3319,
+    "infiltrate_h": 0.0134
+   },
+   "Green Post": {
+    "placed": 1.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 1.0,
+    "spy_rounds": 0.5,
+    "gather_h": 0.3616,
+    "infiltrate_h": 0.0057
+   },
+   "Hagga Basin Post": {
+    "placed": 4.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 1.0,
+    "spy_rounds": 2.0,
+    "gather_h": 0.1155,
+    "infiltrate_h": 0.0444
+   },
+   "Imperial Basin Post": {
+    "placed": 1.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 0.0,
+    "spy_rounds": 2.5,
+    "gather_h": 0.2135,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 1.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 1.0,
+    "spy_rounds": 2.5,
+    "gather_h": 0.2014,
+    "infiltrate_h": 0.0514
+   },
+   "Research Station Left Post": {
+    "placed": 63.0,
+    "gather": 28.0,
+    "infiltrate": 1.0,
+    "recall": 15.0,
+    "never": 19.0,
+    "spy_rounds": 78.5,
+    "gather_h": 0.3372,
+    "infiltrate_h": 0.0156
+   },
+   "Research Station Right Post": {
+    "placed": 57.0,
+    "gather": 22.0,
+    "infiltrate": 0.0,
+    "recall": 11.0,
+    "never": 24.0,
+    "spy_rounds": 78.5,
+    "gather_h": 0.2855,
+    "infiltrate_h": 0.0051
+   },
+   "Shipping Post": {
+    "placed": 56.0,
+    "gather": 22.0,
+    "infiltrate": 0.0,
+    "recall": 16.0,
+    "never": 18.0,
+    "spy_rounds": 197.0,
+    "gather_h": 0.1119,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 65.0,
+    "gather": 38.0,
+    "infiltrate": 1.0,
+    "recall": 6.0,
+    "never": 20.0,
+    "spy_rounds": 122.5,
+    "gather_h": 0.3089,
+    "infiltrate_h": 0.0107
+   }
+  },
+  "Kota Odax of Ix": {
+   "Arrakeen Post": {
+    "placed": 39.0,
+    "gather": 21.0,
+    "infiltrate": 1.0,
+    "recall": 7.0,
+    "never": 10.0,
+    "spy_rounds": 56.5,
+    "gather_h": 0.3705,
+    "infiltrate_h": 0.0303
+   },
+   "Bene Gesserit Post": {
+    "placed": 34.0,
+    "gather": 23.0,
+    "infiltrate": 0.0,
+    "recall": 7.0,
+    "never": 4.0,
+    "spy_rounds": 57.0,
+    "gather_h": 0.3988,
+    "infiltrate_h": 0.0078
+   },
+   "Deep Desert Post": {
+    "placed": 11.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 7.0,
+    "never": 4.0,
+    "spy_rounds": 15.5,
+    "gather_h": 0.0262,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 51.0,
+    "gather": 21.0,
+    "infiltrate": 0.0,
+    "recall": 19.0,
+    "never": 11.0,
+    "spy_rounds": 113.5,
+    "gather_h": 0.198,
+    "infiltrate_h": 0.0006
+   },
+   "Fremen Post": {
+    "placed": 101.0,
+    "gather": 52.0,
+    "infiltrate": 6.0,
+    "recall": 20.0,
+    "never": 23.0,
+    "spy_rounds": 187.5,
+    "gather_h": 0.279,
+    "infiltrate_h": 0.0313
+   },
+   "Green Post": {
+    "placed": 2.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 7.0,
+    "gather_h": 0.3521,
+    "infiltrate_h": 0.0047
+   },
+   "Hagga Basin Post": {
+    "placed": 4.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 1.0,
+    "spy_rounds": 4.0,
+    "gather_h": 0.1087,
+    "infiltrate_h": 0.0418
+   },
+   "Imperial Basin Post": {
+    "placed": 2.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 0.0,
+    "spy_rounds": 3.0,
+    "gather_h": 0.2406,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 3.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 1.0,
+    "spy_rounds": 4.5,
+    "gather_h": 0.1897,
+    "infiltrate_h": 0.0484
+   },
+   "Research Station Left Post": {
+    "placed": 122.0,
+    "gather": 52.0,
+    "infiltrate": 2.0,
+    "recall": 29.0,
+    "never": 39.0,
+    "spy_rounds": 156.0,
+    "gather_h": 0.3257,
+    "infiltrate_h": 0.0145
+   },
+   "Research Station Right Post": {
+    "placed": 79.0,
+    "gather": 28.0,
+    "infiltrate": 3.0,
+    "recall": 29.0,
+    "never": 19.0,
+    "spy_rounds": 108.5,
+    "gather_h": 0.267,
+    "infiltrate_h": 0.0256
+   },
+   "Shipping Post": {
+    "placed": 83.0,
+    "gather": 22.0,
+    "infiltrate": 0.0,
+    "recall": 49.0,
+    "never": 12.0,
+    "spy_rounds": 222.5,
+    "gather_h": 0.1006,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 66.0,
+    "gather": 26.0,
+    "infiltrate": 6.0,
+    "recall": 13.0,
+    "never": 21.0,
+    "spy_rounds": 113.0,
+    "gather_h": 0.2455,
+    "infiltrate_h": 0.0464
+   }
+  },
+  "Lady Amber Metulli": {
+   "Arrakeen Post": {
+    "placed": 31.0,
+    "gather": 12.0,
+    "infiltrate": 3.0,
+    "recall": 3.0,
+    "never": 13.0,
+    "spy_rounds": 38.5,
+    "gather_h": 0.3365,
+    "infiltrate_h": 0.0674
+   },
+   "Bene Gesserit Post": {
+    "placed": 29.0,
+    "gather": 19.0,
+    "infiltrate": 2.0,
+    "recall": 2.0,
+    "never": 6.0,
+    "spy_rounds": 57.5,
+    "gather_h": 0.3508,
+    "infiltrate_h": 0.0306
+   },
+   "Deep Desert Post": {
+    "placed": 16.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 7.0,
+    "never": 9.0,
+    "spy_rounds": 19.0,
+    "gather_h": 0.0244,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 24.0,
+    "gather": 11.0,
+    "infiltrate": 0.0,
+    "recall": 7.0,
+    "never": 6.0,
+    "spy_rounds": 46.0,
+    "gather_h": 0.2424,
+    "infiltrate_h": 0.0012
+   },
+   "Fremen Post": {
+    "placed": 93.0,
+    "gather": 50.0,
+    "infiltrate": 4.0,
+    "recall": 13.0,
+    "never": 26.0,
+    "spy_rounds": 162.5,
+    "gather_h": 0.3049,
+    "infiltrate_h": 0.025
+   },
+   "Green Post": {
+    "placed": 2.0,
+    "gather": 0.0,
+    "infiltrate": 1.0,
+    "recall": 1.0,
+    "never": 0.0,
+    "spy_rounds": 2.0,
+    "gather_h": 0.3446,
+    "infiltrate_h": 0.0367
+   },
+   "Hagga Basin Post": {
+    "placed": 3.0,
+    "gather": 0.0,
+    "infiltrate": 1.0,
+    "recall": 0.0,
+    "never": 2.0,
+    "spy_rounds": 3.5,
+    "gather_h": 0.1103,
+    "infiltrate_h": 0.0723
+   },
+   "Imperial Basin Post": {
+    "placed": 0.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 0.0,
+    "gather_h": 0.2313,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 5.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 3.0,
+    "spy_rounds": 10.5,
+    "gather_h": 0.211,
+    "infiltrate_h": 0.0413
+   },
+   "Research Station Left Post": {
+    "placed": 96.0,
+    "gather": 43.0,
+    "infiltrate": 6.0,
+    "recall": 19.0,
+    "never": 28.0,
+    "spy_rounds": 159.0,
+    "gather_h": 0.273,
+    "infiltrate_h": 0.0354
+   },
+   "Research Station Right Post": {
+    "placed": 65.0,
+    "gather": 24.0,
+    "infiltrate": 1.0,
+    "recall": 18.0,
+    "never": 22.0,
+    "spy_rounds": 95.5,
+    "gather_h": 0.2628,
+    "infiltrate_h": 0.0124
+   },
+   "Shipping Post": {
+    "placed": 78.0,
+    "gather": 18.0,
+    "infiltrate": 0.0,
+    "recall": 38.0,
+    "never": 22.0,
+    "spy_rounds": 222.0,
+    "gather_h": 0.085,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 71.0,
+    "gather": 39.0,
+    "infiltrate": 1.0,
+    "recall": 15.0,
+    "never": 16.0,
+    "spy_rounds": 136.5,
+    "gather_h": 0.2889,
+    "infiltrate_h": 0.0098
+   }
+  },
+  "Lady Jessica": {
+   "Arrakeen Post": {
+    "placed": 45.0,
+    "gather": 24.0,
+    "infiltrate": 1.0,
+    "recall": 7.0,
+    "never": 13.0,
+    "spy_rounds": 56.5,
+    "gather_h": 0.4052,
+    "infiltrate_h": 0.0303
+   },
+   "Bene Gesserit Post": {
+    "placed": 57.0,
+    "gather": 41.0,
+    "infiltrate": 4.0,
+    "recall": 9.0,
+    "never": 3.0,
+    "spy_rounds": 108.5,
+    "gather_h": 0.3805,
+    "infiltrate_h": 0.0338
+   },
+   "Deep Desert Post": {
+    "placed": 10.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 5.0,
+    "spy_rounds": 10.0,
+    "gather_h": 0.0799,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 30.0,
+    "gather": 22.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 5.0,
+    "spy_rounds": 71.0,
+    "gather_h": 0.2913,
+    "infiltrate_h": 0.0009
+   },
+   "Fremen Post": {
+    "placed": 100.0,
+    "gather": 42.0,
+    "infiltrate": 5.0,
+    "recall": 31.0,
+    "never": 22.0,
+    "spy_rounds": 194.0,
+    "gather_h": 0.2263,
+    "infiltrate_h": 0.026
+   },
+   "Green Post": {
+    "placed": 4.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 1.0,
+    "spy_rounds": 8.0,
+    "gather_h": 0.3428,
+    "infiltrate_h": 0.0046
+   },
+   "Hagga Basin Post": {
+    "placed": 3.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 1.0,
+    "spy_rounds": 3.5,
+    "gather_h": 0.1103,
+    "infiltrate_h": 0.0424
+   },
+   "Imperial Basin Post": {
+    "placed": 5.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 0.0,
+    "spy_rounds": 5.5,
+    "gather_h": 0.2518,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 3.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 0.0,
+    "spy_rounds": 9.5,
+    "gather_h": 0.191,
+    "infiltrate_h": 0.0423
+   },
+   "Research Station Left Post": {
+    "placed": 90.0,
+    "gather": 33.0,
+    "infiltrate": 5.0,
+    "recall": 26.0,
+    "never": 26.0,
+    "spy_rounds": 142.0,
+    "gather_h": 0.2418,
+    "infiltrate_h": 0.0331
+   },
+   "Research Station Right Post": {
+    "placed": 65.0,
+    "gather": 27.0,
+    "infiltrate": 1.0,
+    "recall": 15.0,
+    "never": 22.0,
+    "spy_rounds": 82.5,
+    "gather_h": 0.3198,
+    "infiltrate_h": 0.0138
+   },
+   "Shipping Post": {
+    "placed": 55.0,
+    "gather": 17.0,
+    "infiltrate": 0.0,
+    "recall": 23.0,
+    "never": 15.0,
+    "spy_rounds": 158.5,
+    "gather_h": 0.1083,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 62.0,
+    "gather": 39.0,
+    "infiltrate": 2.0,
+    "recall": 7.0,
+    "never": 14.0,
+    "spy_rounds": 129.0,
+    "gather_h": 0.3025,
+    "infiltrate_h": 0.0165
+   }
+  },
+  "Lady Margot Fenring": {
+   "Arrakeen Post": {
+    "placed": 127.0,
+    "gather": 75.0,
+    "infiltrate": 8.0,
+    "recall": 10.0,
+    "never": 34.0,
+    "spy_rounds": 186.5,
+    "gather_h": 0.3975,
+    "infiltrate_h": 0.0444
+   },
+   "Bene Gesserit Post": {
+    "placed": 40.0,
+    "gather": 27.0,
+    "infiltrate": 2.0,
+    "recall": 6.0,
+    "never": 5.0,
+    "spy_rounds": 59.0,
+    "gather_h": 0.4348,
+    "infiltrate_h": 0.0301
+   },
+   "Deep Desert Post": {
+    "placed": 19.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 11.0,
+    "never": 7.0,
+    "spy_rounds": 24.5,
+    "gather_h": 0.0403,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 42.0,
+    "gather": 29.0,
+    "infiltrate": 0.0,
+    "recall": 4.0,
+    "never": 9.0,
+    "spy_rounds": 90.0,
+    "gather_h": 0.3035,
+    "infiltrate_h": 0.0008
+   },
+   "Fremen Post": {
+    "placed": 97.0,
+    "gather": 46.0,
+    "infiltrate": 7.0,
+    "recall": 20.0,
+    "never": 24.0,
+    "spy_rounds": 161.5,
+    "gather_h": 0.2856,
+    "infiltrate_h": 0.0408
+   },
+   "Green Post": {
+    "placed": 4.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 0.0,
+    "spy_rounds": 6.0,
+    "gather_h": 0.3619,
+    "infiltrate_h": 0.0048
+   },
+   "Hagga Basin Post": {
+    "placed": 7.0,
+    "gather": 3.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 1.0,
+    "spy_rounds": 7.5,
+    "gather_h": 0.1786,
+    "infiltrate_h": 0.0379
+   },
+   "Imperial Basin Post": {
+    "placed": 1.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 1.0,
+    "spy_rounds": 0.5,
+    "gather_h": 0.2275,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 3.0,
+    "gather": 1.0,
+    "infiltrate": 1.0,
+    "recall": 0.0,
+    "never": 1.0,
+    "spy_rounds": 3.5,
+    "gather_h": 0.2253,
+    "infiltrate_h": 0.0797
+   },
+   "Research Station Left Post": {
+    "placed": 329.0,
+    "gather": 160.0,
+    "infiltrate": 15.0,
+    "recall": 112.0,
+    "never": 42.0,
+    "spy_rounds": 749.5,
+    "gather_h": 0.2163,
+    "infiltrate_h": 0.0201
+   },
+   "Research Station Right Post": {
+    "placed": 208.0,
+    "gather": 92.0,
+    "infiltrate": 7.0,
+    "recall": 68.0,
+    "never": 41.0,
+    "spy_rounds": 341.0,
+    "gather_h": 0.2722,
+    "infiltrate_h": 0.0204
+   },
+   "Shipping Post": {
+    "placed": 75.0,
+    "gather": 22.0,
+    "infiltrate": 0.0,
+    "recall": 39.0,
+    "never": 14.0,
+    "spy_rounds": 192.5,
+    "gather_h": 0.1142,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 79.0,
+    "gather": 43.0,
+    "infiltrate": 3.0,
+    "recall": 12.0,
+    "never": 21.0,
+    "spy_rounds": 153.5,
+    "gather_h": 0.2839,
+    "infiltrate_h": 0.0198
+   }
+  },
+  "Liet Kynes": {
+   "Arrakeen Post": {
+    "placed": 35.0,
+    "gather": 20.0,
+    "infiltrate": 2.0,
+    "recall": 3.0,
+    "never": 10.0,
+    "spy_rounds": 38.5,
+    "gather_h": 0.4533,
+    "infiltrate_h": 0.0528
+   },
+   "Bene Gesserit Post": {
+    "placed": 44.0,
+    "gather": 33.0,
+    "infiltrate": 1.0,
+    "recall": 5.0,
+    "never": 5.0,
+    "spy_rounds": 74.0,
+    "gather_h": 0.4298,
+    "infiltrate_h": 0.0161
+   },
+   "Deep Desert Post": {
+    "placed": 13.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 4.0,
+    "never": 8.0,
+    "spy_rounds": 18.5,
+    "gather_h": 0.0452,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 31.0,
+    "gather": 25.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 3.0,
+    "spy_rounds": 74.5,
+    "gather_h": 0.3102,
+    "infiltrate_h": 0.0009
+   },
+   "Fremen Post": {
+    "placed": 102.0,
+    "gather": 51.0,
+    "infiltrate": 1.0,
+    "recall": 17.0,
+    "never": 33.0,
+    "spy_rounds": 175.0,
+    "gather_h": 0.2912,
+    "infiltrate_h": 0.0089
+   },
+   "Green Post": {
+    "placed": 2.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 6.0,
+    "gather_h": 0.3619,
+    "infiltrate_h": 0.0048
+   },
+   "Hagga Basin Post": {
+    "placed": 5.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 1.0,
+    "spy_rounds": 11.5,
+    "gather_h": 0.1373,
+    "infiltrate_h": 0.0343
+   },
+   "Imperial Basin Post": {
+    "placed": 2.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 1.0,
+    "spy_rounds": 5.0,
+    "gather_h": 0.2268,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 1.0,
+    "gather": 0.0,
+    "infiltrate": 1.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 2.5,
+    "gather_h": 0.2014,
+    "infiltrate_h": 0.0822
+   },
+   "Research Station Left Post": {
+    "placed": 105.0,
+    "gather": 43.0,
+    "infiltrate": 4.0,
+    "recall": 20.0,
+    "never": 38.0,
+    "spy_rounds": 165.5,
+    "gather_h": 0.2639,
+    "infiltrate_h": 0.024
+   },
+   "Research Station Right Post": {
+    "placed": 60.0,
+    "gather": 27.0,
+    "infiltrate": 1.0,
+    "recall": 12.0,
+    "never": 20.0,
+    "spy_rounds": 76.0,
+    "gather_h": 0.3394,
+    "infiltrate_h": 0.0146
+   },
+   "Shipping Post": {
+    "placed": 97.0,
+    "gather": 43.0,
+    "infiltrate": 0.0,
+    "recall": 29.0,
+    "never": 25.0,
+    "spy_rounds": 279.5,
+    "gather_h": 0.1499,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 73.0,
+    "gather": 40.0,
+    "infiltrate": 2.0,
+    "recall": 8.0,
+    "never": 23.0,
+    "spy_rounds": 133.5,
+    "gather_h": 0.3003,
+    "infiltrate_h": 0.0161
+   }
+  },
+  "Muad'Dib": {
+   "Arrakeen Post": {
+    "placed": 36.0,
+    "gather": 17.0,
+    "infiltrate": 5.0,
+    "recall": 2.0,
+    "never": 12.0,
+    "spy_rounds": 62.0,
+    "gather_h": 0.3049,
+    "infiltrate_h": 0.072
+   },
+   "Bene Gesserit Post": {
+    "placed": 50.0,
+    "gather": 40.0,
+    "infiltrate": 1.0,
+    "recall": 5.0,
+    "never": 4.0,
+    "spy_rounds": 99.0,
+    "gather_h": 0.4008,
+    "infiltrate_h": 0.013
+   },
+   "Deep Desert Post": {
+    "placed": 10.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 6.0,
+    "spy_rounds": 12.0,
+    "gather_h": 0.0522,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 45.0,
+    "gather": 26.0,
+    "infiltrate": 0.0,
+    "recall": 10.0,
+    "never": 9.0,
+    "spy_rounds": 118.5,
+    "gather_h": 0.225,
+    "infiltrate_h": 0.0006
+   },
+   "Fremen Post": {
+    "placed": 89.0,
+    "gather": 42.0,
+    "infiltrate": 3.0,
+    "recall": 25.0,
+    "never": 19.0,
+    "spy_rounds": 171.5,
+    "gather_h": 0.2516,
+    "infiltrate_h": 0.0189
+   },
+   "Green Post": {
+    "placed": 3.0,
+    "gather": 0.0,
+    "infiltrate": 1.0,
+    "recall": 1.0,
+    "never": 1.0,
+    "spy_rounds": 1.5,
+    "gather_h": 0.3501,
+    "infiltrate_h": 0.0373
+   },
+   "Hagga Basin Post": {
+    "placed": 4.0,
+    "gather": 0.0,
+    "infiltrate": 1.0,
+    "recall": 0.0,
+    "never": 3.0,
+    "spy_rounds": 6.0,
+    "gather_h": 0.1027,
+    "infiltrate_h": 0.0673
+   },
+   "Imperial Basin Post": {
+    "placed": 1.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 1.0,
+    "spy_rounds": 0.5,
+    "gather_h": 0.2275,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 2.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 1.0,
+    "spy_rounds": 2.0,
+    "gather_h": 0.2046,
+    "infiltrate_h": 0.0522
+   },
+   "Research Station Left Post": {
+    "placed": 95.0,
+    "gather": 41.0,
+    "infiltrate": 3.0,
+    "recall": 23.0,
+    "never": 28.0,
+    "spy_rounds": 138.5,
+    "gather_h": 0.2943,
+    "infiltrate_h": 0.0219
+   },
+   "Research Station Right Post": {
+    "placed": 54.0,
+    "gather": 18.0,
+    "infiltrate": 2.0,
+    "recall": 15.0,
+    "never": 19.0,
+    "spy_rounds": 81.0,
+    "gather_h": 0.243,
+    "infiltrate_h": 0.023
+   },
+   "Shipping Post": {
+    "placed": 92.0,
+    "gather": 32.0,
+    "infiltrate": 0.0,
+    "recall": 39.0,
+    "never": 21.0,
+    "spy_rounds": 264.0,
+    "gather_h": 0.1204,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 76.0,
+    "gather": 44.0,
+    "infiltrate": 3.0,
+    "recall": 11.0,
+    "never": 18.0,
+    "spy_rounds": 129.0,
+    "gather_h": 0.334,
+    "infiltrate_h": 0.0228
+   }
+  },
+  "Piter De Vries": {
+   "Arrakeen Post": {
+    "placed": 31.0,
+    "gather": 9.0,
+    "infiltrate": 6.0,
+    "recall": 4.0,
+    "never": 12.0,
+    "spy_rounds": 29.5,
+    "gather_h": 0.337,
+    "infiltrate_h": 0.1281
+   },
+   "Bene Gesserit Post": {
+    "placed": 48.0,
+    "gather": 35.0,
+    "infiltrate": 1.0,
+    "recall": 7.0,
+    "never": 5.0,
+    "spy_rounds": 87.0,
+    "gather_h": 0.3991,
+    "infiltrate_h": 0.0143
+   },
+   "Deep Desert Post": {
+    "placed": 13.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 5.0,
+    "never": 7.0,
+    "spy_rounds": 18.5,
+    "gather_h": 0.0452,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 44.0,
+    "gather": 23.0,
+    "infiltrate": 0.0,
+    "recall": 9.0,
+    "never": 12.0,
+    "spy_rounds": 86.0,
+    "gather_h": 0.2622,
+    "infiltrate_h": 0.0008
+   },
+   "Fremen Post": {
+    "placed": 101.0,
+    "gather": 48.0,
+    "infiltrate": 6.0,
+    "recall": 21.0,
+    "never": 26.0,
+    "spy_rounds": 180.5,
+    "gather_h": 0.2693,
+    "infiltrate_h": 0.0324
+   },
+   "Green Post": {
+    "placed": 2.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 2.0,
+    "never": 0.0,
+    "spy_rounds": 2.0,
+    "gather_h": 0.3446,
+    "infiltrate_h": 0.0054
+   },
+   "Hagga Basin Post": {
+    "placed": 8.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 4.0,
+    "spy_rounds": 8.0,
+    "gather_h": 0.1236,
+    "infiltrate_h": 0.0374
+   },
+   "Imperial Basin Post": {
+    "placed": 3.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 2.0,
+    "spy_rounds": 4.5,
+    "gather_h": 0.2301,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 4.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 1.0,
+    "spy_rounds": 5.0,
+    "gather_h": 0.187,
+    "infiltrate_h": 0.0477
+   },
+   "Research Station Left Post": {
+    "placed": 106.0,
+    "gather": 47.0,
+    "infiltrate": 4.0,
+    "recall": 30.0,
+    "never": 25.0,
+    "spy_rounds": 139.0,
+    "gather_h": 0.3289,
+    "infiltrate_h": 0.0278
+   },
+   "Research Station Right Post": {
+    "placed": 62.0,
+    "gather": 32.0,
+    "infiltrate": 0.0,
+    "recall": 10.0,
+    "never": 20.0,
+    "spy_rounds": 105.0,
+    "gather_h": 0.3035,
+    "infiltrate_h": 0.0041
+   },
+   "Shipping Post": {
+    "placed": 94.0,
+    "gather": 33.0,
+    "infiltrate": 1.0,
+    "recall": 35.0,
+    "never": 25.0,
+    "spy_rounds": 289.0,
+    "gather_h": 0.1141,
+    "infiltrate_h": 0.0032
+   },
+   "Spacing Guild Post": {
+    "placed": 80.0,
+    "gather": 42.0,
+    "infiltrate": 2.0,
+    "recall": 13.0,
+    "never": 23.0,
+    "spy_rounds": 160.0,
+    "gather_h": 0.269,
+    "infiltrate_h": 0.0138
+   }
+  },
+  "Princess Irulan": {
+   "Arrakeen Post": {
+    "placed": 34.0,
+    "gather": 13.0,
+    "infiltrate": 3.0,
+    "recall": 3.0,
+    "never": 15.0,
+    "spy_rounds": 39.0,
+    "gather_h": 0.3486,
+    "infiltrate_h": 0.067
+   },
+   "Bene Gesserit Post": {
+    "placed": 44.0,
+    "gather": 31.0,
+    "infiltrate": 2.0,
+    "recall": 6.0,
+    "never": 5.0,
+    "spy_rounds": 76.0,
+    "gather_h": 0.4028,
+    "infiltrate_h": 0.0253
+   },
+   "Deep Desert Post": {
+    "placed": 16.0,
+    "gather": 2.0,
+    "infiltrate": 0.0,
+    "recall": 10.0,
+    "never": 4.0,
+    "spy_rounds": 23.0,
+    "gather_h": 0.0603,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 33.0,
+    "gather": 19.0,
+    "infiltrate": 1.0,
+    "recall": 7.0,
+    "never": 6.0,
+    "spy_rounds": 96.5,
+    "gather_h": 0.2088,
+    "infiltrate_h": 0.0086
+   },
+   "Fremen Post": {
+    "placed": 90.0,
+    "gather": 47.0,
+    "infiltrate": 7.0,
+    "recall": 22.0,
+    "never": 14.0,
+    "spy_rounds": 150.0,
+    "gather_h": 0.3094,
+    "infiltrate_h": 0.0434
+   },
+   "Green Post": {
+    "placed": 3.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 2.0,
+    "spy_rounds": 4.5,
+    "gather_h": 0.3197,
+    "infiltrate_h": 0.005
+   },
+   "Hagga Basin Post": {
+    "placed": 4.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 4.0,
+    "spy_rounds": 2.0,
+    "gather_h": 0.1155,
+    "infiltrate_h": 0.0444
+   },
+   "Imperial Basin Post": {
+    "placed": 2.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 1.0,
+    "spy_rounds": 3.0,
+    "gather_h": 0.2406,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 3.0,
+    "gather": 2.0,
+    "infiltrate": 1.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 6.5,
+    "gather_h": 0.2341,
+    "infiltrate_h": 0.0732
+   },
+   "Research Station Left Post": {
+    "placed": 71.0,
+    "gather": 28.0,
+    "infiltrate": 2.0,
+    "recall": 21.0,
+    "never": 20.0,
+    "spy_rounds": 97.5,
+    "gather_h": 0.287,
+    "infiltrate_h": 0.0211
+   },
+   "Research Station Right Post": {
+    "placed": 68.0,
+    "gather": 29.0,
+    "infiltrate": 1.0,
+    "recall": 17.0,
+    "never": 21.0,
+    "spy_rounds": 100.0,
+    "gather_h": 0.2921,
+    "infiltrate_h": 0.0119
+   },
+   "Shipping Post": {
+    "placed": 78.0,
+    "gather": 21.0,
+    "infiltrate": 0.0,
+    "recall": 35.0,
+    "never": 22.0,
+    "spy_rounds": 233.0,
+    "gather_h": 0.0928,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 68.0,
+    "gather": 40.0,
+    "infiltrate": 2.0,
+    "recall": 7.0,
+    "never": 19.0,
+    "spy_rounds": 129.0,
+    "gather_h": 0.3088,
+    "infiltrate_h": 0.0165
+   }
+  },
+  "Shaddam Corrino IV": {
+   "Arrakeen Post": {
+    "placed": 36.0,
+    "gather": 16.0,
+    "infiltrate": 1.0,
+    "recall": 4.0,
+    "never": 15.0,
+    "spy_rounds": 39.0,
+    "gather_h": 0.3921,
+    "infiltrate_h": 0.038
+   },
+   "Bene Gesserit Post": {
+    "placed": 45.0,
+    "gather": 28.0,
+    "infiltrate": 4.0,
+    "recall": 7.0,
+    "never": 6.0,
+    "spy_rounds": 84.5,
+    "gather_h": 0.3467,
+    "infiltrate_h": 0.0409
+   },
+   "Deep Desert Post": {
+    "placed": 15.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 5.0,
+    "never": 10.0,
+    "spy_rounds": 18.5,
+    "gather_h": 0.0246,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 48.0,
+    "gather": 25.0,
+    "infiltrate": 0.0,
+    "recall": 11.0,
+    "never": 12.0,
+    "spy_rounds": 129.0,
+    "gather_h": 0.2039,
+    "infiltrate_h": 0.0006
+   },
+   "Fremen Post": {
+    "placed": 114.0,
+    "gather": 63.0,
+    "infiltrate": 4.0,
+    "recall": 13.0,
+    "never": 34.0,
+    "spy_rounds": 199.0,
+    "gather_h": 0.3131,
+    "infiltrate_h": 0.021
+   },
+   "Green Post": {
+    "placed": 1.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 2.5,
+    "gather_h": 0.3701,
+    "infiltrate_h": 0.0054
+   },
+   "Hagga Basin Post": {
+    "placed": 9.0,
+    "gather": 1.0,
+    "infiltrate": 2.0,
+    "recall": 2.0,
+    "never": 4.0,
+    "spy_rounds": 14.5,
+    "gather_h": 0.1055,
+    "infiltrate_h": 0.0769
+   },
+   "Imperial Basin Post": {
+    "placed": 2.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 1.0,
+    "spy_rounds": 5.0,
+    "gather_h": 0.2268,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 4.0,
+    "gather": 0.0,
+    "infiltrate": 1.0,
+    "recall": 2.0,
+    "never": 1.0,
+    "spy_rounds": 11.0,
+    "gather_h": 0.1597,
+    "infiltrate_h": 0.0651
+   },
+   "Research Station Left Post": {
+    "placed": 101.0,
+    "gather": 57.0,
+    "infiltrate": 4.0,
+    "recall": 14.0,
+    "never": 26.0,
+    "spy_rounds": 153.5,
+    "gather_h": 0.3574,
+    "infiltrate_h": 0.0256
+   },
+   "Research Station Right Post": {
+    "placed": 53.0,
+    "gather": 22.0,
+    "infiltrate": 0.0,
+    "recall": 11.0,
+    "never": 20.0,
+    "spy_rounds": 72.5,
+    "gather_h": 0.3022,
+    "infiltrate_h": 0.0054
+   },
+   "Shipping Post": {
+    "placed": 69.0,
+    "gather": 20.0,
+    "infiltrate": 0.0,
+    "recall": 34.0,
+    "never": 15.0,
+    "spy_rounds": 230.5,
+    "gather_h": 0.0899,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 67.0,
+    "gather": 41.0,
+    "infiltrate": 3.0,
+    "recall": 6.0,
+    "never": 17.0,
+    "spy_rounds": 134.5,
+    "gather_h": 0.3046,
+    "infiltrate_h": 0.0221
+   }
+  },
+  "Staban Tuek": {
+   "Arrakeen Post": {
+    "placed": 38.0,
+    "gather": 17.0,
+    "infiltrate": 2.0,
+    "recall": 7.0,
+    "never": 12.0,
+    "spy_rounds": 42.0,
+    "gather_h": 0.3896,
+    "infiltrate_h": 0.0503
+   },
+   "Bene Gesserit Post": {
+    "placed": 27.0,
+    "gather": 13.0,
+    "infiltrate": 0.0,
+    "recall": 9.0,
+    "never": 5.0,
+    "spy_rounds": 51.5,
+    "gather_h": 0.303,
+    "infiltrate_h": 0.0083
+   },
+   "Deep Desert Post": {
+    "placed": 5.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 2.0,
+    "spy_rounds": 5.5,
+    "gather_h": 0.0336,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 34.0,
+    "gather": 16.0,
+    "infiltrate": 0.0,
+    "recall": 12.0,
+    "never": 6.0,
+    "spy_rounds": 88.0,
+    "gather_h": 0.1985,
+    "infiltrate_h": 0.0008
+   },
+   "Fremen Post": {
+    "placed": 137.0,
+    "gather": 52.0,
+    "infiltrate": 7.0,
+    "recall": 49.0,
+    "never": 29.0,
+    "spy_rounds": 248.5,
+    "gather_h": 0.2179,
+    "infiltrate_h": 0.0281
+   },
+   "Green Post": {
+    "placed": 166.0,
+    "gather": 90.0,
+    "infiltrate": 1.0,
+    "recall": 62.0,
+    "never": 13.0,
+    "spy_rounds": 253.0,
+    "gather_h": 0.357,
+    "infiltrate_h": 0.0041
+   },
+   "Hagga Basin Post": {
+    "placed": 4.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 3.0,
+    "spy_rounds": 3.0,
+    "gather_h": 0.1423,
+    "infiltrate_h": 0.0431
+   },
+   "Imperial Basin Post": {
+    "placed": 1.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 2.5,
+    "gather_h": 0.2443,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 329.0,
+    "gather": 174.0,
+    "infiltrate": 41.0,
+    "recall": 75.0,
+    "never": 39.0,
+    "spy_rounds": 613.5,
+    "gather_h": 0.2806,
+    "infiltrate_h": 0.0663
+   },
+   "Research Station Left Post": {
+    "placed": 96.0,
+    "gather": 33.0,
+    "infiltrate": 2.0,
+    "recall": 36.0,
+    "never": 25.0,
+    "spy_rounds": 115.0,
+    "gather_h": 0.2868,
+    "infiltrate_h": 0.0186
+   },
+   "Research Station Right Post": {
+    "placed": 62.0,
+    "gather": 24.0,
+    "infiltrate": 2.0,
+    "recall": 15.0,
+    "never": 21.0,
+    "spy_rounds": 71.0,
+    "gather_h": 0.3265,
+    "infiltrate_h": 0.0253
+   },
+   "Shipping Post": {
+    "placed": 79.0,
+    "gather": 23.0,
+    "infiltrate": 0.0,
+    "recall": 41.0,
+    "never": 15.0,
+    "spy_rounds": 214.5,
+    "gather_h": 0.108,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 63.0,
+    "gather": 36.0,
+    "infiltrate": 2.0,
+    "recall": 9.0,
+    "never": 16.0,
+    "spy_rounds": 120.5,
+    "gather_h": 0.2997,
+    "infiltrate_h": 0.0175
+   }
+  },
+  "Steersman Y'rkoon": {
+   "Arrakeen Post": {
+    "placed": 34.0,
+    "gather": 16.0,
+    "infiltrate": 2.0,
+    "recall": 5.0,
+    "never": 11.0,
+    "spy_rounds": 48.0,
+    "gather_h": 0.3468,
+    "infiltrate_h": 0.0464
+   },
+   "Bene Gesserit Post": {
+    "placed": 52.0,
+    "gather": 36.0,
+    "infiltrate": 2.0,
+    "recall": 6.0,
+    "never": 8.0,
+    "spy_rounds": 84.0,
+    "gather_h": 0.4184,
+    "infiltrate_h": 0.0235
+   },
+   "Deep Desert Post": {
+    "placed": 7.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 3.0,
+    "spy_rounds": 11.5,
+    "gather_h": 0.0529,
+    "infiltrate_h": 0.0
+   },
+   "Emperor Post": {
+    "placed": 40.0,
+    "gather": 23.0,
+    "infiltrate": 0.0,
+    "recall": 13.0,
+    "never": 4.0,
+    "spy_rounds": 94.0,
+    "gather_h": 0.2453,
+    "infiltrate_h": 0.0007
+   },
+   "Fremen Post": {
+    "placed": 108.0,
+    "gather": 58.0,
+    "infiltrate": 11.0,
+    "recall": 21.0,
+    "never": 18.0,
+    "spy_rounds": 187.0,
+    "gather_h": 0.3073,
+    "infiltrate_h": 0.0545
+   },
+   "Green Post": {
+    "placed": 1.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 1.0,
+    "spy_rounds": 4.5,
+    "gather_h": 0.3197,
+    "infiltrate_h": 0.005
+   },
+   "Hagga Basin Post": {
+    "placed": 3.0,
+    "gather": 0.0,
+    "infiltrate": 0.0,
+    "recall": 3.0,
+    "never": 0.0,
+    "spy_rounds": 4.5,
+    "gather_h": 0.1071,
+    "infiltrate_h": 0.0412
+   },
+   "Imperial Basin Post": {
+    "placed": 4.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 1.0,
+    "never": 2.0,
+    "spy_rounds": 7.0,
+    "gather_h": 0.2146,
+    "infiltrate_h": 0.0
+   },
+   "Landsraad Post": {
+    "placed": 1.0,
+    "gather": 1.0,
+    "infiltrate": 0.0,
+    "recall": 0.0,
+    "never": 0.0,
+    "spy_rounds": 1.5,
+    "gather_h": 0.2396,
+    "infiltrate_h": 0.053
+   },
+   "Research Station Left Post": {
+    "placed": 114.0,
+    "gather": 51.0,
+    "infiltrate": 4.0,
+    "recall": 36.0,
+    "never": 23.0,
+    "spy_rounds": 165.0,
+    "gather_h": 0.3056,
+    "infiltrate_h": 0.0241
+   },
+   "Research Station Right Post": {
+    "placed": 62.0,
+    "gather": 25.0,
+    "infiltrate": 2.0,
+    "recall": 11.0,
+    "never": 24.0,
+    "spy_rounds": 80.0,
+    "gather_h": 0.3089,
+    "infiltrate_h": 0.0232
+   },
+   "Shipping Post": {
+    "placed": 72.0,
+    "gather": 21.0,
+    "infiltrate": 0.0,
+    "recall": 41.0,
+    "never": 10.0,
+    "spy_rounds": 193.0,
+    "gather_h": 0.1095,
+    "infiltrate_h": 0.0
+   },
+   "Spacing Guild Post": {
+    "placed": 69.0,
+    "gather": 39.0,
+    "infiltrate": 3.0,
+    "recall": 10.0,
+    "never": 17.0,
+    "spy_rounds": 121.5,
+    "gather_h": 0.3175,
+    "infiltrate_h": 0.024
+   }
+  }
+ },
+ "spaces": {
+  "Accept Contract": {
+   "visit": 0.0406,
+   "block": 0.0374
+  },
+  "Arrakeen": {
+   "visit": 0.1963,
+   "block": 0.2724
+  },
+  "Assembly Hall": {
+   "visit": 0.135,
+   "block": 0.1503
+  },
+  "Deep Desert": {
+   "visit": 0.0589,
+   "block": 0.0893
+  },
+  "Deliver Supplies": {
+   "visit": 0.1244,
+   "block": 0.1811
+  },
+  "Desert Tactics": {
+   "visit": 0.0471,
+   "block": 0.0387
+  },
+  "Dutiful Service": {
+   "visit": 0.0861,
+   "block": 0.1227
+  },
+  "Espionage": {
+   "visit": 0.0791,
+   "block": 0.1361
+  },
+  "Fremkit": {
+   "visit": 0.2005,
+   "block": 0.3698
+  },
+  "Gather Support": {
+   "visit": 0.1136,
+   "block": 0.1389
+  },
+  "Hagga Basin": {
+   "visit": 0.1276,
+   "block": 0.1563
+  },
+  "Heighliner": {
+   "visit": 0.0454,
+   "block": 0.0931
+  },
+  "High Council": {
+   "visit": 0.1396,
+   "block": 0.2494
+  },
+  "Imperial Basin": {
+   "visit": 0.091,
+   "block": 0.1202
+  },
+  "Imperial Privilege": {
+   "visit": 0.0149,
+   "block": 0.0134
+  },
+  "Research Station": {
+   "visit": 0.0963,
+   "block": 0.1507
+  },
+  "Sardaukar": {
+   "visit": 0.0385,
+   "block": 0.0666
+  },
+  "Secrets": {
+   "visit": 0.1174,
+   "block": 0.1424
+  },
+  "Shipping": {
+   "visit": 0.0332,
+   "block": 0.0528
+  },
+  "Sietch Tabr": {
+   "visit": 0.1394,
+   "block": 0.1945
+  },
+  "Spice Refinery": {
+   "visit": 0.1638,
+   "block": 0.2956
+  },
+  "Swordmaster": {
+   "visit": 0.0346,
+   "block": 0.054
+  },
+  "Tuek's Sietch": {
+   "visit": 0.0206,
+   "block": 0.0201
+  }
+ },
+ "by_leader_spaces": {
+  "Chani": {
+   "Accept Contract": 0.0425,
+   "Arrakeen": 0.1882,
+   "Assembly Hall": 0.1418,
+   "Deep Desert": 0.0579,
+   "Deliver Supplies": 0.1248,
+   "Desert Tactics": 0.0506,
+   "Dutiful Service": 0.0886,
+   "Espionage": 0.0742,
+   "Fremkit": 0.1821,
+   "Gather Support": 0.1157,
+   "Hagga Basin": 0.1177,
+   "Heighliner": 0.0514,
+   "High Council": 0.133,
+   "Imperial Basin": 0.0771,
+   "Imperial Privilege": 0.0163,
+   "Research Station": 0.1172,
+   "Sardaukar": 0.0522,
+   "Secrets": 0.0909,
+   "Shipping": 0.0361,
+   "Sietch Tabr": 0.1259,
+   "Spice Refinery": 0.1761,
+   "Swordmaster": 0.0246,
+   "Tuek's Sietch": 0.0119
+  },
+  "Count Hasimir Fenring": {
+   "Accept Contract": 0.06,
+   "Arrakeen": 0.1975,
+   "Assembly Hall": 0.1412,
+   "Deep Desert": 0.0538,
+   "Deliver Supplies": 0.1386,
+   "Desert Tactics": 0.0536,
+   "Dutiful Service": 0.0981,
+   "Espionage": 0.0793,
+   "Fremkit": 0.2358,
+   "Gather Support": 0.1027,
+   "Hagga Basin": 0.133,
+   "Heighliner": 0.0406,
+   "High Council": 0.1519,
+   "Imperial Basin": 0.0747,
+   "Imperial Privilege": 0.0222,
+   "Research Station": 0.1024,
+   "Sardaukar": 0.0299,
+   "Secrets": 0.1279,
+   "Shipping": 0.029,
+   "Sietch Tabr": 0.1193,
+   "Spice Refinery": 0.1449,
+   "Swordmaster": 0.0502,
+   "Tuek's Sietch": 0.015
+  },
+  "Duncan Idaho": {
+   "Accept Contract": 0.0595,
+   "Arrakeen": 0.2261,
+   "Assembly Hall": 0.1033,
+   "Deep Desert": 0.0598,
+   "Deliver Supplies": 0.1205,
+   "Desert Tactics": 0.0571,
+   "Dutiful Service": 0.0917,
+   "Espionage": 0.0958,
+   "Fremkit": 0.1914,
+   "Gather Support": 0.1088,
+   "Hagga Basin": 0.1231,
+   "Heighliner": 0.0463,
+   "High Council": 0.1307,
+   "Imperial Basin": 0.096,
+   "Imperial Privilege": 0.0143,
+   "Research Station": 0.0985,
+   "Sardaukar": 0.0421,
+   "Secrets": 0.1171,
+   "Shipping": 0.0411,
+   "Sietch Tabr": 0.1465,
+   "Spice Refinery": 0.1676,
+   "Swordmaster": 0.0437,
+   "Tuek's Sietch": 0.0153
+  },
+  "Esmar Tuek": {
+   "Accept Contract": 0.0345,
+   "Arrakeen": 0.1818,
+   "Assembly Hall": 0.1426,
+   "Deep Desert": 0.0391,
+   "Deliver Supplies": 0.1069,
+   "Desert Tactics": 0.0476,
+   "Dutiful Service": 0.0829,
+   "Espionage": 0.0672,
+   "Fremkit": 0.1844,
+   "Gather Support": 0.1232,
+   "Hagga Basin": 0.1078,
+   "Heighliner": 0.0493,
+   "High Council": 0.1557,
+   "Imperial Basin": 0.0648,
+   "Imperial Privilege": 0.0167,
+   "Research Station": 0.1004,
+   "Sardaukar": 0.0414,
+   "Secrets": 0.1336,
+   "Shipping": 0.0291,
+   "Sietch Tabr": 0.1089,
+   "Spice Refinery": 0.176,
+   "Swordmaster": 0.0309,
+   "Tuek's Sietch": 0.1069
+  },
+  "Feyd-Rautha Harkonnen": {
+   "Accept Contract": 0.033,
+   "Arrakeen": 0.2102,
+   "Assembly Hall": 0.1255,
+   "Deep Desert": 0.0585,
+   "Deliver Supplies": 0.1262,
+   "Desert Tactics": 0.0593,
+   "Dutiful Service": 0.0852,
+   "Espionage": 0.0801,
+   "Fremkit": 0.1741,
+   "Gather Support": 0.1019,
+   "Hagga Basin": 0.1364,
+   "Heighliner": 0.0432,
+   "High Council": 0.1336,
+   "Imperial Basin": 0.1055,
+   "Imperial Privilege": 0.0154,
+   "Research Station": 0.0905,
+   "Sardaukar": 0.046,
+   "Secrets": 0.1281,
+   "Shipping": 0.0339,
+   "Sietch Tabr": 0.1265,
+   "Spice Refinery": 0.1693,
+   "Swordmaster": 0.0299,
+   "Tuek's Sietch": 0.0115
+  },
+  "Gaius Helen Mohiam": {
+   "Accept Contract": 0.0411,
+   "Arrakeen": 0.173,
+   "Assembly Hall": 0.1553,
+   "Deep Desert": 0.0517,
+   "Deliver Supplies": 0.1425,
+   "Desert Tactics": 0.0492,
+   "Dutiful Service": 0.0998,
+   "Espionage": 0.0711,
+   "Fremkit": 0.2103,
+   "Gather Support": 0.1328,
+   "Hagga Basin": 0.1187,
+   "Heighliner": 0.0261,
+   "High Council": 0.1363,
+   "Imperial Basin": 0.0832,
+   "Imperial Privilege": 0.0177,
+   "Research Station": 0.1063,
+   "Sardaukar": 0.0332,
+   "Secrets": 0.1201,
+   "Shipping": 0.0323,
+   "Sietch Tabr": 0.1379,
+   "Spice Refinery": 0.1351,
+   "Swordmaster": 0.0244,
+   "Tuek's Sietch": 0.0106
+  },
+  "Gurney Halleck": {
+   "Accept Contract": 0.0413,
+   "Arrakeen": 0.192,
+   "Assembly Hall": 0.1322,
+   "Deep Desert": 0.0558,
+   "Deliver Supplies": 0.1309,
+   "Desert Tactics": 0.0475,
+   "Dutiful Service": 0.1018,
+   "Espionage": 0.0825,
+   "Fremkit": 0.2032,
+   "Gather Support": 0.0984,
+   "Hagga Basin": 0.1138,
+   "Heighliner": 0.0505,
+   "High Council": 0.1302,
+   "Imperial Basin": 0.1009,
+   "Imperial Privilege": 0.0114,
+   "Research Station": 0.1152,
+   "Sardaukar": 0.0362,
+   "Secrets": 0.1045,
+   "Shipping": 0.0371,
+   "Sietch Tabr": 0.1171,
+   "Spice Refinery": 0.1782,
+   "Swordmaster": 0.032,
+   "Tuek's Sietch": 0.0146
+  },
+  "Kota Odax of Ix": {
+   "Accept Contract": 0.0317,
+   "Arrakeen": 0.204,
+   "Assembly Hall": 0.1622,
+   "Deep Desert": 0.0524,
+   "Deliver Supplies": 0.1098,
+   "Desert Tactics": 0.04,
+   "Dutiful Service": 0.0806,
+   "Espionage": 0.0715,
+   "Fremkit": 0.1845,
+   "Gather Support": 0.1259,
+   "Hagga Basin": 0.1156,
+   "Heighliner": 0.0473,
+   "High Council": 0.1427,
+   "Imperial Basin": 0.097,
+   "Imperial Privilege": 0.0133,
+   "Research Station": 0.102,
+   "Sardaukar": 0.0365,
+   "Secrets": 0.1097,
+   "Shipping": 0.0291,
+   "Sietch Tabr": 0.1296,
+   "Spice Refinery": 0.1863,
+   "Swordmaster": 0.0357,
+   "Tuek's Sietch": 0.0199
+  },
+  "Lady Amber Metulli": {
+   "Accept Contract": 0.0355,
+   "Arrakeen": 0.1873,
+   "Assembly Hall": 0.1569,
+   "Deep Desert": 0.0541,
+   "Deliver Supplies": 0.122,
+   "Desert Tactics": 0.0511,
+   "Dutiful Service": 0.0747,
+   "Espionage": 0.0645,
+   "Fremkit": 0.2194,
+   "Gather Support": 0.1182,
+   "Hagga Basin": 0.1449,
+   "Heighliner": 0.0447,
+   "High Council": 0.1497,
+   "Imperial Basin": 0.0912,
+   "Imperial Privilege": 0.0122,
+   "Research Station": 0.0923,
+   "Sardaukar": 0.0373,
+   "Secrets": 0.1082,
+   "Shipping": 0.0225,
+   "Sietch Tabr": 0.1589,
+   "Spice Refinery": 0.1538,
+   "Swordmaster": 0.0363,
+   "Tuek's Sietch": 0.0168
+  },
+  "Lady Jessica": {
+   "Accept Contract": 0.0429,
+   "Arrakeen": 0.2046,
+   "Assembly Hall": 0.1416,
+   "Deep Desert": 0.0585,
+   "Deliver Supplies": 0.1198,
+   "Desert Tactics": 0.0547,
+   "Dutiful Service": 0.094,
+   "Espionage": 0.0984,
+   "Fremkit": 0.1786,
+   "Gather Support": 0.0837,
+   "Hagga Basin": 0.1181,
+   "Heighliner": 0.0331,
+   "High Council": 0.1156,
+   "Imperial Basin": 0.0896,
+   "Imperial Privilege": 0.0119,
+   "Research Station": 0.0897,
+   "Sardaukar": 0.033,
+   "Secrets": 0.1655,
+   "Shipping": 0.0221,
+   "Sietch Tabr": 0.1345,
+   "Spice Refinery": 0.1753,
+   "Swordmaster": 0.0302,
+   "Tuek's Sietch": 0.0255
+  },
+  "Lady Margot Fenring": {
+   "Accept Contract": 0.0316,
+   "Arrakeen": 0.2087,
+   "Assembly Hall": 0.1166,
+   "Deep Desert": 0.0594,
+   "Deliver Supplies": 0.125,
+   "Desert Tactics": 0.0463,
+   "Dutiful Service": 0.09,
+   "Espionage": 0.083,
+   "Fremkit": 0.1916,
+   "Gather Support": 0.1128,
+   "Hagga Basin": 0.1302,
+   "Heighliner": 0.0429,
+   "High Council": 0.1304,
+   "Imperial Basin": 0.0806,
+   "Imperial Privilege": 0.0209,
+   "Research Station": 0.1065,
+   "Sardaukar": 0.0428,
+   "Secrets": 0.1292,
+   "Shipping": 0.0384,
+   "Sietch Tabr": 0.1527,
+   "Spice Refinery": 0.1755,
+   "Swordmaster": 0.0401,
+   "Tuek's Sietch": 0.0227
+  },
+  "Liet Kynes": {
+   "Accept Contract": 0.0383,
+   "Arrakeen": 0.1408,
+   "Assembly Hall": 0.1029,
+   "Deep Desert": 0.1058,
+   "Deliver Supplies": 0.1445,
+   "Desert Tactics": 0.0335,
+   "Dutiful Service": 0.0923,
+   "Espionage": 0.0988,
+   "Fremkit": 0.1745,
+   "Gather Support": 0.0993,
+   "Hagga Basin": 0.1667,
+   "Heighliner": 0.0515,
+   "High Council": 0.135,
+   "Imperial Basin": 0.0801,
+   "Imperial Privilege": 0.0093,
+   "Research Station": 0.0769,
+   "Sardaukar": 0.0334,
+   "Secrets": 0.1043,
+   "Shipping": 0.0513,
+   "Sietch Tabr": 0.2259,
+   "Spice Refinery": 0.1378,
+   "Swordmaster": 0.0341,
+   "Tuek's Sietch": 0.011
+  },
+  "Muad'Dib": {
+   "Accept Contract": 0.0431,
+   "Arrakeen": 0.1956,
+   "Assembly Hall": 0.1452,
+   "Deep Desert": 0.0625,
+   "Deliver Supplies": 0.1372,
+   "Desert Tactics": 0.0519,
+   "Dutiful Service": 0.0794,
+   "Espionage": 0.0854,
+   "Fremkit": 0.1957,
+   "Gather Support": 0.1033,
+   "Hagga Basin": 0.12,
+   "Heighliner": 0.0441,
+   "High Council": 0.1184,
+   "Imperial Basin": 0.0864,
+   "Imperial Privilege": 0.015,
+   "Research Station": 0.103,
+   "Sardaukar": 0.0431,
+   "Secrets": 0.1302,
+   "Shipping": 0.0387,
+   "Sietch Tabr": 0.1297,
+   "Spice Refinery": 0.1717,
+   "Swordmaster": 0.0318,
+   "Tuek's Sietch": 0.0125
+  },
+  "Piter De Vries": {
+   "Accept Contract": 0.0383,
+   "Arrakeen": 0.188,
+   "Assembly Hall": 0.122,
+   "Deep Desert": 0.0711,
+   "Deliver Supplies": 0.1167,
+   "Desert Tactics": 0.0538,
+   "Dutiful Service": 0.0792,
+   "Espionage": 0.0894,
+   "Fremkit": 0.2137,
+   "Gather Support": 0.1088,
+   "Hagga Basin": 0.133,
+   "Heighliner": 0.0461,
+   "High Council": 0.1366,
+   "Imperial Basin": 0.087,
+   "Imperial Privilege": 0.0105,
+   "Research Station": 0.0982,
+   "Sardaukar": 0.0425,
+   "Secrets": 0.1071,
+   "Shipping": 0.0476,
+   "Sietch Tabr": 0.1554,
+   "Spice Refinery": 0.1652,
+   "Swordmaster": 0.0391,
+   "Tuek's Sietch": 0.0183
+  },
+  "Princess Irulan": {
+   "Accept Contract": 0.0334,
+   "Arrakeen": 0.1968,
+   "Assembly Hall": 0.1238,
+   "Deep Desert": 0.0701,
+   "Deliver Supplies": 0.132,
+   "Desert Tactics": 0.0513,
+   "Dutiful Service": 0.079,
+   "Espionage": 0.078,
+   "Fremkit": 0.2136,
+   "Gather Support": 0.1141,
+   "Hagga Basin": 0.1106,
+   "Heighliner": 0.0643,
+   "High Council": 0.1267,
+   "Imperial Basin": 0.0885,
+   "Imperial Privilege": 0.0124,
+   "Research Station": 0.0764,
+   "Sardaukar": 0.039,
+   "Secrets": 0.1403,
+   "Shipping": 0.0277,
+   "Sietch Tabr": 0.1276,
+   "Spice Refinery": 0.1747,
+   "Swordmaster": 0.0277,
+   "Tuek's Sietch": 0.0106
+  },
+  "Shaddam Corrino IV": {
+   "Accept Contract": 0.0379,
+   "Arrakeen": 0.2045,
+   "Assembly Hall": 0.1189,
+   "Deep Desert": 0.0534,
+   "Deliver Supplies": 0.1137,
+   "Desert Tactics": 0.0549,
+   "Dutiful Service": 0.0733,
+   "Espionage": 0.0647,
+   "Fremkit": 0.235,
+   "Gather Support": 0.1034,
+   "Hagga Basin": 0.1695,
+   "Heighliner": 0.0523,
+   "High Council": 0.152,
+   "Imperial Basin": 0.1064,
+   "Imperial Privilege": 0.0146,
+   "Research Station": 0.0794,
+   "Sardaukar": 0.0362,
+   "Secrets": 0.0907,
+   "Shipping": 0.0293,
+   "Sietch Tabr": 0.1477,
+   "Spice Refinery": 0.1499,
+   "Swordmaster": 0.0386,
+   "Tuek's Sietch": 0.0189
+  },
+  "Staban Tuek": {
+   "Accept Contract": 0.0404,
+   "Arrakeen": 0.265,
+   "Assembly Hall": 0.1828,
+   "Deep Desert": 0.038,
+   "Deliver Supplies": 0.0996,
+   "Desert Tactics": 0.018,
+   "Dutiful Service": 0.053,
+   "Espionage": 0.0384,
+   "Fremkit": 0.1506,
+   "Gather Support": 0.1725,
+   "Hagga Basin": 0.1655,
+   "Heighliner": 0.036,
+   "High Council": 0.209,
+   "Imperial Basin": 0.145,
+   "Imperial Privilege": 0.0174,
+   "Research Station": 0.0946,
+   "Sardaukar": 0.0214,
+   "Secrets": 0.0752,
+   "Shipping": 0.0231,
+   "Sietch Tabr": 0.0999,
+   "Spice Refinery": 0.1968,
+   "Swordmaster": 0.0529,
+   "Tuek's Sietch": 0.0121
+  },
+  "Steersman Y'rkoon": {
+   "Accept Contract": 0.0436,
+   "Arrakeen": 0.1751,
+   "Assembly Hall": 0.1147,
+   "Deep Desert": 0.0558,
+   "Deliver Supplies": 0.1264,
+   "Desert Tactics": 0.0273,
+   "Dutiful Service": 0.1047,
+   "Espionage": 0.1009,
+   "Fremkit": 0.2673,
+   "Gather Support": 0.1179,
+   "Hagga Basin": 0.0671,
+   "Heighliner": 0.051,
+   "High Council": 0.1239,
+   "Imperial Basin": 0.0902,
+   "Imperial Privilege": 0.0167,
+   "Research Station": 0.083,
+   "Sardaukar": 0.0491,
+   "Secrets": 0.1326,
+   "Shipping": 0.0271,
+   "Sietch Tabr": 0.1558,
+   "Spice Refinery": 0.1207,
+   "Swordmaster": 0.0189,
+   "Tuek's Sietch": 0.0159
+  }
+ }
+}

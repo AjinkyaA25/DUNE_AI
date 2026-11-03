@@ -35,6 +35,22 @@ never sees hidden information. --critic-warmup N: the first N iterations
 train only the critic (and value heads) so a fresh critic doesn't steer the
 policy.
 
+Critic teacher (--look-frac, user 2026-10-25: "try a different method of learning
+... one with the best moves always using the critic"): at that share of the
+trained seats' decisions the policy's top --look-m moves are each played on a
+copy of the game and the position right after is valued by the privileged
+critic (src.ai.ppo.critic_q; the critic is exported to critic.npz for the
+workers every iteration). The policy then learns to put its probability on
+the critic's best move (cross-entropy to softmax(Q / --look-tau), weight
+--look-w), and with --look-act the critic's best move is also the one played,
+so the games themselves follow the improved policy (those decisions are left
+out of the PPO ratio, which assumes the policy picked them).
+The 1-step critic was too noisy to beat the policy (moves' Q gaps < its error),
+so --look-n > 0 swaps in the rollout teacher (src.ai.ppo.rollout_q): each tried
+move is played to the end of the round in --look-n determinized worlds before
+the critic values it, and only decisions the policy is unsure of (top move
+probability < --look-pmax) are graded.
+
 Self-play (2026-10-20, once the policy plateaued vs Best AI): --cur-frac of the
 opponent seats play the CURRENT policy (sampling, and trained on too), --pool
 adds frozen older PPO nets to the snapshot opponents, and --eval-opp /
@@ -56,7 +72,8 @@ from multiprocessing import Pool
 
 import numpy as np
 
-from src.ai.ppo import EMB, ID_FIELDS, id_sizes
+from src.ai.ppo import EMB, ID_FIELDS, LEADER_STATE_DIM, NAV_STATE_DIM, id_sizes
+from src.ai.action_features import LEADER_ACT_DIM, SPY_PLAN_DIM
 from src.selfplay import elo
 
 BASE = os.path.join("config", "ppo", "base.json")        # heuristic the policy sits on (pinned)
@@ -124,6 +141,31 @@ def make_critic(S, Hd, w=(512, 256)):
                          nn.Linear(w[1], 1))
 
 
+def export_critic(critic, path, S):
+    """critic.npz for the workers' lookahead (src.ai.ppo.CriticNet)."""
+    lin = [m for m in critic if hasattr(m, "weight")]
+    out = {"S": np.array(S, np.int32)}
+    for j, m in enumerate(lin):
+        out[f"w{j}"] = m.weight.detach().cpu().numpy().astype(np.float32)
+        out[f"b{j}"] = m.bias.detach().cpu().numpy().astype(np.float32)
+    tmp = path + ".tmp.npz"
+    np.savez(tmp, **out)
+    os.replace(tmp, path)
+
+
+def pad_critic(sd: dict, S_old: int, S_new: int) -> dict:
+    """A critic trained before new state inputs: zero weights on them (inserted
+    after the old state block, before the hidden inputs) so it values exactly as before."""
+    import torch
+    w = sd["0.weight"]
+    if S_new == S_old:
+        return sd
+    z = torch.zeros(w.shape[0], S_new - S_old, dtype=w.dtype, device=w.device)
+    sd = dict(sd)
+    sd["0.weight"] = torch.cat([w[:, :S_old], z, w[:, S_old:]], dim=1)
+    return sd
+
+
 def mem_gb():
     """This process's committed memory in GB (logged per iteration: leak watch)."""
     try:
@@ -163,16 +205,31 @@ def critic_values(critic, B, dev):
 
 def load_npz(net, p: dict) -> None:
     """Weights of an exported net (net.npz / the UI's ppo.npz) back into the
-    PyTorch net (the final-VP head is not exported: it starts fresh)."""
+    PyTorch net (the final-VP head is not exported: it starts fresh).
+    A net from before the Leader inputs (shorter state, 5 identity fields)
+    loads with zero weights on the new inputs, so it plays exactly as before
+    and learns to use the Leaders from there."""
     import torch
     sd = net.state_dict()
     t = lambda x: torch.as_tensor(np.asarray(x, np.float32))
-    new = {"s1.weight": t(p["s1.w"]), "s1.bias": t(p["s1.b"]), "s2.weight": t(p["s2.w"]), "s2.bias": t(p["s2.b"]),
+    s1 = sd["s1.weight"].clone().cpu().zero_()
+    s1[:, :p["s1.w"].shape[1]] = t(p["s1.w"])
+    # move layer input = [state hidden | move features | identity embeddings]: new move features
+    # and new identity fields get zero columns, the old blocks keep their weights
+    a1 = sd["a1.weight"].clone().cpu().zero_()
+    W2, A_new = p["s2.w"].shape[0], net.A
+    nf_old = sum(1 for k in p if k[0] == "e" and k[1:].isdigit())
+    A_old = p["a1.w"].shape[1] - W2 - nf_old * p["e0"].shape[1]
+    o = t(p["a1.w"])
+    a1[:, :W2 + A_old] = o[:, :W2 + A_old]
+    a1[:, W2 + A_new:W2 + A_new + o.shape[1] - W2 - A_old] = o[:, W2 + A_old:]
+    new = {"s1.weight": s1, "s1.bias": t(p["s1.b"]), "s2.weight": t(p["s2.w"]), "s2.bias": t(p["s2.b"]),
            "v.weight": t(p["v.w"])[None, :], "v.bias": t(p["v.b"]).reshape(1),
-           "a1.weight": t(p["a1.w"]), "a1.bias": t(p["a1.b"]),
+           "a1.weight": a1, "a1.bias": t(p["a1.b"]),
            "a2.weight": t(p["a2.w"])[None, :], "a2.bias": t(p["a2.b"]).reshape(1)}
     for j in range(len(net.emb)):
-        new[f"emb.{j}.weight"] = t(p[f"e{j}"])
+        if f"e{j}" in p:
+            new[f"emb.{j}.weight"] = t(p[f"e{j}"])
     sd.update({k: v.to(sd[k].device) for k, v in new.items()})
     net.load_state_dict(sd)
 
@@ -220,15 +277,23 @@ def _reward(gs, pid) -> float:
 
 def rollout(args):
     """One training game -> list of (trajectory, reward) for the PPO seats."""
-    g, net, ppo_seats, league, league_frac, snaps, self_frac, cur_frac, hidden = (tuple(args) + (False,))[:9]
+    g, net, ppo_seats, league, league_frac, snaps, self_frac, cur_frac, hidden, focus, focus_frac, teacher = \
+        (tuple(args) + (False, (), 0.0, None))[:12]
     from src.ai.agents import make_agent
     from src.ai.ppo import PPOAgent
     from src.data.card_definitions import setup_game
     from src.game.leader.leader_definitions import LEADER_NAMES
     r = random.Random(g)
     lineup = r.sample(list(LEADER_NAMES), 4)
-    gs = setup_game(num_players=4, seed=g, leaders=lineup, use_bloodlines=True)
     seats = r.sample(range(4), ppo_seats)
+    if focus and r.random() < focus_frac:    # --focus: the first trained seat plays one of these Leaders
+        f = r.choice(list(focus))
+        if f in lineup:
+            lineup.remove(f)
+        else:
+            lineup.pop(r.randrange(4))
+        lineup.insert(seats[0], f)
+    gs = setup_game(num_players=4, seed=g, leaders=lineup, use_bloodlines=True)
     for s in range(4):                       # self-play: opponent seats on the current policy
         if cur_frac and s not in seats and r.random() < cur_frac:
             seats.append(s)
@@ -239,6 +304,7 @@ def rollout(args):
             a = PPOAgent(net=net, tuning=base, seed=g * 4 + s)
             a.record = []
             a.hidden = hidden
+            a.teacher = teacher
         else:
             x = r.random()
             if snaps and x < self_frac:
@@ -253,7 +319,16 @@ def rollout(args):
         pid = gs.player_in_reveal_buy
         if pid is None:
             pid = gs.get_current_player_id()
+        rec = getattr(agents[pid], "record", None)
+        k = len(rec) if rec is not None else 0
         gs.step(agents[pid].select_action(gs, pid, gs.get_valid_actions(pid)))
+        if hidden and rec is not None and len(rec) > k:
+            # the position right after the move: the critic also learns to value these,
+            # since the lookahead (critic_q) asks it about exactly such positions
+            from src.ai.ppo import full_state
+            from src.ai.hidden_features import encode_hidden
+            rec[-1]["s2"] = full_state(gs, pid, len(rec[-1]["s"])).astype(np.float16)
+            rec[-1]["hid2"] = encode_hidden(gs, pid).astype(np.float16)
         n += 1
     out = []
     vp = [q.victory_points for q in gs.players]
@@ -284,7 +359,7 @@ def eval_game(args):
         n += 1
     vp = [q.victory_points for q in gs.players]
     win = gs.winner if gs.winner is not None else max(range(4), key=lambda s: vp[s])
-    return float(win == seat), gs.round
+    return float(win == seat), gs.round, lineup[seat]
 
 
 # ---------------------------------------------------------------------------
@@ -309,7 +384,24 @@ def to_batch(trajs, device):
     B = dict(S=t(S), D=t(D), I=t(I), H=t(H), cnt=t(cnt), off=t(off), act=t(act), oldlp=t(oldlp), aux=t(aux))
     if recs and "hid" in recs[0]:
         B["X"] = t(np.stack([d["hid"] for d in recs]).astype(np.float32))
+    if recs and "hid2" in recs[0]:
+        B["S2"] = t(np.stack([d["s2"] for d in recs]).astype(np.float32))
+        B["X2"] = t(np.stack([d["hid2"] for d in recs]).astype(np.float32))
+    if any("q" in d for d in recs):              # critic lookahead: Q per move (NaN = not tried / no lookahead)
+        B["Q"] = t(np.concatenate([d["q"] if "q" in d else np.full(len(d["h"]), np.nan, np.float32)
+                                   for d in recs]).astype(np.float32))
+        B["teach"] = t(np.array([bool(d.get("teach")) for d in recs]))
     return B, N
+
+
+def rows_q(B, idx, k):
+    """The minibatch's lookahead Q, padded like rows() (NaN where untried)."""
+    import torch
+    cnt, off = B["cnt"][idx], B["off"][idx]
+    ar = torch.arange(k, device=cnt.device)
+    M = ar[None, :] < cnt[:, None]
+    pos = torch.where(M, off[:, None] + ar[None, :], torch.zeros_like(off)[:, None])
+    return B["Q"][pos].masked_fill(~M, float("nan"))
 
 
 def rows(B, idx):
@@ -357,7 +449,7 @@ def advantages(trajs, values, lam, dense=0.0):
     return np.concatenate(adv), np.concatenate(ret)
 
 
-def ppo_update(net, opt, B, adv, ret, A, critic=None, copt=None, train_policy=True):
+def ppo_update(net, opt, B, adv, ret, A, critic=None, copt=None, train_policy=True, anchor=None):
     """train_policy False (critic warm-up): only the value heads / critic learn."""
     import torch
     dev = B["S"].device
@@ -368,6 +460,10 @@ def ppo_update(net, opt, B, adv, ret, A, critic=None, copt=None, train_policy=Tr
     stats = {"pi": 0.0, "v": 0.0, "aux": 0.0, "ent": 0.0, "kl": 0.0, "clip": 0.0, "n": 0}
     if critic is not None:
         stats["cv"] = 0.0
+        if "S2" in B:
+            stats["cv2"] = 0.0
+    if "Q" in B:
+        stats["look"] = stats["agree"] = 0.0
     net.heads_only = not train_policy
     for _ in range(A.epochs):
         perm = torch.randperm(N, device=dev)
@@ -379,14 +475,60 @@ def ppo_update(net, opt, B, adv, ret, A, critic=None, copt=None, train_policy=Tr
             lp = lp_all.gather(1, B["act"][idx][:, None]).squeeze(1)
             ratio = torch.exp(lp - B["oldlp"][idx])
             a = adv_t[idx]
-            pi_loss = -torch.min(ratio * a, torch.clamp(ratio, 1 - A.clip, 1 + A.clip) * a).mean()
+            surr = -torch.min(ratio * a, torch.clamp(ratio, 1 - A.clip, 1 + A.clip) * a)
+            look_loss = None
+            if "Q" in B:
+                own = ~B["teach"][idx]               # moves the critic picked: not the policy's sample
+                pi_loss = (surr * own).sum() / own.sum().clamp(min=1)
+                q = rows_q(B, idx, logits.shape[1])
+                tried = ~torch.isnan(q)
+                has = tried.sum(-1) >= 2
+                if A.look_gap > 0:
+                    # only clear verdicts: a tie (many moves score the same) taught as a soft
+                    # target flattened the policy (iters 90-100: entropy 0.16 -> 0.32, eval -8 pts)
+                    top2 = q.masked_fill(~tried, -1e9).topk(2, dim=-1).values
+                    has = has & (top2[:, 0] - top2[:, 1] >= A.look_gap)
+                if has.any():
+                    z = (q / A.look_tau).masked_fill(~tried, -1e9)
+                    if A.look_mode == "adv":
+                        # all-action policy gradient on the tried moves: raise the expected rollout Q
+                        # (sum_j pi_j * (Q_j - b) / tau). Ties push nothing and the push fades once the
+                        # policy sits on the best move - the CE targets above flattened the policy instead.
+                        pt = torch.exp(lp_all).masked_fill(~tried, 0.0)
+                        qz = torch.nan_to_num(q, nan=0.0)
+                        with torch.no_grad():
+                            b = (pt * qz).sum(-1, keepdim=True) / pt.sum(-1, keepdim=True).clamp(min=1e-8)
+                            adv_q = ((qz - b) / A.look_tau).masked_fill(~tried, 0.0)
+                        ce = -(pt * adv_q).sum(-1)
+                    elif A.look_gap > 0:             # target: the best move only
+                        ce = -lp_all.gather(1, z.argmax(-1, keepdim=True)).squeeze(1)
+                    else:                            # target: softmax(Q / tau) over the moves the critic looked at
+                        tgt = torch.softmax(z, dim=-1)
+                        ce = -(tgt * lp_all.masked_fill(~tried, 0.0)).sum(-1)
+                    look_loss = ce[has].mean()
+                    with torch.no_grad():
+                        best = z.argmax(-1)
+                        stats["agree"] += float((logits.masked_fill(~tried, -1e9).argmax(-1) == best)[has]
+                                                .float().mean())
+            else:
+                pi_loss = surr.mean()
             v_loss = ((v - ret_t[idx]) ** 2).mean()
             aux_loss = ((net.last_aux - B["aux"][idx]) ** 2).mean()
             p_all = torch.exp(lp_all)
             ent = -(p_all * lp_all.masked_fill(~bs[4], 0.0)).sum(-1).mean()
             loss = A.vf * v_loss + A.aux * aux_loss
+            anchor_kl = None
+            if anchor is not None:                   # tether: KL(anchor policy || policy) on the shortlist
+                with torch.no_grad():
+                    lp_ref = torch.log_softmax(anchor(*bs)[0], dim=-1)
+                m = bs[4]
+                anchor_kl = (torch.exp(lp_ref) * (lp_ref - lp_all)).masked_fill(~m, 0.0).sum(-1).mean()
             if train_policy:
                 loss = loss + pi_loss - A.ent * ent
+                if look_loss is not None:
+                    loss = loss + A.look_w * look_loss
+                if anchor_kl is not None:
+                    loss = loss + A.anchor_w * anchor_kl
             opt.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
@@ -394,14 +536,23 @@ def ppo_update(net, opt, B, adv, ret, A, critic=None, copt=None, train_policy=Tr
             if critic is not None:
                 cv = critic(torch.cat([B["S"][idx], B["X"][idx]], dim=1)).squeeze(-1)
                 c_loss = ((cv - ret_t[idx]) ** 2).mean()
+                stats["cv"] += float(c_loss)             # decision positions only (as logged before)
+                if "S2" in B:                        # and the position right after the move (same outcome)
+                    cv2 = critic(torch.cat([B["S2"][idx], B["X2"][idx]], dim=1)).squeeze(-1)
+                    c2 = ((cv2 - ret_t[idx]) ** 2).mean()
+                    c_loss = c_loss + c2
+                    stats["cv2"] += float(c2)
                 copt.zero_grad()
                 c_loss.backward()
                 torch.nn.utils.clip_grad_norm_(critic.parameters(), 1.0)
                 copt.step()
-                stats["cv"] += float(c_loss)
             with torch.no_grad():
                 stats["pi"] += float(pi_loss); stats["v"] += float(v_loss); stats["ent"] += float(ent)
                 stats["aux"] += float(aux_loss)
+                if look_loss is not None:
+                    stats["look"] += float(look_loss)
+                if anchor_kl is not None:
+                    stats["akl"] = stats.get("akl", 0.0) + float(anchor_kl)
                 stats["kl"] += float((B["oldlp"][idx] - lp).mean())
                 stats["clip"] += float(((ratio - 1).abs() > A.clip).float().mean())
                 stats["n"] += 1
@@ -448,6 +599,37 @@ def main():
     ap.add_argument("--critic-warmup", type=int, default=5,
                     help="iterations that train only the critic / value heads before the policy moves")
     ap.add_argument("--critic-lr", type=float, default=1e-3)
+    ap.add_argument("--critic-init", default="",
+                    help="checkpoint.pt whose critic to start from (new state inputs get zero weights)")
+    ap.add_argument("--look-frac", type=float, default=0.0,
+                    help="share of the trained seats' decisions graded by critic lookahead (needs --critic)")
+    ap.add_argument("--look-m", type=int, default=6, help="policy's top moves tried per graded decision")
+    ap.add_argument("--look-tau", type=float, default=0.01, help="target = softmax(Q / tau) over the tried moves")
+    ap.add_argument("--look-w", type=float, default=1.0, help="weight of the lookahead cross-entropy")
+    ap.add_argument("--look-n", type=int, default=0,
+                    help="> 0: rollout teacher - each tried move is played to the end of the round in this many "
+                         "determinized worlds by the greedy policy, then valued by the critic (src.ai.ppo.rollout_q)")
+    ap.add_argument("--look-mode", choices=["ce", "adv"], default="ce",
+                    help="ce: cross-entropy to the lookahead's pick; adv: all-action policy gradient on the "
+                         "rollout Q of the tried moves (scaled by 1 / --look-tau)")
+    ap.add_argument("--anchor-w", type=float, default=0.0,
+                    help="> 0: KL tether to the policy this run started from (frozen in <out>/anchor.pt)")
+    ap.add_argument("--look-gap", type=float, default=0.0,
+                    help="> 0: learn only from graded decisions whose best move beats the next by this much "
+                         "(hard target = that move)")
+    ap.add_argument("--look-pmax", type=float, default=1.0,
+                    help="rollout teacher only grades decisions whose top move probability is below this")
+    ap.add_argument("--look-act", action="store_true", help="play the critic's best move at graded decisions")
+    ap.add_argument("--look-auto", action="store_true",
+                    help="grade / play by the critic only once an eval shows the critic's picks beat the policy's "
+                         "(eval_teacher diff > 2 se); until then the critic just keeps learning")
+    ap.add_argument("--teacher-eval-games", type=int, default=0,
+                    help="> 0: each eval also plays the critic lookahead's best move (every decision) in the eval "
+                         "seat on the first N eval seeds - is the critic a better player than the policy yet?")
+    ap.add_argument("--head-warmup", type=int, default=0,
+                    help="first N iterations train only the value / final-VP heads (on detached features): "
+                         "starting from an exported net, the fresh final-VP head's early error would otherwise "
+                         "push the shared state layers and knock the policy off its peak (KL 0.07 on iter 1)")
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=2000)
     ap.add_argument("--eval-secs", type=float, default=0,
@@ -460,6 +642,9 @@ def main():
     ap.add_argument("--elo-games", type=int, default=0,
                     help="> 0: each eval's snapshot also plays this many 4-player games vs the rated field (Best AI, "
                          "--pool nets, earlier snapshots) and all rated games are refit into Elo (src.selfplay.elo)")
+    ap.add_argument("--focus", default="", help="comma list of Leaders: --focus-frac of the games give the "
+                                                "first PPO seat one of them (per-Leader fine-tuning)")
+    ap.add_argument("--focus-frac", type=float, default=0.5)
     ap.add_argument("--base", default=os.path.join("config", "best_ai.json"),
                     help="heuristic weights the policy starts from (copied to config/ppo/base.json once)")
     A = ap.parse_args()
@@ -477,7 +662,8 @@ def main():
     if npz is not None:                          # a played net (e.g. the UI's): its own widths and T
         widths = (npz["s1.w"].shape[0], npz["s2.w"].shape[0], npz["a1.w"].shape[0], npz["e0"].shape[1])
         A.T = float(npz["T"])
-    net = make_torch_net(FEATURE_DIM, ACTION_FEATURE_DIM, id_sizes(), A.T, widths).to(dev)
+    S = FEATURE_DIM + LEADER_STATE_DIM + NAV_STATE_DIM
+    net = make_torch_net(S, ACTION_FEATURE_DIM + SPY_PLAN_DIM + LEADER_ACT_DIM, id_sizes(), A.T, widths).to(dev)
     net.K = A.k
     opt = torch.optim.Adam(net.parameters(), lr=A.lr)
     state = {"iter": 0, "games": 0}
@@ -496,6 +682,8 @@ def main():
             opt.load_state_dict(c["opt"])
         except ValueError:                       # new head added: fresh optimiser state
             pass
+        for g in opt.param_groups:               # --lr wins over the checkpoint's (so a resume can retune it)
+            g["lr"] = A.lr
         state = c["state"]
         if missing:
             print(f"new layers (not in the checkpoint): {missing}", flush=True)
@@ -503,17 +691,45 @@ def main():
     critic = copt = None
     if A.critic:
         from src.ai.hidden_features import hidden_dim
-        critic = make_critic(FEATURE_DIM, hidden_dim()).to(dev)
+        critic = make_critic(S, hidden_dim()).to(dev)
         copt = torch.optim.Adam(critic.parameters(), lr=A.critic_lr)
         if c is not None and "critic" in c:
             critic.load_state_dict(c["critic"])
             copt.load_state_dict(c["copt"])
             print("critic resumed", flush=True)
+        elif A.critic_init:
+            sd = torch.load(A.critic_init, map_location=dev)["critic"]
+            S_old = sd["0.weight"].shape[1] - hidden_dim()
+            critic.load_state_dict(pad_critic(sd, S_old, S))
+            state["critic_iters"] = 10 ** 6         # trained already: no warm-up
+            print(f"critic from {A.critic_init} (state inputs {S_old} -> {S})", flush=True)
         else:
             print(f"new privileged critic ({hidden_dim()} hidden inputs); "
                   f"{A.critic_warmup} warm-up iterations", flush=True)
+    anchor = None
+    if A.anchor_w > 0:                           # the policy this run started from, frozen for the KL tether
+        import copy
+        anchor = copy.deepcopy(net)
+        apath = os.path.join(A.out, "anchor.pt")
+        if os.path.exists(apath):
+            anchor.load_state_dict(torch.load(apath, map_location=dev))
+        else:
+            torch.save(anchor.state_dict(), apath)
+        anchor.eval()
+        for prm in anchor.parameters():
+            prm.requires_grad_(False)
+        print(f"KL anchor {apath} (weight {A.anchor_w})", flush=True)
     cur = os.path.join(A.out, "net.npz")
     net.export(cur)
+    cpath = os.path.join(A.out, "critic.npz")
+    teacher = None
+    if critic is not None and A.look_frac > 0:
+        export_critic(critic, cpath, S)
+        teacher = {"critic": cpath, "frac": A.look_frac, "m": A.look_m, "act": A.look_act,
+                   "n": A.look_n, "pmax": A.look_pmax}
+    if A.look_auto and not state.get("teacher_ok"):
+        teacher = None
+        print("critic teacher waits until it beats the policy", flush=True)
     league = sorted(glob.glob(A.league)) if A.league else []
     pool_nets = sorted(glob.glob(A.pool)) if A.pool else []
     log = open(os.path.join(A.out, "log.jsonl"), "a")
@@ -525,8 +741,8 @@ def main():
         if (A.eval_every or A.eval_secs) and base_eval is None:
             res = pool.map(eval_game, [(g, A.eval_base or f"heuristic:tuned={BASE}", A.eval_opp)
                                        for g in range(A.eval_games)], chunksize=8)
-            base_eval = {"share": float(np.mean([w for w, _ in res])), "wins": [w for w, _ in res],
-                         "rounds": float(np.mean([r for _, r in res]))}
+            base_eval = {"share": float(np.mean([x[0] for x in res])), "wins": [x[0] for x in res],
+                         "rounds": float(np.mean([x[1] for x in res]))}
             json.dump(base_eval, open(bpath, "w"))
             print(f"baseline: Best AI in the eval seat {base_eval['share']:.1%} | rounds {base_eval['rounds']:.2f}",
                   flush=True)
@@ -545,8 +761,9 @@ def main():
                     print("pool: " + ", ".join(os.path.basename(p) for p in new), flush=True)
                 pool_nets = new
             snaps = sorted(glob.glob(os.path.join(A.out, "snap_*.npz")))[-A.snap_pool:] + pool_nets
+            focus = tuple(x.strip() for x in A.focus.split(",") if x.strip())
             jobs = [(100_000_000 + state["games"] + g, cur, A.ppo_seats, league, A.league_frac, snaps, A.self_frac,
-                     A.cur_frac, critic is not None)
+                     A.cur_frac, critic is not None, focus, A.focus_frac, teacher)
                     for g in range(A.games)]
             trajs, rounds = [], []
             for out, rnd in pool.imap_unordered(rollout, jobs, chunksize=2):
@@ -565,11 +782,16 @@ def main():
                 vals = critic_values(critic, B, dev)
             adv, ret = advantages(trajs, vals, A.lam, A.dense)
             warm = critic is not None and state.get("critic_iters", 0) < A.critic_warmup
-            st = ppo_update(net, opt, B, adv, ret, A, critic, copt, train_policy=not warm)
+            if state.get("head_iters", 0) < A.head_warmup:   # fresh final-VP head: learn it before the policy moves
+                warm = True
+                state["head_iters"] = state.get("head_iters", 0) + 1
+            st = ppo_update(net, opt, B, adv, ret, A, critic, copt, train_policy=not warm, anchor=anchor)
             if critic is not None:
                 state["critic_iters"] = state.get("critic_iters", 0) + 1
-                st["warmup"] = warm
+            st["warmup"] = warm
             net.export(cur)
+            if teacher is not None:
+                export_critic(critic, cpath, S)
             # how often the trained policy now overrules the heuristic's top move
             with torch.no_grad():
                 idx = torch.randperm(N, device=dev)[:8192]
@@ -577,6 +799,8 @@ def main():
                 lg, _, _ = net(*bs)
                 h_top = bs[3].masked_fill(~bs[4], -1e9).argmax(-1)
                 overrule = float((lg.argmax(-1) != h_top).float().mean())
+            if "Q" in B:                             # share of decisions the critic's pick was played
+                st["teach"] = round(float(B["teach"].float().mean()), 4)
             del B, bs, lg, h_top
             if dev == "cuda":
                 torch.cuda.empty_cache()             # give the batch's GPU memory back (Windows: RAM)
@@ -600,18 +824,40 @@ def main():
                     t_eval, g_eval = time.time(), state["games"]
                 res = pool.map(eval_game, [(g, f"ppo:net={snap}:tuned={BASE}:greedy", A.eval_opp)
                                            for g in range(A.eval_games)], chunksize=8)
-                w = np.array([x for x, _ in res])
+                w = np.array([x[0] for x in res])
                 d = w - np.array(base_eval["wins"])
                 rec["eval"] = {"share": round(float(w.mean()), 4), "baseline": round(base_eval["share"], 4),
                                "diff": round(float(d.mean()), 4),
                                "se": round(float(d.std() / math.sqrt(len(d))), 4),
-                               "rounds": round(float(np.mean([r for _, r in res])), 3)}
+                               "rounds": round(float(np.mean([x[1] for x in res])), 3)}
+                by = {}                               # per Leader in the eval seat: [share, baseline share, games]
+                for (x, _, ld), b in zip(res, base_eval["wins"]):
+                    e = by.setdefault(ld, [0.0, 0.0, 0])
+                    e[0] += x; e[1] += b; e[2] += 1
+                rec["eval"]["by_leader"] = {k: [round(a / n, 3), round(b / n, 3), n]
+                                            for k, (a, b, n) in sorted(by.items())}
+                if A.teacher_eval_games and critic is not None:
+                    export_critic(critic, cpath, S)
+                    tspec = f"ppo:net={snap}:tuned={BASE}:greedy:critic={cpath}:M{A.look_m}:RN{A.look_n}:PM{A.look_pmax}"
+                    n_t = min(A.teacher_eval_games, A.eval_games)
+                    res = pool.map(eval_game, [(g, tspec, A.eval_opp) for g in range(n_t)], chunksize=4)
+                    wt = np.array([x[0] for x in res])
+                    dt = wt - w[:n_t]                 # vs the policy itself on the same seeds
+                    if A.look_auto and not state.get("teacher_ok") and critic is not None and A.look_frac > 0                             and dt.mean() > 2 * dt.std() / math.sqrt(len(dt)):
+                        state["teacher_ok"] = it
+                        teacher = {"critic": cpath, "frac": A.look_frac, "m": A.look_m, "act": A.look_act,
+                   "n": A.look_n, "pmax": A.look_pmax}
+                        print(f"critic teacher ON from iteration {it}", flush=True)
+                    rec["eval_teacher"] = {"share": round(float(wt.mean()), 4), "policy": round(float(w[:n_t].mean()), 4),
+                                           "diff": round(float(dt.mean()), 4),
+                                           "se": round(float(dt.std() / math.sqrt(len(dt))), 4),
+                                           "rounds": round(float(np.mean([x[1] for x in res])), 3)}
                 prev = state.get("eval_snap")
                 if A.self_eval_games and prev and os.path.exists(prev):
                     opp = f"ppo:net={prev}:tuned={BASE}:greedy"
                     res = pool.map(eval_game, [(g, f"ppo:net={snap}:tuned={BASE}:greedy", opp)
                                                for g in range(A.self_eval_games)], chunksize=8)
-                    w = np.array([x for x, _ in res])
+                    w = np.array([x[0] for x in res])
                     rec["eval_vs_prev"] = {"prev": os.path.basename(prev), "share": round(float(w.mean()), 4),
                                            "se": round(float(w.std() / math.sqrt(len(w))), 4)}
                 state["eval_snap"] = snap

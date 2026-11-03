@@ -18,15 +18,45 @@ train_run.log
 *.jpeg
 *.PNG
 *.JPG
-# ...except the card / tile images the game and UI need, which are tracked
-# so a fresh clone has them.
-!/cards/**
-!/base_cards/**
-!/intrigue_cards/**
-!/conflicts/**
-!/contracts/**
-!/Tech tiles/**
-!/sard_skills/**
-!/video_scrape/cards/**
-!/hub_images/**
+*.webp
+*.gif
+# image assets (cards, tiles, board art) are kept locally, not on GitHub
+/hub_images/
+/cards/
+/base_cards/
+/intrigue_cards/
+/conflicts/
+/contracts/
+/Tech tiles/
+/sard_skills/
+/video_scrape/cards/
+/ui/static/*.png
+/ui/static/*.webp
+# ...except the video extraction's alignment frame
+!/video_scrape/layout/**
 models_fight/rows.jsonl
+
+# training outputs and checkpoints stay local (PACE keeps its own copies)
+/models*/
+!/models_fight/
+/models_fight/*
+!/models_fight/calibration*.json
+!/models_fight/forecast.json
+!/models_tech/
+/models_tech/*
+!/models_tech/tech_values.json
+!/models_spy/
+/models_spy/*
+!/models_spy/spy_stats.json
+*.npz
+*.pt
+!/config/*.npz
+!/video_scrape/layout/*.npz
+/reports/
+/config/evolve*/
+/config/gap/
+/config/paired/
+/config/persona_test/
+/config/spy/
+/pace/logs/*
+!/pace/logs/.gitkeep

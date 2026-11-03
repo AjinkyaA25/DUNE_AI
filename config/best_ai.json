@@ -2,10 +2,10 @@
  "res_contract": 0.942941,
  "res_spice": 0.622589,
  "res_troops": 0.352085,
- "sm_solari": 0.333272,
+ "sm_solari": 0.383945,
  "combat": 0.470593,
  "influence": 1.852691,
- "troop_hold": 0.560028,
+ "troop_hold": 0.426731,
  "early.res_troops": 1.267076,
  "late.res_solari": 0.563995,
  "late.res_troops": 1.785162,
@@ -21,7 +21,7 @@
  "res_water": 1.442712,
  "deck_k": 1.115776,
  "plot_hold": 0.793635,
- "contracts": 1.885507,
+ "contracts": 3.691952,
  "alliance": 1.0564,
  "ci_hold": 1.170586,
  "card_play": 1.174505,
@@ -85,5 +85,7 @@
  "combat_ev": 2.5,
  "deck_model": 1,
  "tech_learned": 1.0,
- "tech_deny": 0.5
+ "tech_deny": 0.5,
+ "prep_draw": 0.872268,
+ "spy_freq": 3
 }
